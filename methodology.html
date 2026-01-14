@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Methodology - Sanitation Revolving Fund Model</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: #334155;
+            line-height: 1.6;
+            padding: 2rem;
+            overflow-y: auto !important;
+            height: auto !important;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            background: white;
+            padding: 4rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+            border-bottom: 3px solid #6366f1;
+            padding-bottom: 1rem;
+            display: inline-block;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            color: #1e293b;
+            margin-top: 3rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            color: #334155;
+            margin-top: 2rem;
+            font-weight: 600;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+        }
+
+        .formula-box {
+            background: #f1f5f9;
+            border-left: 4px solid #6366f1;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            color: #1e293b;
+        }
+
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            font-size: 0.95rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .param-table th {
+            background: #e2e8f0;
+            text-align: left;
+            padding: 1rem;
+            font-weight: 700;
+            color: #334155;
+        }
+
+        .param-table td {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1rem;
+            vertical-align: top;
+        }
+
+        .param-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .alert-box {
+            background: #fff7ed;
+            border: 1px solid #ffedd5;
+            border-left: 4px solid #f97316;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            color: #9a3412;
+            margin: 2rem 0;
+        }
+
+        .nav {
+            margin-bottom: 3rem;
+        }
+
+        .nav a {
+            text-decoration: none;
+            color: #6366f1;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .nav a:hover {
+            text-decoration: underline;
+        }
+
+        .tag {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .alert-box.green {
+            background: #f0fdf4;
+            border-left: 4px solid #16a34a;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav">
+        <a href="index.html">← Back to Simulator</a>
+    </div>
+
+    <div class="container">
+        <h1>Methodology & Technical Note</h1>
+        <p class="lead">A detailed explanation of the financial mechanics, assumptions, and impact calculations powering
+            the Sanitation Revolving Fund Model.</p>
+
+        <h2>1. Executive Summary: The Model Logic</h2>
+        <p>This simulator models a <strong>Blended Finance Vehicle</strong> designed to close the sanitation gap in
+            LDCs. Unlike traditional grant programs, it operates as a specialized Microfinance Institution (MFI):</p>
+        <ol>
+            <li><strong>Seed Capital:</strong> The fund starts with Concessional Debt (Soft Loans) and Grants.</li>
+            <li><strong>Revolving Lending:</strong> Capital is lent to Households (for toilets) and Sanitation
+                Entrepreneurs (MEs).</li>
+            <li><strong>Repayment & Recycling:</strong> As loans are repaid with interest, the capital "revolves" to
+                fund new loans.</li>
+            <li><strong>Cross-Subsidy:</strong> Profits from the lending window are implicitly used to subsidize grants
+                for the poorest.</li>
+        </ol>
+
+        <h2>2. Financial Mechanics (The "Waterfall")</h2>
+        <p>The model runs a monthly cash flow simulation (Series Calculation). In every month <code>m</code>, the
+            following "Waterfall" of priorities is executed:</p>
+
+        <h3>Priority 1: Senior Debt Service (The Schedule)</h3>
+        <p>The model pre-calculates a <strong>Definitive Repayment Schedule</strong> based on your "Fund Repayment Term"
+            inputs. This liability is hard-coded and must be met.</p>
+        <div class="formula-box">
+            <strong>MonthlyDue</strong> = (LoanAmount / (TermYears * 12)) <em>(After Grace Period)</em>
+        </div>
+        <p><em>Constraint:</em> If <code>CashBalance &lt; MonthlyDue</code>, the fund defaults (Repayment Failure).</p>
+
+        <h3>Priority 2: Operational Costs</h3>
+        <p>Fixed costs (staff, office) and Variable costs (M&E per toilet) are deducted next.</p>
+        <div class="formula-box">
+            <strong>OpsCost</strong> = (FixedAnnualOps / 12) + (NewToilets * M&ECost%)
+        </div>
+
+        <h3>Priority 3: New Lending (The Solvency Constraint)</h3>
+        <p>The model determines <strong>Lendable Capital</strong> by looking ahead into the future.</p>
+        <div class="formula-box">
+            <strong>DebtReserve</strong> = Sum(Participant Principal Due over Next 3 Months) + Est. Interest<br>
+            <strong>LendableBalance</strong> = CashBalance - DebtReserve - OpsBuffer
+        </div>
+        <p>If <code>LendableBalance > 0</code>, we issue new loans. If not, the fund automatically <strong>slows
+                growth</strong> to accumulate cash for the upcoming investor payment.</p>
+
+        <h2>5. Intelligent Analysis (AI Advisor)</h2>
+        <p>The built-in Advisor uses a Rule-Based Engine (JavaScript) to analyze the final simulation results. It
+            checks:</p>
+        <ul>
+            <li><strong>Principal Repayment:</strong> Did the investor get 100% of their money back? (Even if the fund
+                is solvent, a shortfall is a failure).</li>
+            <li><strong>Structural Deficit:</strong> Do revenues cover fixed costs?</li>
+            <li><strong>Negative Yield:</strong> Is the Real Interest Rate (after inflation/default) positive?</li>
+        </ul>
+
+        <h2>3. Smart Data Integration (World Bank API)</h2>
+        <p>To ensure realism, the model fetches real-time macroeconomic indicators for the selected LDC country via the
+            World Bank API. These inputs drive the default assumptions:</p>
+
+        <table class="param-table">
+            <thead>
+                <tr>
+                    <th>Indicator</th>
+                    <th>WB Code</th>
+                    <th>Impact on Model</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Inflation (CPI)</strong></td>
+                    <td><code>FP.CPI.TOTL.ZG</code></td>
+                    <td>Escalates the cost of toilet construction annually. Increases the required loan size.</td>
+                </tr>
+                <tr>
+                    <td><strong>Lending Rate</strong></td>
+                    <td><code>FR.INR.LEND</code></td>
+                    <td>Sets the baseline "Cost of Funds". The model adds a spread (default +10%) to estimate realistic
+                        MFI pricing.</td>
+                </tr>
+                <tr>
+                    <td><strong>Poverty Headcount</strong></td>
+                    <td><code>SI.POV.DDAY</code></td>
+                    <td>Determines the "Grant Support %". The model assumes anyone living on &lt;$2.15/day requires a
+                        100% subsidy.</td>
+                </tr>
+                <tr>
+                    <td><strong>Rural Population</strong></td>
+                    <td><code>SP.RUR.TOTL</code></td>
+                    <td>Sets the Total Market Size.</td>
+                </tr>
+                <tr>
+                    <td><strong>Political Stability</strong></td>
+                    <td><code>PV.EST</code></td>
+                    <td>Determines the "Contingency Reserve". Lower stability scores trigger higher mandatory cash
+                        reserves (risk buffer).</td>
+                </tr>
+                <tr>
+                    <td><strong>Basic Sanitation (Rural)</strong></td>
+                    <td><code>SH.STA.BASS.RU.ZS</code></td>
+                    <td>Used to calculate the "Unserved Population" gap.</td>
+                </tr>
+                <tr>
+                    <td><strong>GDP per Capita</strong></td>
+                    <td><code>NY.GDP.PCAP.CD</code></td>
+                    <td>Used to calculate the Economic Value of DALYs and calibrate toilet Affordability.</td>
+                </tr>
+                <tr>
+                    <td><strong>GNI per Capita</strong></td>
+                    <td><code>NY.GNP.PCAP.CD</code></td>
+                    <td>Supplement to GDP for income estimation.</td>
+                </tr>
+                <tr>
+                    <td><strong>Population Growth</strong></td>
+                    <td><code>SP.POP.GROW</code></td>
+                    <td>Increases the target population annually, creating a moving target.</td>
+                </tr>
+                <tr>
+                    <td><strong>Gini Index</strong></td>
+                    <td><code>SI.POV.GINI</code></td>
+                    <td>Measure of inequality. High Gini (>40) suggests higher need for cross-subsidization.</td>
+                </tr>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>4. Impact Methodology</h2>
+        <p>We convert physical infrastructure (Latrines Built) into social and environmental outcomes using standard
+            development economics multipliers.</p>
+
+        <h3>🚑 Health: DALYs Averted</h3>
+        <p>Disability-Adjusted Life Years (DALYs) measure the burden of disease. Sanitation prevents diarrhea, stunting,
+            and cholera.</p>
+        <div class="formula-box">
+            <strong>DALYs</strong> = PeopleReached * 0.005 (WHO Standard Coefficient per person/year for basic
+            sanitation)
+        </div>
+
+        <h3>💰 Economic Value of Health</h3>
+        <p>We monetize the DALYs to calculate an SROI.</p>
+        <div class="formula-box">
+            <strong>HealthValue ($)</strong> = DALYs * GDP_Per_Capita * 1.0 (Conservative Multiplier)
+        </div>
+
+        <h3>🌿 Carbon Mitigation</h3>
+        <p>Replacing open defecation with improved latrines reduces methane emissions. Note: The model accrues carbon
+            revenue <strong>monthly</strong> to smooth cash flow, assuming a programmatic buyer.</p>
+        <div class="formula-box">
+            <strong>CarbonRev ($)</strong> = (CumulativeLatrines * 0.2 tCO2e/year) * CarbonPrice($) * Share(%)
+        </div>
+        <p><em>Assumption:</em> Default is 0.2 tons/year (Safe Latrine). Higher values (1.0+) require Biogas or CBS
+            technologies.</p>
+
+        <h2>6. Fund Philosophy: Impact vs. Evergreen</h2>
+        <div class="alert-box green">
+            <strong>Why is this an "Impact Fund"?</strong><br>
+            A traditional "Evergreen Fund" aims to preserve 100% of its capital forever (Profit >= Costs).
+            <br><br>
+            This model is designed as a <strong>Time-Bound Impact Fund</strong>. Its primary goal is to reach
+            <strong>Universal Coverage (SDG 6)</strong> within a target timeframe (e.g., 5-10 years).
+            <br><br>
+            <em>Trade-off:</em> To reach the poorest (Strategy: High Grants, Low Interest), the fund may slowly consume
+            its capital. This is acceptable as long as the <strong>Depletion Year</strong> > <strong>Target
+                Year</strong>.
+            <br>
+            <strong>Note:</strong> If the model proves successful ("Proof of Concept"), donors can inject a "Series B"
+            grant to recapitalize the fund.
+        </div>
+
+        <h2>7. Parameter Dictionary & Assumptions</h2>
+        <p>A complete guide to the model's inputs, their sources, and how they influence the results.</p>
+
+        <table class="param-table">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Parameter</th>
+                    <th style="width: 20%;">Default / Source</th>
+                    <th>Rationale & Impact</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Market -->
+                <tr>
+                    <td colspan="3" class="tag">Market Context</td>
+                </tr>
+                <tr>
+                    <td><strong>Target Population</strong></td>
+                    <td><em>API: World Bank</em></td>
+                    <td>Rural Population * (1 - Basic Sanitation Coverage). Defines the total volume of toilets needed.
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong># of Districts</strong></td>
+                    <td><em>API: CountriesNow</em><br>(or User Input)</td>
+                    <td>Number of Administrative Areas (States/Provinces). <br><strong>Impact:</strong> Divides the
+                        national target into manageable zones. Determines total MEs required (Target is distributed
+                        across districts).</td>
+                </tr>
+                <tr>
+                    <td><strong>Avg Household Size</strong></td>
+                    <td><code>5</code> (Standard LDC estimate)</td>
+                    <td>Converts "People" into "Households" (Loan Units). Lower size = More loans needed.</td>
+                </tr>
+
+                <!-- Capital -->
+                <tr>
+                    <td colspan="3" class="tag">Capital Structure</td>
+                </tr>
+                <tr>
+                    <td><strong>Grant Support %</strong></td>
+                    <td><em>Default: WB Poverty Rate (<$2.15 /day)</em>
+                    </td>
+                    <td>
+                        <strong>Calculation:</strong> The model automatically sets this to the percentage of the
+                        population living in extreme poverty (Source: World Bank).
+                        <br><strong>Inequality Context:</strong> In countries with a high Gini Index (>40), this "Grant
+                        Window" is essential to ensure the poorest aren't excluded by the market-based approach.
+                        <br><strong>Impact:</strong> Higher % = Faster Insolvency (unless huge grants are added).
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Initial Capital</strong></td>
+                    <td>User Defined ($3M Grant / $5M Loan)</td>
+                    <td>The starting "fuel". The Mix (Grant vs Loan) determines the Cost of Capital.</td>
+                </tr>
+
+                <!-- Product -->
+                <tr>
+                    <td colspan="3" class="tag">Product & Supply Chain</td>
+                </tr>
+                <tr>
+                    <td><strong>Avg Toilet Cost</strong></td>
+                    <td><code>$50, $75, or $100</code></td>
+                    <td><strong>Smart Default:</strong> Auto-calibrated based on GDP per Capita tiers (<$1k, <$2.5k,>
+                            $2.5k). Represents a "Value for Money" durable latrine.</td>
+                </tr>
+                <tr>
+                    <td><strong># of MEs (Entrepreneurs)</strong></td>
+                    <td><em>Calculated (Per District)</em></td>
+                    <td>
+                        <strong>Formula:</strong> <code>Total MEs = (MEs per District) * (# of Districts)</code>.
+                        <br><strong>Logic:</strong> We first calculate the "Construction Rate" needed <em>per
+                            District</em> to meet the goal. We then divide that by one mason's capacity (5/mo) to see
+                        how many masons are needed per district.
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>ME Capacity</strong></td>
+                    <td><code>5 / month</code></td>
+                    <td>Real-world benchmark for a small team (1 mason + 2 helpers) building twin-pit latrines.</td>
+                </tr>
+
+                <!-- Lending Terms -->
+                <tr>
+                    <td colspan="3" class="tag">Lending Terms</td>
+                </tr>
+                <tr>
+                    <td><strong>HH Interest Rate</strong></td>
+                    <td><code>Inflation + ~15% Spread</code></td>
+                    <td>
+                        <strong>Rational:</strong> Not arbitrary. It is constructed as:
+                        <code>Cost of Funds + OPS Cost + Risk Premium + Inflation</code>.
+                        <br>The default aims for a "Break-even" rate where the fund doesn't lose value in real terms.
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Loan Term (Months)</strong></td>
+                    <td><code>12 - 24</code></td>
+                    <td>Repayment duration. <br><strong>Impact:</strong> Longer terms = Smaller monthly payments (More
+                        Affordable) but slower Capital Recycling.</td>
+                </tr>
+                <tr>
+                    <td><strong>Default Rate</strong></td>
+                    <td><code>5%</code> (MFI Standard)</td>
+                    <td>
+                        <strong>Rationale:</strong> Standard conservative provision for unsecured micro-lending in rural
+                        markets.
+                        <br><strong>Impact:</strong> Directly reduces the "Revolving Fund" capacity over time.
+                    </td>
+                </tr>
+
+                <!-- Operations -->
+                <tr>
+                    <td colspan="3" class="tag">Operational Efficiency</td>
+                </tr>
+                <tr>
+                    <td><strong>Ops Cap (%)</strong></td>
+                    <td><code>15%</code></td>
+                    <td>Maximum limit of Fund Balance reserved for Operations.</td>
+                </tr>
+                <tr>
+                    <td><strong>Mgmt Fee (%)</strong></td>
+                    <td><code>2%</code></td>
+                    <td>Annual fee on the Portfolio to cover overheads.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="alert-box">
+            <strong>The "Insolvency Trap":</strong> Note that a high OSS doesn't guarantee survival. If you lend too
+            fast (High Leverage) and have a bad month of collections, you may run out of liquidity to pay the Senior
+            Investor. The model aggressively tracks "Months Insolvent" to warn you of this risk.
+        </div>
+
+        <h2>8. Understanding the Charts</h2>
+        <ul>
+            <li><strong>Cash Balance (Green Line):</strong> The most critical line. If it hits zero, the model stops new
+                loans. Spikes indicate Carbon Payments or Capital Injections.</li>
+            <li><strong>Fund Health (Bar Chart):</strong>
+                <ul>
+                    <li><span style="color:#2563eb; font-weight:bold;">Blue (Portfolio):</span> Money currently in the
+                        hands of borrowers.</li>
+                    <li><span style="color:#16a34a; font-weight:bold;">Green (Cash):</span> Money in the bank ready to
+                        be lent.</li>
+                    <li><span style="color:#ef4444; font-weight:bold;">Red (Debt):</span> Money owed to the original
+                        investor.</li>
+                </ul>
+                <em>Goal:</em> Keep Blue + Green > Red at all times.
+            </li>
+            <h2>9. Programme Summary Glossary</h2>
+            <p>Definitions for the metrics found in the "Copy Full Report" CSV export.</p>
+            <table class="param-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Definition</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Total Latrines</strong></td>
+                        <td>Sum of all toilets built by both Loans and Grants over the project life.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Loans (Count/Value)</strong></td>
+                        <td>Number and total $ value of loans disbursed to households.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grants (Count/Value)</strong></td>
+                        <td>Number and total $ value of fully subsidized toilets for ultra-poor.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Households Reached</strong></td>
+                        <td>Equivalent Key Performance Indicator (KPI) to "Total Latrines".</td>
+                    </tr>
+                    <tr>
+                        <td><strong>People Reached</strong></td>
+                        <td><code>Households * Avg HH Size</code>. The total beneficiaries.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>MEs Supported</strong></td>
+                        <td>Number of Sanitation Entrepreneurs (Masons/SMEs) actively employed. <br><em>Calculated
+                                as:</em> <code>(Target Toilets / Year) / (Toilet Capacity per ME)</code>. Higher targets
+                            require more MEs.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>DALYs Averted</strong></td>
+                        <td>Disability-Adjusted Life Years saved (Health Impact).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Economic Value</strong></td>
+                        <td>Monetized value of DALYs (<code>DALYs * GDP/Capita</code>).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Carbon Mitigated</strong></td>
+                        <td>Tons of CO2 equivalent avoided by replacing open defecation.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Job Creation</strong></td>
+                        <td>Estimated non-ME jobs (supply chain) derived from ME count (<code>MEs * 3</code>).</td>
+                    </tr>
+                </tbody>
+            </table>
+    </div>
+
+</body>
+
+</html>

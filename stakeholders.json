@@ -1,0 +1,193 @@
+[
+    {
+        "type": "Informal Sector",
+        "name": "Pit emptying operators",
+        "role": "Manual desludging services",
+        "scope": "Urban slums"
+    },
+    {
+        "type": "Informal Sector",
+        "name": "Village artisans",
+        "role": "Latrine construction, minor repairs",
+        "scope": "Rural"
+    },
+    {
+        "type": "Microbusiness",
+        "name": "Sanitation kiosk operators",
+        "role": "Sell soap, hygiene products",
+        "scope": "Peri-urban"
+    },
+    {
+        "type": "Microbusiness",
+        "name": "Toilet builders (solo)",
+        "role": "Build basic toilets",
+        "scope": "Urban/rural"
+    },
+    {
+        "type": "SME",
+        "name": "Skyloos Ltd",
+        "role": "Eco-toilet manufacturing",
+        "scope": "National"
+    },
+    {
+        "type": "SME",
+        "name": "Sanitation products distributor",
+        "role": "Distribution of slabs, cement, pipes",
+        "scope": "National"
+    },
+    {
+        "type": "Regulator",
+        "name": "Reserve Bank of Malawi",
+        "role": "Regulates MFIs and banks",
+        "scope": "National"
+    },
+    {
+        "type": "Regulator",
+        "name": "Malawi Microfinance Network (MAMN)",
+        "website": "https://www.facebook.com/people/Malawi-Microfinance-Network-MAMN/100095180764740/",
+        "role": "Umbrella body for MFIs",
+        "scope": "National"
+    },
+    {
+        "type": "MFI",
+        "name": "Malawi Rural Finance Company",
+        "role": "",
+        "scope": "Rural"
+    },
+    {
+        "type": "MFI",
+        "name": "NEEF",
+        "website": "https://www.neef.mw/about/",
+        "scope": "National"
+    },
+    {
+        "type": "MFI",
+        "name": "Mzinda SACCO",
+        "scope": "Urban"
+    },
+    {
+        "type": "MFI",
+        "name": "Saile Financial Services Ltd",
+        "website": "https://sailefinancialservices.mw/",
+        "scope": "Regional (Mzuzu)"
+    },
+    {
+        "type": "MFI",
+        "name": "FINCA Malawi",
+        "website": "https://finca.mw/",
+        "scope": "National"
+    },
+    {
+        "type": "MFI",
+        "name": "VisionFund Malawi",
+        "website": "https://www.visionfund.org/where-we-work/africa/malawi",
+        "scope": "National"
+    },
+    {
+        "type": "MFI",
+        "name": "CUMO Microfinance",
+        "scope": "Rural Malawi"
+    },
+    {
+        "type": "Commercial Bank",
+        "name": "National Bank of Malawi",
+        "website": "https://www.natbank.co.mw/",
+        "scope": "National"
+    },
+    {
+        "type": "Commercial Bank",
+        "name": "Standard Bank Malawi",
+        "website": "https://www.standardbank.co.mw/",
+        "scope": "National"
+    },
+    {
+        "type": "Commercial Bank",
+        "name": "FDH Bank",
+        "website": "https://www.fdh.co.mw/",
+        "scope": "National"
+    },
+    {
+        "type": "Commercial Bank",
+        "name": "NBS Bank",
+        "website": "https://www.nbsmw.com/",
+        "scope": "National"
+    },
+    {
+        "type": "Commercial Bank",
+        "name": "First Capital Bank Malawi",
+        "website": "https://www.firstcapitalbank.co.mw/",
+        "scope": "National"
+    },
+    {
+        "type": "Commercial Bank",
+        "name": "CDH Investment Bank",
+        "website": "https://www.cdh-malawi.com/",
+        "scope": "National"
+    },
+    {
+        "type": "Commercial Bank",
+        "name": "Ecobank Malawi",
+        "website": "https://ecobank.com/mw",
+        "scope": "National"
+    },
+    {
+        "type": "Commercial Bank",
+        "name": "MyBucks Banking Corporation",
+        "website": "https://www.mybucksbanking.mw/",
+        "scope": "National"
+    },
+    {
+        "type": "Regional Bank",
+        "name": "ABSA Bank Limited",
+        "website": "https://www.absa.africa/",
+        "scope": "South Africa"
+    },
+    {
+        "type": "Regional Bank",
+        "name": "Nedbank Limited",
+        "website": "https://www.nedbank.co.za/",
+        "scope": "South Africa"
+    },
+    {
+        "type": "Regional Bank",
+        "name": "FirstRand Bank Ltd",
+        "website": "https://www.firstrand.co.za/",
+        "scope": "South Africa"
+    },
+    {
+        "type": "Regional Bank",
+        "name": "Standard Bank Group",
+        "website": "https://www.standardbank.com/",
+        "scope": "South Africa"
+    },
+    {
+        "type": "Impact Fund",
+        "name": "Old Mutual Alternative Investments",
+        "website": "https://aiimafrica.com/",
+        "scope": "South Africa"
+    },
+    {
+        "type": "Impact Fund",
+        "name": "Khanyisa Impact Investment Fund (STANLIB)",
+        "website": "https://stanlib.com/",
+        "scope": "South Africa"
+    },
+    {
+        "type": "Impact Fund",
+        "name": "Impact Capital Africa (ICA)",
+        "website": "https://impactcapafrica.com/",
+        "scope": "Southern Africa"
+    },
+    {
+        "type": "Impact Fund",
+        "name": "Fund for Export Development in Africa (FEDA)",
+        "website": "https://feda.africa/",
+        "scope": "Africa"
+    },
+    {
+        "type": "Impact Fund",
+        "name": "Africa Impact Ventures",
+        "website": "https://www.aiventures.co/",
+        "scope": "Africa"
+    }
+]

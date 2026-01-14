@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanitation Revolving Fund Model</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Splash Screen -->
+    <div id="splashScreen" class="splash-overlay">
+        <div class="splash-card wizard-card" style="max-width: 800px; text-align: left;">
+            <h1 style="text-align: center; margin-bottom: 0.5rem;">Sanitation Revolving Fund Simulator</h1>
+            <p class="subtitle" style="text-align: center; margin-bottom: 2rem;">Optimize Impact, Sustainability, and
+                Reach.</p>
+
+            <div class="splash-content" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <!-- Left: Guide & Context -->
+                <div class="splash-guide">
+                    <h3>💡 Introduction (LDC Context)</h3>
+                    <p style="margin-bottom:1rem; font-size:0.95rem;">
+                        This simulator models a <strong>Revolving Fund</strong> for sanitation in Least Developed
+                        Countries (LDCs).
+                        We've pre-loaded a scenario for <strong>Malawi</strong>:
+                    </p>
+                    <ul style="margin-bottom:1rem; font-size:0.95rem; list-style: disc; padding-left:1.5rem;">
+                        <li><strong>Capital:</strong> $5M Loan + $500k Grant</li>
+                        <li><strong>Goal:</strong> Sustainable growth to close the SDG6 Gap.</li>
+                        <li><strong>Challenge:</strong> Balance affordability (Low Interest) with Fund Survival
+                            (Solvency).</li>
+                    </ul>
+
+                    <h3>📚 How to Run</h3>
+                    <ol style="padding-left: 1.2rem; line-height: 1.6; font-size:0.95rem;">
+                        <li><strong>1. Auto-Load:</strong> The model is fetching real-time data for
+                            <strong>Malawi</strong>...
+                        </li>
+                        <li><strong>2. Run Model:</strong> Click "Calculated Model" to see the projection.</li>
+                        <li><strong>3. Optimize:</strong> Tweaking <em>Interest Rates</em> affects demand. Tweaking
+                            <em>Grant Support</em> affects projected fund life.
+                        </li>
+                    </ol>
+                </div>
+
+                <!-- Right: Metrics & Optimization -->
+                <div class="splash-optimization">
+                    <div
+                        style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                        <h3 style="margin-top:0; font-size:1rem; color:#166534;">🔄 Theory of Change (Revised)</h3>
+                        <p style="font-size:0.85rem; color:#15803d; line-height:1.4;">
+                            This model uses a <strong>Generalized Repayment Engine</strong>.
+                            It prioritizes <strong>Investor Repayment</strong> above all else.<br><br>
+                            If the fund forecasts a cash shortfall (based on your chosen Term), it will automatically
+                            <strong>slow down lending</strong> or hibernate to preserve liquidity.
+                            <br><br>
+                            <strong>Your Mission:</strong> Find the balance where the fund grows fast enough to reach
+                            the poor, but slow enough to guarantee the Investor gets their money back.
+                        </p>
+                    </div>
+
+                    <h3>🚀 How to Use</h3>
+                    <ul style="font-size:0.9rem; text-align:left; color:#1e293b; padding-left:1.5rem;">
+                        <li><strong>Step 1:</strong> Select a Country (loads real economic data).</li>
+                        <li><strong>Step 2:</strong> Adjust the "Levers" (Interest Rates, Loan Terms, Grant %).</li>
+                        <li><strong>Step 3:</strong> Watch the Charts & Scorecard. Avoid "Insolvency"!</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="wizard-nav" style="justify-content: center; margin-top: 2rem;">
+                <button class="splash-btn" id="startAppBtn" style="padding: 1rem 3rem; font-size: 1.2rem;">Start
+                    Model</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar: Inputs -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <h2>Rural Sanitation Fund</h2>
+                <div class="country-selector">
+                    <label>Select LDC Country</label>
+                    <div style="position:relative; margin-bottom:0.5rem;">
+                        <input list="countryList" id="countryInput" class="search-input" placeholder="Type Country..."
+                            value="Malawi"
+                            style="width:100%; padding:0.5rem; border-radius:0.25rem; border:1px solid #cbd5e1;">
+                        <datalist id="countryList">
+                            <!-- Populated by JS -->
+                        </datalist>
+                    </div>
+
+                    <button id="fetchDataBtn">Load Country Data</button>
+                    <small>Auto-fills Population & Inflation</small>
+                </div>
+            </div>
+
+            <div class="inputs-scroll">
+
+                <!-- Action Action Center -->
+                <div class="top-actions"
+                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #e2e8f0;">
+
+                    <button id="recalcBtn" class="primary-btn" style="grid-column: span 2; font-weight: 600;">
+                        🔄 Recalculate Model
+                    </button>
+
+                    <button id="exportBtn" class="secondary-btn"
+                        style="border:1px solid #cbd5e1; background:#fff; color:#334155;">
+                        ⬇️ CSV
+                    </button>
+
+                    <a href="methodology.html" class="secondary-btn"
+                        style="text-decoration:none; text-align:center; padding:0.6rem; border:1px solid #cbd5e1; background:#fff; color:#334155; font-size:0.8rem; border-radius:0.25rem;">
+                        📘 Method
+                    </a>
+
+                    <!-- Phase 47: AI Advisor -->
+                    <button id="aiAdvisorBtn" class="primary-btn"
+                        style="grid-column: span 2; background: linear-gradient(135deg, #6366f1, #8b5cf6); border:none; margin-top:0.25rem;">
+                        ✨ AI Advisor
+                    </button>
+
+                </div>
+
+
+                <h3>Investment Constraints</h3>
+                <div class="input-group">
+                    <label>Initial Grant Capital
+                        <span class="info-icon" title="Sunk capital provided as a subsidy to seed the fund.">i</span>
+                    </label>
+                    <div class="input-wrapper has-prefix">
+                        <span class="input-prefix">$</span>
+                        <input type="text" id="wiz-invest-grant-sidebar" value="1,000,000" class="formatted-number">
+
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Initial Loan Capital
+                        <span class="info-icon" title="Repayable capital provided by investors.">i</span>
+                    </label>
+                    <div class="input-wrapper has-prefix">
+                        <span class="input-prefix">$</span>
+                        <input type="text" id="wiz-invest-loan-sidebar" value="4,000,000" class="formatted-number">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Duration (Years)
+                        <span class="info-icon" title="Project timeline.">i</span>
+                    </label>
+                    <input type="number" id="wiz-duration-sidebar" value="5">
+                </div>
+                <div class="input-group">
+                    <label>Fund Repayment (Years)
+                        <span class="info-icon"
+                            title="Term to repay the initial loan capital to investors. Set > 0 to enable debt service.">i</span>
+                    </label>
+                    <input type="number" id="fundRepaymentTerm" value="5">
+                </div>
+
+                <!-- Added Grace Period Input -->
+                <div class="input-group">
+                    <label>Invester Grace Period (Months)
+                        <span class="info-icon" title="Delay repayment start to allow capital deployment.">i</span>
+                    </label>
+                    <input type="number" id="investorGracePeriod" value="6">
+                </div>
+
+                <h3>Demand Parameters</h3>
+                <div class="input-group">
+                    <label>Pop. Needing Toilets
+                        <span class="info-icon"
+                            title="Total rural population currently without access to basic sanitation. Can be auto-filled via API.">i</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <input type="text" id="popReqToilets" value="27,280,461" class="formatted-number">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Annual Pop Growth
+                        <span class="info-icon" title="Annual population growth rate.">i</span>
+                    </label>
+                    <div class="input-wrapper has-suffix">
+                        <input type="number" id="popGrowthRate" value="3">
+                        <span class="input-suffix">%</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Avg Household Size (people)
+                        <span class="info-icon" title="Average number of people per household.">i</span>
+                    </label>
+                    <input type="number" id="avgHHSize" value="5">
+                </div>
+                <div class="input-group">
+                    <label>Grant Support (% of Households)
+                        <span class="info-icon"
+                            title="API Derived: Based on poverty headcount ($2.15/day). Represents the % of toilet cost covered by grant. Higher poverty = Higher grant need.">i</span>
+                    </label>
+                    <div class="input-wrapper has-suffix">
+                        <input type="number" id="grantSupportPct" value="10">
+                        <span class="input-suffix">%</span>
+                    </div>
+
+                    <small id="affordability-help"
+                        style="display:block; margin-top:4px; font-size:0.75rem; color:#64748b; line-height:1.4;">
+                        Base rate (20%).
+                    </small>
+                </div>
+
+                <h3>Supply & Cost</h3>
+                <div class="input-group">
+                    <label>Avg Toilet Cost ($ USD)
+                        <span class="info-icon"
+                            title="Estimated construction cost of a single basic latrine in USD. This determines the loan principal required per household.">i</span>
+                    </label>
+                    <input type="number" id="avgToiletCost" value="100">
+                </div>
+                <div class="input-group">
+                    <label>Administrative Units (e.g. Districts)
+                        <span class="info-icon"
+                            title="Number of distinct geographical areas (Districts/Counties) where the project operates. Affects total scale and logistical complexity.">i</span>
+                    </label>
+                    <input type="number" id="districts" value="50">
+                </div>
+
+                <div class="input-group">
+                    <label>Micro-enterprises / Unit
+                        <span class="info-icon"
+                            title="Initial number of Sanitation Businesses (MEs) to recruit per district. The model will auto-recruit more if demand exceeds capacity.">i</span>
+                    </label>
+                    <input type="number" id="mePerDistrict" value="20">
+                </div>
+
+                <div class="input-group">
+                    <label>Toilets / ME / Month
+                        <span class="info-icon"
+                            title="Production Capacity: The maximum number of latrines one business can build in a month. Limits the speed of scale-up.">i</span>
+                    </label>
+                    <input type="number" id="toiletsPerMeMonth" value="7">
+                </div>
+                <div class="input-group">
+                    <label>ME Setup Cost ($ USD)
+                        <span class="info-icon"
+                            title="Seed Capital: Cost to train, equip, and register one new Micro-enterprise. Provided as a loan or grant to the business.">i</span>
+                    </label>
+                    <input type="number" id="meSetupCost" value="2000">
+                </div>
+
+
+                <h3>Financials</h3>
+                <div class="input-group">
+                    <label>HH Loan Interest Rate (%)
+                        <span class="info-icon"
+                            title="API Derived: Based on local Commercial Lending Rate + Risk Spread. The annual interest charged to households. Must cover inflation + defaults + ops.">i</span>
+                    </label>
+                    <input type="number" id="loanInterestRate_v2" value="35" class="api-field">
+                </div>
+                <div class="input-group">
+                    <label>ME Loan Interest Rate (%)
+                        <span class="info-icon"
+                            title="API Derived: Typically lower than HH rate. Annual interest charged to businesses for setup loans.">i</span>
+                    </label>
+                    <input type="number" id="meLoanInterestRate_v2" value="10" class="api-field">
+                </div>
+                <div class="input-group">
+                    <label>HH Loan Term (Months)
+                        <span class="info-icon"
+                            title="Repayment period for household loans. Shorter terms = higher monthly payments but faster recycling of capital.">i</span>
+                    </label>
+                    <input type="number" id="termHh" value="6">
+                </div>
+                <div class="input-group">
+                    <label>ME Loan Term (Months)
+                        <span class="info-icon"
+                            title="Repayment period for business startup loans. Typically longer (12-24 months) to allow business stabilization.">i</span>
+                    </label>
+                    <input type="number" id="termMe" value="12">
+                </div>
+                <div class="input-group">
+                    <label>HH Default Rate (%)
+                        <span class="info-icon"
+                            title="Risk Metric: % of household loans never repaid. High defaults (>10%) represent a major leak in the revolving fund. Auto-set to 8% (Conservative).">i</span>
+                    </label>
+                    <input type="number" id="hhDefaultRate" value="5">
+                </div>
+
+                <div class="input-group">
+                    <label>ME Default Rate (%)
+                        <span class="info-icon"
+                            title="Risk Metric: % of businesses that fail and default on setup loans. Auto-set to 10% (High Risk for Startups).">i</span>
+                    </label>
+                    <input type="number" id="meDefaultRate" value="5">
+                </div>
+                <div class="input-group">
+                    <label>Mgmt Fee Ratio (%)
+                        <span class="info-icon"
+                            title="Variable Operational Cost: % of all disbursements (loans+grants) retained to cover administration and monitoring.">i</span>
+                    </label>
+                    <input type="number" id="mgmtFeeRatio" value="1">
+                </div>
+
+
+                <div class="input-group">
+                    <label>Annual Fixed Ops Cost ($)
+                        <span class="info-icon"
+                            title="Fixed Overhead: Essential costs (PMU salaries, Office, Vehicles) incurred regardless of lending volume. High fixed costs require scale to sustain.">i</span>
+                    </label>
+                    <input type="text" id="annualFixedOpsCost" value="145,000" class="formatted-number">
+                </div>
+
+                <h3>Impact Assumptions</h3>
+                <div class="input-group">
+                    <label>Avg Annual Income ($)
+                        <span class="info-icon"
+                            title="API Derived: GNI per capita. Used to value economic benefits (Job creation).">i</span>
+                    </label>
+                    <input type="text" id="avgAnnualIncome" value="1,020" class="formatted-number">
+                </div>
+
+                <div class="input-group">
+                    <label>DALYs Averted / Person
+                        <span class="info-icon"
+                            title="Health Metric: Disability-Adjusted Life Years saved per person/year. Standard assumption 0.005 for improved sanitation.">i</span>
+                    </label>
+                    <input type="number" id="dalyPerPerson" value="0.005" step="0.001">
+                </div>
+                <div class="input-group">
+                    <label>Value per DALY ($)
+                        <span class="info-icon"
+                            title="Economic Value of one healthy life year saved. Often pegged to GDP/Capita (1x or 3x).">i</span>
+                    </label>
+                    <input type="number" id="dalyValue" value="500">
+                </div>
+                <div class="input-group">
+                    <label>CO2e / Toilet (Tonnes/Yr)
+                        <span class="info-icon"
+                            title="Climate Metric: Tonnes of CO2 equivalent emissions prevented per toilet per year (via waste treatment/methane capture).">i</span>
+                    </label>
+                    <input type="number" id="co2PerToilet" value="0.2" step="0.01">
+                </div>
+                <div class="input-group">
+                    <label>Value per Tonne CO2e ($)
+                        <span class="info-icon"
+                            title="Carbon Credit Price: Market value per tonne of verified CO2e reduction.">i</span>
+                    </label>
+                    <input type="number" id="co2Value" value="15">
+                </div>
+                <div class="input-group">
+                    <label>Fund Carbon Share (%)
+                        <span class="info-icon"
+                            title="Revenue Share: % of Carbon Credit value that flows back to the Fund vs. retained by households/operators.">i</span>
+                    </label>
+                    <div class="input-wrapper has-suffix">
+                        <input type="number" id="carbonCreditShare" value="100">
+                        <span class="input-suffix">%</span>
+                    </div>
+                </div>
+
+                <h3>Macro / Risk</h3>
+                <div class="input-group">
+                    <label>Annual Inflation (%)
+                        <span class="info-icon"
+                            title="API Derived: Annual inflation (CPI) from World Bank. Future costs are adjusted upwards by this rate.">i</span>
+                    </label>
+                    <input type="number" id="inflationRate" value="3.32">
+                </div>
+                <div class="input-group">
+                    <label>Contingency (Risk Buffer %)
+                        <span class="info-icon"
+                            title="Capital Reserve: % of Initial Fund held back for shocks. Adjusted based on Country Governance Score (CPIA). Low Gov = High Contingency.">i</span>
+                    </label>
+                    <input type="number" id="contingencyRate" value="5">
+                </div>
+                <div class="input-group">
+                    <label>Max Ops Reserve Cap (%)
+                        <span class="info-icon"
+                            title="Liquidity Buffer: Maximum % of the fund allowed to be held as cash for Operational deficits. Prevents draining the loan capital.">i</span>
+                    </label>
+                    <input type="number" id="opsReserveCap" value="15">
+                </div>
+                <div class="input-group">
+                    <label>M&E Cost (%)
+                        <span class="info-icon"
+                            title="Variable Cost: Charged as % of TOTAL Disbursements. Paid from Revenue first, then Ops Reserve.">i</span>
+                    </label>
+                    <input type="number" id="meCostRate" value="2">
+                </div>
+
+                <div class="sidebar-footer">
+                    <button id="copyReportBtn" class="secondary-btn"
+                        style="width:100%; border:1px solid #94a3b8; background:#eff6ff; color:#1e3a8a; padding:0.75rem; cursor:pointer; font-size:0.8rem; font-weight:600;">
+                        📄 Copy Full Report
+                    </button>
+                </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="header-title">
+                    <h1 id="dashboardTitle" style="margin:0; font-size:1.5rem; color:#1e293b;">🏳️ Rural Sanitation Fund
+                        Model</h1>
+                </div>
+                <div class="wb-indicators" id="wbIndicators">
+                    <div class="indicator-group" id="api-transparency">
+                        <!-- Populated by JS -->
+                        <span class="ind-label">Population Data (WB API):</span>
+                        <div class="ind-tags">
+                            <span id="transparency-pop" class="tag">Rural Pop: ...</span>
+                            <span id="transparency-access" class="tag">Access: ...</span>
+                            <span class="tag operator">→</span>
+                            <span id="transparency-gap" class="tag highlight">Unserved: ...</span>
+                        </div>
+                        <div class="ind-tags secondary">
+                            <span id="transparency-econ" class="tag">Gini: ... | GDP/Cap: ...</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div id="modelTab" class="tab-content active">
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>Fund Balance & Cashflow</h3>
+                        <canvas id="fundChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Annual Cost Breakdown</h3>
+                        <canvas id="costChart"></canvas>
+                    </div>
+                    <div class="chart-card full-width">
+                        <h3>Monthly Production (Grant vs Loan)</h3>
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                            <h3 style="margin:0;">Project Impact</h3>
+                            <select id="chartMetricSelect"
+                                style="padding:0.25rem; font-size:0.85rem; border:1px solid #cbd5e1; border-radius:0.25rem;">
+                                <option value="toilets">Toilets Built</option>
+                                <option value="people">People Reached</option>
+                                <option value="jobs">Jobs Created</option>
+                                <option value="dalys">DALYs Averted</option>
+                                <option value="carbon">Carbon Mitigated</option>
+                            </select>
+                        </div>
+                        <canvas id="productionChart"></canvas>
+                    </div>
+                    <!-- Phase 23: Financial Charts -->
+                    <div class="chart-card">
+                        <h3>Monthly Fund Revenue (Inflow Sources)</h3>
+                        <canvas id="incomeChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Monthly Net Profit/Loss (Sustainability)</h3>
+                        <canvas id="profitChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="detailed-stats">
+                    <h3>Programme Summary (End of Project Estimation)</h3>
+                    <div class="stats-table-wrapper">
+                        <!-- Expanded Results Grid -->
+                        <div class="results-grid"
+                            style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;">
+
+                            <!-- Reach Card -->
+                            <div class="card">
+                                <h3>Reach & Operations</h3>
+                                <table class="summary-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Total Latrines</strong></td>
+                                            <td id="sum-toilets" class="font-bold">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-label"> Latrine # (Loans)</td>
+                                            <td id="sum-toilets-loan-count">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-label"> Latrine $ (Loans)</td>
+                                            <td id="sum-toilets-loan-val">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-label"> Latrine # (Grants)</td>
+                                            <td id="sum-toilets-grant-count">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-label"> Latrine $ (Grants)</td>
+                                            <td id="sum-toilets-grant-val">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Households Reached</td>
+                                            <td id="sum-households">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>People Reached</td>
+                                            <td id="sum-people">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>MEs Supported</td>
+                                            <td id="sum-mes">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>SDG6 Gap Closed</td>
+                                            <td id="sum-sdg6" class="font-bold text-green">--</td>
+                                        </tr>
+                                        <tr class="separator"></tr>
+                                        <tr>
+                                            <td><strong>Primary Constraint</strong></td>
+                                            <td id="sum-constraint" style="font-size:0.9em; color:#ef4444;">--</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Impact Card -->
+                            <div class="card">
+                                <h3>Health & Climate Impact</h3>
+                                <table class="summary-table">
+                                    <tbody>
+                                        <tr>
+                                            <td>DALYs Averted</td>
+                                            <td id="sum-dalys">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-label"> Economic Value</td>
+                                            <td id="sum-val-dalys" class="font-mono text-green">--</td>
+                                        </tr>
+                                        <tr class="separator"></tr>
+                                        <tr>
+                                            <td>Carbon Mitigated</td>
+                                            <td id="sum-carbon">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-label"> Economic Value</td>
+                                            <td id="sum-val-carbon" class="font-mono text-green">--</td>
+                                        </tr>
+                                        <tr class="separator"></tr>
+                                        <tr>
+                                            <td>Jobs (Job-Years)</td>
+                                            <td id="sum-jobs">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-label"> Job Valuation</td>
+                                            <td id="sum-val-jobs" class="text-sm">--</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Sustainability Scorecard -->
+                            <div class="card">
+                                <h3>Sustainability Scorecard</h3>
+                                <table class="summary-table">
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>OSS Ratio</strong>
+                                                <span class="info-icon"
+                                                    title="Operational Self-Sufficiency: Revenue / (Ops + Defaults + Grants). >100% is Sustainable.">i</span>
+                                            </td>
+                                            <td id="sus-oss-ratio" class="font-bold">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Depletion Year
+                                                <span class="info-icon"
+                                                    title="Estimated year the fund hits $0 capital.">i</span>
+                                            </td>
+                                            <td id="sus-depletion">--</td>
+                                        </tr>
+                                        <tr class="separator"></tr>
+                                        <tr>
+                                            <td>Break-even Interest
+                                                <span class="info-icon"
+                                                    title="Household Interest Rate required to cover all currently modeled costs (Ops + Defaults + Grants).">i</span>
+                                            </td>
+                                            <td id="sus-breakeven-rate">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Max Sustainable Grant
+                                                <span class="info-icon"
+                                                    title="Maximum Grant % sustainable at the CURRENT Interest Rate.">i</span>
+                                            </td>
+                                            <td id="sus-max-grant">--</td>
+                                        </tr>
+                                        <tr class="separator"></tr>
+                                        <tr>
+                                            <td>Fund Balance (End)</td>
+                                            <td id="sum-balance" class="font-bold text-green">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Principal Repaid</td>
+                                            <td id="sum-capital-repaid">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Capital Preserved</td>
+                                            <td id="sum-health">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Self-Sufficiency</td>
+                                            <td id="sum-sufficiency">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sub-label" style="font-size:0.8em; color:#666;">(Monthly Rev / Op
+                                                Cost at End)</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Min Cash Balance
+                                                <span class="info-icon"
+                                                    title="Lowest cash point during the simulation.">i</span>
+                                            </td>
+                                            <td id="sum-min-cash">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Months Insolvent
+                                                <span class="info-icon"
+                                                    title="Number of months where cash balance was negative.">i</span>
+                                            </td>
+                                            <td id="sum-insolvency">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Principal Repaid
+                                                <span class="info-icon"
+                                                    title="Total amount of investor loan principal returned.">i</span>
+                                            </td>
+                                            <td id="sum-repaid">--</td>
+                                        </tr>
+                                        <!-- Added % Repaid -->
+                                        <tr>
+                                            <td>% Principal Repaid
+                                                <span class="info-icon"
+                                                    title="Percentage of loan principal returned.">i</span>
+                                            </td>
+                                            <td id="sum-repaid-pct">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Capital Preserved
+                                                <span class="info-icon"
+                                                    title="Ratio of Ending Fund Balance to Initial Loan Investment.">i</span>
+                                            </td>
+                                            <td id="sum-preserved">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Ops Coverage
+                                                <span class="info-icon"
+                                                    title="Years of operation covering fixed costs with remaining capital.">i</span>
+                                            </td>
+                                            <td id="sum-ops-coverage">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Total Leverage
+                                                <span class="info-icon"
+                                                    title="Ratio of Total Loans Disbursed to Initial Capital.">i</span>
+                                            </td>
+                                            <td id="sum-leverage">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>SROI Ratio
+                                                <span class="info-icon" title="Social Return on Investment.">i</span>
+                                            </td>
+                                            <td id="sum-sroi">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Cost / Latrine
+                                                <span class="info-icon"
+                                                    title="Average investment cost per latrine delivered (Total Investment / Total Latrines).">i</span>
+                                            </td>
+                                            <td id="sum-cost-per-latrine">--</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Effective Cost / Latrine
+                                                <span class="info-icon"
+                                                    title="Cost to the Grant Provider per latrine (Initial Grant / Total Latrines). Reflects leverage of the revolving fund.">i</span>
+                                            </td>
+                                            <td id="sum-effective-cost">--</td>
+                                        </tr>
+
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card full-width" style="margin-top:2rem;">
+                    <h3>Monthly Implementation Data</h3>
+                    <div style="overflow-x: auto; max-height: 500px;">
+                        <table id="monthlyDataTable" class="summary-table"
+                            style="width:100%; min-width:1400px; font-size:0.85rem;">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Toilets(Loan)</th>
+                                    <th>Toilets(Grant)</th>
+                                    <th title="Production limit by MEs">Capacity</th>
+                                    <th title="Production limit by Funds">Affordable</th>
+                                    <th>NewLoans(HH)</th>
+                                    <th>RevInt(HH)</th>
+                                    <th>PrincipalRepaid(HH)</th>
+                                    <th>Defaults(HH)</th>
+                                    <th>NewLoans(ME)</th>
+                                    <th>RevInt(ME)</th>
+                                    <th>PrincipalRepaid(ME)</th>
+                                    <th>Defaults(ME)</th>
+                                    <th>MgmtFees(Var)</th>
+                                    <th>MandECosts(Var)</th>
+                                    <th>FixedOps</th>
+                                    <th>FundReflow(Principal)</th>
+                                    <th>FundDebtService(Int)</th>
+                                    <th>CarbonRev</th>
+                                    <th>NetCashFlow</th>
+                                    <th>CashBalance</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthlyDataBody">
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>
