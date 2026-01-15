@@ -161,31 +161,32 @@
         </ol>
 
         <h2>2. Financial Mechanics (The "Waterfall")</h2>
-        <p>The model runs a monthly cash flow simulation (Series Calculation). In every month <code>m</code>, the
-            following "Waterfall" of priorities is executed:</p>
+        <p>The model runs a monthly simulation using a <strong>Centralized Cashflow Engine</strong> (Double-Entry
+            Ledger). In every month <code>m</code>, cash is allocated based on a <strong>Strict Priority
+                Waterfall</strong>:</p>
 
         <h3>Priority 1: Senior Debt Service (The Schedule)</h3>
-        <p>The model pre-calculates a <strong>Definitive Repayment Schedule</strong> based on your "Fund Repayment Term"
-            inputs. This liability is hard-coded and must be met.</p>
+        <p>The model prioritizes the Investor. Principal and Interest due for the month are calculated and paid
+            <strong>before any other expense</strong>.</p>
         <div class="formula-box">
-            <strong>MonthlyDue</strong> = (LoanAmount / (TermYears * 12)) <em>(After Grace Period)</em>
+            <strong>Inflow Priorities:</strong> 1. Investor Repayment &rarr; 2. Ops &rarr; 3. Growth
         </div>
-        <p><em>Constraint:</em> If <code>CashBalance &lt; MonthlyDue</code>, the fund defaults (Repayment Failure).</p>
+        <p><em>Constraint:</em> If <code>CashBalance &lt; DueAmount</code>, the fund is flagged as insolvent.</p>
 
-        <h3>Priority 2: Operational Costs</h3>
+        <h3>Priority 2: Operational Costs (Fixed & Variable)</h3>
         <p>Fixed costs (staff, office) and Variable costs (M&E per toilet) are deducted next.</p>
-        <div class="formula-box">
-            <strong>OpsCost</strong> = (FixedAnnualOps / 12) + (NewToilets * M&ECost%)
-        </div>
+        <p><strong>Hibernation Mode:</strong> If the fund stops lending (due to winding down or insolvency), fixed costs
+            do not disappear. Instead, they drop to a <strong>"Collections Floor"</strong> (30% of peak) to maintain a
+            skeleton crew for loan recovery.</p>
 
-        <h3>Priority 3: New Lending (The Solvency Constraint)</h3>
-        <p>The model determines <strong>Lendable Capital</strong> by looking ahead into the future.</p>
+        <h3>Priority 3: The Solvency Constraint (New Lending)</h3>
+        <p>New loans and grants are <strong>only issued</strong> if the fund has "Free Cash".</p>
         <div class="formula-box">
-            <strong>DebtReserve</strong> = Sum(Participant Principal Due over Next 3 Months) + Est. Interest<br>
-            <strong>LendableBalance</strong> = CashBalance - DebtReserve - OpsBuffer
+            <strong>Reserves</strong> = (3-Months of Debt Service) + (3-Months of Fixed Ops)<br>
+            <strong>LendableBalance</strong> = CashBalance - Reserves
         </div>
-        <p>If <code>LendableBalance > 0</code>, we issue new loans. If not, the fund automatically <strong>slows
-                growth</strong> to accumulate cash for the upcoming investor payment.</p>
+        <p>If <code>LendableBalance > 0</code>, new loans are approved. If not, the fund <strong>automatically pauses
+                growth</strong> to rebuild liquidity.</p>
 
         <h2>5. Intelligent Analysis (AI Advisor)</h2>
         <p>The built-in Advisor uses a Rule-Based Engine (JavaScript) to analyze the final simulation results. It

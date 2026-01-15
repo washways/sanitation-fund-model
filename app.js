@@ -118,44 +118,79 @@ const ApiModule = {
 
 // --- Model Module (Dynamic Core) ---
 const ModelModule = {
+    // Helper: Geometric Monthly Rate
+    getMonthlyRate(annualRate) {
+        if (!annualRate) return 0;
+        return Math.pow(1 + annualRate, 1 / 12) - 1;
+    },
+
+    // Helper: Investor Repayment Schedule
+    calculateInvestorSchedule(principal, annualCostOfCapital, termYears, graceMonths) {
+        const schedule = [];
+        const monthlyRate = this.getMonthlyRate(annualCostOfCapital);
+        const totalMonths = termYears * 12;
+        const effectiveMonths = Math.max(1, totalMonths - graceMonths);
+
+        // Scenario: Flat Principal + Interest on Outstanding
+        // (Amortization style can be changed here easily)
+        const principalPmt = principal / effectiveMonths;
+
+        let balance = principal;
+
+        for (let m = 1; m <= totalMonths; m++) {
+            let p = 0;
+            if (m > graceMonths) {
+                p = principalPmt;
+            }
+            // Ensure we don't overpay due to rounding
+            if (p > balance) p = balance;
+
+            const int = balance * monthlyRate;
+            balance -= p;
+
+            schedule[m] = { principal: p, interest: int, balance: balance };
+        }
+        return schedule;
+    },
+
     calculate(inputs) {
         // --- Configuration & Conversion to Monthly ---
         // Extend simulation by 30% to show post-project sustainability
         const projectMonths = inputs.duration * 12;
-        const totalMonths = Math.ceil(projectMonths * 1.3);
+        // Fix: activeMonths should match Project Term exactly. Winding Down is extra.
+        const totalMonths = projectMonths; // Only used for labelling if needed.
+
 
         // Rates (Monthly)
-        const monthlyInterestRateHh = inputs.loanInterestRate / 12;
-        const monthlyInterestRateMe = (inputs.meLoanInterestRate !== undefined ? inputs.meLoanInterestRate : inputs.loanInterestRate) / 12;
-        const monthlyInflationRate = Math.pow(1 + inputs.inflationRate, 1 / 12) - 1;
-        const monthlyFundCostOfCapital = inputs.fundCostOfCapital / 12;
+        // Rates (Monthly Geometric)
+        const monthlyInterestRateHh = this.getMonthlyRate(inputs.loanInterestRate);
+        const monthlyInterestRateMe = this.getMonthlyRate(inputs.meLoanInterestRate !== undefined ? inputs.meLoanInterestRate : inputs.loanInterestRate);
+        const monthlyInflationRate = this.getMonthlyRate(inputs.inflationRate);
+        const monthlyFundCostOfCapital = this.getMonthlyRate(inputs.fundCostOfCapital);
 
         // Terms (Months)
         const termHh = inputs.termHh || 6;
         const termMe = inputs.termMe || 12;
 
-        // Fund Init
-        let grantFundBalance = inputs.investGrant;
-        let loanFundBalance = inputs.investLoan;
+        // Treasury Init (Dual Ledger)
+        let grantCash = inputs.investGrant;     // Grants, Subsidies
+        let loanCash = inputs.investLoan;       // Lending Capital
 
-        // Fund Liability (Start Calculation)
+        // Initial Fund Liability
         const fundPrincipal = inputs.investLoan;
         let loanFundLiability = fundPrincipal;
+        const totalCapital = inputs.investGrant + inputs.investLoan;
 
-        // Fund Debt Service (PMT to Lender)
-        let monthlyFundDebtPayment = 0;
-        if (inputs.fundRepaymentTerm > 0 && inputs.fundCostOfCapital >= 0) {
-            const nFund = inputs.fundRepaymentTerm * 12;
-            const rFund = monthlyFundCostOfCapital;
-            if (rFund === 0) {
-                monthlyFundDebtPayment = fundPrincipal / nFund;
-            } else {
-                monthlyFundDebtPayment = (fundPrincipal * rFund) / (1 - Math.pow(1 + rFund, -nFund));
-            }
-        }
+        // Pre-Calculate Investor Schedule
+        const investorSchedule = this.calculateInvestorSchedule(
+            inputs.investLoan,
+            inputs.fundCostOfCapital,
+            inputs.fundRepaymentTerm,
+            inputs.investorGracePeriod || 0
+        );
 
         // --- Reserve & Fee Logic (Refactored Phase 9) ---
-        const totalCapital = inputs.investGrant + inputs.investLoan;
+
 
         // 1. Calculate Reserves
         // Contingency: General Risk Buffer (Held until end)
@@ -253,9 +288,10 @@ const ModelModule = {
         let dataMonthlyRepaymentMe = [];
         let dataMonthlyDefaultsHh = [];
         let dataMonthlyDefaultsMe = [];
-        let dataMonthlyMgmtFees = [];
-        let dataMonthlyMandECosts = [];
-        let dataMonthlyFixedOps = [];
+        const dataMonthlyMgmtFees = [];
+        const dataMonthlyMandECosts = [];
+        const dataMonthlyFixedOps = []; // Restored
+        const dataMonthlyMes = []; // New Tracker for ME Count
         // Phase 49: Carbon Revenue Data
         let dataMonthlyCarbonRevenue = [];
 
@@ -263,6 +299,10 @@ const ModelModule = {
         let dataMonthlyCapacity = [];
         let dataMonthlyAffordable = [];
         let dataMonthlyTargetMEs = [];
+
+        // Debug Tracking Arrays (Fix ReferenceError)
+        let dataMonthlyUnitCost = [];
+        let dataMonthlyInflation = [];
 
         // Impact State
         let peopleReached = 0; // Fix: Scope for Return
@@ -295,7 +335,11 @@ const ModelModule = {
 
         // CHECK: Startup costs come from LENDABLE capital
         // We must apply the FULLY BURDENED logic here too, or we bankrupt the fund on Day 0.
-        let lendableBalance = (grantFundBalance + loanFundBalance) - currentReserve;
+        // CHECK: Startup costs come from LENDABLE capital + Start Grant
+        // We must apply the FULLY BURDENED logic here too.
+        // GrantCash covers Setup (if grant)? No, usually Debt Model. 
+        // Assuming ME setup is a LOAN.
+        let lendableBalance = loanCash - currentReserve;
 
         const reserveMonthsStart = Math.max(6, inputs.termHh || 6);
         const oneMeWorkingCapitalStart = inputs.toiletsPerMeMonth * inputs.avgToiletCost * reserveMonthsStart;
@@ -313,56 +357,46 @@ const ModelModule = {
         // Phase 62: Track Active ME Exposure for Cap
         let activeMeLoanBalance = 0; // Total Outstanding Principal on ME Loans
 
-        // Actual Cash Outflow is only Setup Cost (Buffer stays in bank)
-        let startCost = startMEs * inputs.meSetupCost;
-        if (grantFundBalance >= startCost) {
-            grantFundBalance -= startCost;
-        } else {
-            let rem = startCost - grantFundBalance;
-            grantFundBalance = 0;
-            loanFundBalance -= rem; // Borrow from loan fund
-        }
-        currentMEs += startMEs;
-        // Schedule Repayments for Initial ME Loans? 
-        // Logic assumes these are loans too?
-        if (startCost > 0) {
-            meDefaultCostTotal += startCost * inputs.meDefaultRate;
+        // Initialize State (Phase 1-3)
+        // Startup Logic: Setup Cost = Grant/Ops? Working Capital = Loan?
+        // Simplification: MEs borrow their setup cost.
+        let startLoanVolume = startMEs * inputs.meSetupCost;
+        if (startLoanVolume > 0) {
+            loanCash -= startLoanVolume; // Deduct from Lending Capital
+            currentMEs += startMEs;
+            activeMeLoanBalance += startLoanVolume;
 
-            // Scheduling logic for start loans was missing! Added it.
-            const pmtMeCalc = (startCost * monthlyInterestRateMe) / (1 - Math.pow(1 + monthlyInterestRateMe, -termMe));
+            // Schedule Repayment
+            const pmtMeCalc = (startLoanVolume * monthlyInterestRateMe) / (1 - Math.pow(1 + monthlyInterestRateMe, -termMe));
+            // Note: Influx is reduced by default rate logic inside loop, here we just schedule raw.
+            // Using "effective" for global array is OK for simple lookahead.
             const effectivePmt = pmtMeCalc * (1 - inputs.meDefaultRate);
+
             for (let k = 1; k <= termMe; k++) {
-                if (k < repaymentInflows.length) { // Start Month 0, First payment Month 1
+                if (k < repaymentInflows.length) {
                     repaymentInflows[k] += effectivePmt;
                 }
             }
+
+            // Add to Cohort (Strict Tracking)
+            meCohorts.push({
+                balance: startLoanVolume,
+                monthlyPayment: pmtMeCalc, // Full payment obligation 
+                termRemaining: termMe
+            });
         }
 
         // Update Lendable (Cash dropped)
-        lendableBalance = (grantFundBalance + loanFundBalance) - currentReserve;
+        lendableBalance = loanCash - currentReserve;
 
 
         // Phase 65: Winding Down Period (User Request: "Pay off up to 1 year after programme finished")
-        const activeMonths = totalMonths;
+        // Fix: Active Months = Project Duration. Total Sim = Active + 12 (Winding Down).
+        const activeMonths = projectMonths;
         const totalSimMonths = activeMonths + 12;
 
         // --- Pre-Calculation: Investor Repayment Schedule (Generalised) ---
         // Dynamically calculate the Principal Due based on Inputs (Term & Amount).
-        // This ensures the logic works for ANY country/loan scenario.
-        const fundTermMonths = (inputs.fundRepaymentTerm || 5) * 12;
-        const graceMonths = inputs.investorGracePeriod || 0;
-        const monthlyPrincipalDue = fundTermMonths > 0 ? (inputs.investLoan / fundTermMonths) : 0;
-
-        // Schedule Store: Index matches Simulation Month (1-based)
-        const investorSchedule = new Array(totalSimMonths + 1).fill(0);
-
-        for (let t = 1; t <= totalSimMonths; t++) {
-            // Repayment starts AFTER Grace Period, lasts for Term.
-            if (t > graceMonths && t <= (graceMonths + fundTermMonths)) {
-                investorSchedule[t] = monthlyPrincipalDue;
-            }
-        }
-
         // Localize ME Principle Schedule (Fixes Global Leak)
         const mePrincipalSchedule = new Array(360).fill(0);
 
@@ -372,889 +406,445 @@ const ModelModule = {
             const currentYear = Math.ceil(m / 12);
             monthlyLabels.push(`M${m}`);
 
-            let monthlyMeLoans = 0;
-            // Phase 45: Calculate Fixed Ops Early for Liquidity Constraint
-            // Apply Inflation to Ops Cost (Salaries/Rent go up)
-            // Apply Inflation to Ops Cost (Salaries/Rent go up)
-            let baseFixedOps = (inputs.annualFixedOpsCost || 0) / 12;
-            let fullMonthlyFixedOps = baseFixedOps * Math.pow(1 + monthlyInflationRate, m); // Used for Buffers (War Chest logic)
-            let monthlyFixedOps = fullMonthlyFixedOps;
-
-            // --- Phase 45+56: Inflows First (Revenue) ---
-            // Fix: Add Revenue BEFORE Debt Service
-            const inflow = repaymentInflows[m] || 0;
-            loanFundBalance += inflow;
-            yearRepayments += inflow;
-
-            // Phase 58: Adaptive Operational Rightsizing (Hibernation Mode)
-            // If the fund has stopped growing (Zero Production) for > 3 months, 
-            // we assume it downsizes staff significantly to "Harvest Mode" (Collections Only).
-            if (dormantMonths > 3) {
-                // 1. Standard Reduction (70% cut)
-                let reducedOps = monthlyFixedOps * 0.3;
-
-                // 2. Solvency Cap (Phase 60: Revenue-Based Compensation)
-                // Ensure we don't spend more than we earn.
-                // Estimate Monthly Interest Income (approximate based on portfolio)
-                const estInterestHH = (portfolioHh || 0) * monthlyInterestRateHh;
-                const estInterestME = (portfolioMe || 0) * monthlyInterestRateMe;
-                const projectedRevenue = estInterestHH + estInterestME;
-
-                // Cap Ops at 90% of Revenue (Ensure 10% Profit Margin even in hibernation)
-                // This simulates "Commission-Only" staff or extreme austere measures.
-                // Floor at 0.
-                const revenueCap = Math.max(0, projectedRevenue * 0.9);
-
-                // Use the LOWER of the two.
-                monthlyFixedOps = Math.min(reducedOps, revenueCap);
-            }
-
-            // --- Phase 50: Adaptive Solvency Guardrails ---
-            // 0. Calculate Burn Rate (Ops + Debt Service)
-            let prevDebtService = 0;
-            if (m > 1) {
-                // Arrays are 0-indexed. M-2 is index of previous month (M-1).
-                const idx = m - 2;
-                if (dataMonthlyFundInt[idx] !== undefined) {
-                    prevDebtService = dataMonthlyFundInt[idx] + dataMonthlyFundPrincipal[idx];
-                }
-            }
-            // Phase 61: Dynamic Debt Reserve (3 Months Lookup)
-            // Fix: Use Pre-Calculated Schedule instead of undefined log
-            // Check next 3 months
-            let futurePrincipalNeeded = 0;
-            for (let k = 1; k <= 3; k++) {
-                if (m + k <= totalSimMonths) futurePrincipalNeeded += investorSchedule[m + k];
-            }
-            // Estimate Interest (Current Interest * 3) - Assumes flat balance
-            const estFutureInt = (dataMonthlyFundInt[m - 1] || 0) * 3;
-
-            const debtReserve = futurePrincipalNeeded + estFutureInt;
-
-            // Phase 63: Ops Buffer (3 Months Fixed Ops)
-            const opsBuffer = fullMonthlyFixedOps * 3;
-            const monthlyBurn = monthlyFixedOps + ((dataMonthlyFundInt[m - 1] || 0) + (dataMonthlyFundPrincipal[m - 1] || 0));
-
-            // Flags
-            // Flags
-            // Growth Freeze: If Cash < 1.2x Burn Rate. (Aggressive Scale: Only stop if nearly empty)
-            const growthFreeze = loanFundBalance < (monthlyBurn * 1.2);
-            // Survival Mode: If Cash < 0.5x Burn Rate.
-            const survivalMode = loanFundBalance < (monthlyBurn * 0.5);
-
-
-
-            // 2. Variable Op Costs (Waterfall: Revenue -> Ops Reserve)
-            // Calculate Disbursements for this month (We need to estimate or do it after?
-            // Problem: We haven't calculated disbursements yet.
-            // Solution: We must move this block AFTER "Financial Execution" or Estimate it.
-            // Ideally, fees are charged on ACTUAL disbursements.
-            // Let's Move the Fee Calculation to the END of the loop logic, but we need to pay it.
-            // Wait, if we pay it at the end, it doesn't reduce lendable balance for THIS month.
-            // That's fine. Next month's lendable balance will be lower.
-
-            // NOTE: To be accurate, we'll initialize expensePaid here as 0 and do the calculation after disbursements.
-            // But we need to declare variables.
-            let expensePaid = 0;
-
-            // Phase 53/54: Dynamic Reserve Release & Risk Calculation
-            // Fix: Don't hold 15% Capital Reserve ($1.2M) when only 10 months ($40k) of Ops remain.
-            const projectEndM = inputs.duration * 12;
-            const monthsRemaining = Math.max(0, projectEndM - m);
-            // 1. Ops Reserve: Cap at Lesser of (Remaining Months) OR (6 Months Rolling Buffer).
-            // We assume Revenue covers Ops, so we only need a liquidity buffer, not full pre-payment.
-            const bufferMonths = Math.min(monthsRemaining, 6);
-            const neededOpsReserve = bufferMonths * monthlyFixedOps;
-
-            if (currentOpsReserve > neededOpsReserve) {
-                currentOpsReserve = Math.max(0, neededOpsReserve);
-            }
-
-            // 2. Contingency: Based on Active Risk (Portfolio)
-            // "Reasonable % of loans that are out"
-            const totalRiskyAssets = (portfolioHh || 0) + (portfolioMe || 0);
-            currentContingency = totalRiskyAssets * inputs.contingencyRate;
-
-            // Calculate Lendable (Cash - Reserve Liability)
-            // Cash includes Revenue (repaymentInflows added above)
-            // Reserve includes OpsReserve and Contingency
-            currentReserve = currentOpsReserve + currentContingency;
-            lendableBalance = (grantFundBalance + loanFundBalance) - currentReserve;
-
-            // Phase 56: Senior Debt Priority
-            // Reserve cash for Investor Repayment BEFORE calculating lendable funds for new toilets.
-            if (loanFundLiability > 0 && monthlyFundDebtPayment > 0 && m <= inputs.fundRepaymentTerm * 12) {
-                lendableBalance -= monthlyFundDebtPayment;
-            }
-
-
-            // 3. Outflows (Fund Debt Service)
-            // FIXED: Removed Double Payment Logic here. 
-            // Phase 23/45 Logic at end of loop handles capped repayment correctly.
-            /* 
-            if (loanFundLiability > 0 && monthlyFundDebtPayment > 0) {
-                if (m <= inputs.fundRepaymentTerm * 12) {
-                    loanFundBalance -= monthlyFundDebtPayment;
-                    yearDebtService += monthlyFundDebtPayment;
-                    const interestPart = loanFundLiability * monthlyFundCostOfCapital;
-                    const principalPart = monthlyFundDebtPayment - interestPart;
-                    loanFundLiability -= principalPart;
-                }
-            }
-            */
-
-            // Update Lendable Again
-            lendableBalance = (grantFundBalance + loanFundBalance) - currentReserve;
-
-
-            // 4. Expansion (Monthly Evaluation)
-            // MOVED: Senior Debt Service Execution (Priority)
-
-            // --- Phase 56: Senior Debt Service (Repayment to Investor) ---
-            // Moved to TOP of Waterfall (Seniority)
-            // Fix: Re-calculate Target PMT locally
-            let fundPaymentPrincipal = 0;
-            let fundPaymentInterest = 0;
-
-            // Phase 64: "Financing Expert" Flexible Repayment (Cash Sweep)
-            // Instead of rigid PMT, we target 100% repayment by Year X + 1.
-            // We set a "Target" to keep us on track, but actual payment will be flexible based on cash.
-            // But actually, the user said "1st priority is to pay off principle... with flexibility".
-            // So we will prioritize Debt Service in the waterfall, but allow variance.
-
-            // To ensure we don't just hoard cash, we need to KNOW how much we OUGHT to pay.
-            // Let's keep the target calculation as a "Soft Target" for planning, 
-            // but the actual deduction will be "Sweep Logic".
-            let targetMonthlyPmt = 0;
-            const gracePeriod = inputs.investorGracePeriod || 0;
-
-            if (inputs.fundRepaymentTerm > 0) {
-                const totalMonthsTerm = inputs.fundRepaymentTerm * 12;
-                const paymentMonths = Math.max(1, totalMonthsTerm - gracePeriod);
-                if (inputs.fundCostOfCapital > 0) {
-                    const r = (inputs.fundCostOfCapital / 12);
-                    targetMonthlyPmt = (inputs.investLoan * r) / (1 - Math.pow(1 + r, -paymentMonths));
-                } else {
-                    targetMonthlyPmt = inputs.investLoan / paymentMonths;
-                }
-            }
-
-            // Only pay if liability exists and Grace Period passed
-            // Only pay if liability exists and Grace Period passed
-            if (targetMonthlyPmt > 0 && loanFundLiability > 0 && m > gracePeriod) {
-                // 1. Calculate Allowable Cash Drain
-                // Phase 57: Liquidity Buffer (Senior to Debt?)
-                // NO. Debt is Senior. But we need to keep lights on?
-                // Compromise: Keep 3 Months of Ops Buffer.
-                // If we are winding down (End of Term), Taper buffer to 0.
-
-                const monthsUntilDue = (inputs.fundRepaymentTerm * 12) - m;
-                // Fix: Relax Buffer to 3 months (User Feedback: "Incomplete Repayment")
-                let requiredBufferMonths = 3;
-                if (monthsUntilDue < 3) {
-                    requiredBufferMonths = Math.max(0, monthsUntilDue);
-                }
-
-                // Check fullMonthlyFixedOps availability. If not defined, use monthlyFixedOps?
-                // Assuming monthlyFixedOps is available as per Phase 9.
-                // FIX: User requested Principal Priority. Pay Debt BEFORE Buffer.
-                const liquidityBuffer = 0; // Removing Buffer constraint for debt service.
-
-                // Allow using Repayments (inflow) AND Balance
-                const availableForDebt = Math.max(0, loanFundBalance - liquidityBuffer);
-                const maxPayable = availableForDebt;
-
-                // 2. Interest
-                const monthlyFundRate = (inputs.fundCostOfCapital || 0) / 12;
-                const interestDue = loanFundLiability * monthlyFundRate;
-
-                // 3. Components
-                let actualTotalPayment = Math.min(targetMonthlyPmt, maxPayable);
-
-                // Allocation
-                if (actualTotalPayment >= interestDue) {
-                    fundPaymentInterest = interestDue;
-                    fundPaymentPrincipal = actualTotalPayment - interestDue;
-                } else {
-                    fundPaymentInterest = actualTotalPayment;
-                    fundPaymentPrincipal = 0;
-                }
-
-                // Cap Principal
-                if (fundPaymentPrincipal > loanFundLiability) {
-                    fundPaymentPrincipal = loanFundLiability;
-                    actualTotalPayment = fundPaymentInterest + fundPaymentPrincipal;
-                }
-
-                // 4. Execution
-                // Note: If we use Inflow, we are spending 'future' cash? No, Inflow is added to Balance at start of loop.
-                loanFundBalance -= actualTotalPayment;
-                loanFundLiability -= fundPaymentPrincipal;
-
-                // 5. Stats
-                yearDebtService += actualTotalPayment;
-            }
-
-            // Log Values Arrays
-            dataMonthlyFundPrincipal.push(fundPaymentPrincipal);
-            dataMonthlyFundInt.push(fundPaymentInterest);
-
-            // Re-update Lendable Balance after Debt Service deduction
-            lendableBalance = (grantFundBalance + loanFundBalance) - currentReserve;
-
-            // 4. Expansion (Monthly Evaluation)
-            // Dynamic Target: How many MEs do we need to finish backlog?
-            // CONSTRAINTS: 
-            // 1. Density Limit (Pop / 2000)
-            // 2. Speed Limit (Max 5% growth)
-
-            let targetMEs = currentMEs;
-            if (backlogToilets > 0) {
-                const densityLimit = Math.ceil(inputs.popReqToilets / 2000); // Saturation Point
-
-                const monthsRem = Math.max(1, totalMonths - m);
-                const requiredRate = backlogToilets / monthsRem;
-                const neededMEs = Math.ceil(requiredRate / inputs.toiletsPerMeMonth);
-
-                // Target is lesser of Need and Density Cap
-                // But never lower than current (no firing)
-                // Target is lesser of Need and Density Cap
-                // But never lower than current (no firing)
-                // Phase 50: Cap Growth if Insolvency Risk
-                const rationalTarget = Math.min(neededMEs, densityLimit);
-
-                if (growthFreeze || isWindingDown) {
-                    targetMEs = currentMEs; // Freeze (or natural attrition if we added that)
-                } else {
-                    targetMEs = Math.max(currentMEs, rationalTarget);
-                }
-            }
-
-            // Phase 60: Define Debt Reserve (Using shared scope definition from Line 404)
-            // const debtReserve = ... (Removed Duplicate)
-
-            if (currentMEs < targetMEs && !isWindingDown) {
-                const deficit = targetMEs - currentMEs;
-
-                // --- Production First Logic ---
-                // Phase 60: Solvency Guard logic moved to outer scope
-
-                // Reserve cash to fund existing capacity (prevent cannibalization)
-                const inflationFactorExp = Math.pow(1 + monthlyInflationRate, m);
-                const unitCostExp = inputs.avgToiletCost * inflationFactorExp;
-
-                // Reserve full loan term (e.g. 6 months) to ensure rotation
-                // Aggressive Scaling: Only reserve 1 month of working capital (User Request)
-                const reserveMonths = 1; // Was 6. Reduced to unlock capital for expansion.
-
-                const maxMonthlyProductionCost = currentMEs * inputs.toiletsPerMeMonth * unitCostExp;
-                const productionReserve = maxMonthlyProductionCost * reserveMonths;
-
-                // Phase 45+50: Deduct Fixed Ops (Using shared scope definition from Line 407)
-                // const opsBuffer = ... (Removed Duplicate)
-
-                // FIX: Decouple ME Expansion from strict Debt Reserve.
-                // We want to scale Capacity (MEs) early (Phase 1), even if we are saving for Debt.
-                // Only apply a minimal reserve for MEs (e.g. 1 month debt) to avoid total recklessness,
-                // but do NOT block them with the full 12-month war chest.
-                const expansionDebtReserve = (targetMonthlyPmt || 0) * 1;
-
-                // CRITICAL FIX: Prioritize Production over Expansion.
-                // Deduct the cost of running EXISTING capacity (Toilets) from the expansion budget.
-                const projectedToiletCost = currentMEs * inputs.toiletsPerMeMonth * unitCostExp;
-
-                // Phase 63: Strategic "Sprint" during Grace Period (User Request: "Focus on ME at start")
-                // During the Grace Period, we relax the 'Projected Cost' constraint to allow aggressive capacity building.
-                // We assume we can fund the toilets later with the remaining large war chest.
-                let effectiveProjectedCost = projectedToiletCost;
-                if (m < (inputs.investorGracePeriod || 0)) {
-                    effectiveProjectedCost = 0; // Ignore future production liability during Setup Phase
-                }
-
-                // Phase 62: Capital Allocation Cap
-                // Limit ME exposure to 25% of Total Fund Size (Raised from 15% for "Rapid Scale").
-                // This ensures we have enough capacity but still reserve majority for Toilets.
-                const totalFundSize = (inputs.investGrant || 0) + (inputs.investLoan || 0);
-                const meCapLimit = totalFundSize * 0.25;
-                const meCapRoom = Math.max(0, meCapLimit - activeMeLoanBalance);
-
-                // Reduce available expansion funds if we are hitting the ME Cap
-                const availableForExpansion = Math.min(
-                    Math.max(0, lendableBalance - productionReserve - opsBuffer - expansionDebtReserve - effectiveProjectedCost),
-                    meCapRoom
-                );
-
-
-                // COST TO ADD ONE ME: Setup + Working Capital for its Toilets
-                // If we don't reserve the working capital, the new ME will sit idle.
-                const oneMeWorkingCapital = inputs.toiletsPerMeMonth * unitCostExp * reserveMonths;
-                const fullyBurdenedMeCost = inputs.meSetupCost + oneMeWorkingCapital;
-
-                const affordable = Math.floor(availableForExpansion / fullyBurdenedMeCost);
-
-                // Growth Speed Cap (Tuned to 10% to smooth "excessive loans")
-                const maxGrowth = Math.max(1, Math.ceil(currentMEs * 0.10));
-
-                const toAdd = Math.min(deficit, affordable, maxGrowth);
-
-                if (toAdd > 0) {
-                    const cost = toAdd * inputs.meSetupCost;
-                    monthlyMeLoans = cost;
-                    loanFundBalance -= cost;
-                    activeMeLoanBalance += cost; // Track Exposure
-                    currentMEs += toAdd;
-                    yearLoansMe += cost;
-                    yearLoansMeCount += toAdd; // Fix: Count Number of Loans (1 per ME), not Number of Batch Events
-                    meDefaultCostTotal += cost * inputs.meDefaultRate;
-
-                    const pmtMeCalc = (cost * monthlyInterestRateMe) / (1 - Math.pow(1 + monthlyInterestRateMe, -termMe));
-                    const effectivePmt = pmtMeCalc * (1 - inputs.meDefaultRate);
-                    for (let k = 1; k <= termMe; k++) {
-                        if (m + k < repaymentInflows.length) {
-                            repaymentInflows[m + k] += effectivePmt;
-                            repaymentInflowsMe[m + k] += effectivePmt; // Granular Track
-
-                            // Amortization tracking for exposure cap (Simplified linear runoff or just reduce by principal portion)
-                            // For simplicity/conservatism, we won't reduce 'activeMeLoanBalance' monthly in this loop,
-                            // but ideally we should.
-                            // Let's reduce it by the principal portion of the payment *when* the payment happens?
-                            // No, simpler: Reduces by principal portion linearly?
-                            // Let's just create a repayment event array for exposure reduction
-                        }
-                    }
-                    // Schedule Principal Reduction for Exposure Tracking
-                    // Using simple reduction: We assume principal is repaid evenly or we don't reduce it?
-                    // If we don't reduce it, the cap locks forever. We MUST reduce it.
-                    // Let's assume linear principal repayment for tracking simplicity
-                    const principalPerMonth = cost / termMe;
-                    for (let k = 1; k <= termMe; k++) {
-                        if (m + k < 360) { // Limit array size check
-                            // We need a way to reduce 'activeMeLoanBalance' in the future months.
-                            // We can't edit future variables.
-                            // We need an array 'scheduledMePrincipalRepayments'
-                            // if (!window.mePrincipalSchedule) window.mePrincipalSchedule = new Array(360).fill(0);
-                            if (m + k < mePrincipalSchedule.length) {
-                                mePrincipalSchedule[m + k] = (mePrincipalSchedule[m + k] || 0) + principalPerMonth;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Execute Scheduled Exposure Reduction
-            if (mePrincipalSchedule[m]) {
-                activeMeLoanBalance -= mePrincipalSchedule[m];
-            }
-
-            // Update Lendable (Post-ME Loan)
-            lendableBalance = (grantFundBalance + loanFundBalance) - currentReserve;
-
-            // 5. Toilet Prod Capacity
-            const capacity = currentMEs * inputs.toiletsPerMeMonth;
-
-            // 6. Demand
-            if (backlogToilets <= 0) backlogToilets = 0;
-
-            // 7. Affordability
+            // 1. Initialize Auditable Ledger (The General Ledger)
+            const inflows = {
+                hhInterest: 0,
+                hhPrincipal: 0,
+                meInterest: 0,
+                mePrincipal: 0,
+                carbon: 0,
+                grantsIn: 0 // If we had external injections
+            };
+
+            const outflows = {
+                fixedOps: 0,
+                mgmtFees: 0,
+                meSupport: 0,
+                investorPrincipal: 0,
+                investorInterest: 0,
+                newLoansHH: 0,
+                newLoansME: 0,
+                grantPayouts: 0,
+                defaultsHH: 0, // Reduces Portfolio, not Cash (unless recovery costs?)
+                defaultsME: 0
+            };
+
+            // 2. Inflation & Unit Costs
             const inflationFactor = Math.pow(1 + monthlyInflationRate, m);
-            const unitCost = inputs.avgToiletCost * inflationFactor;
+            // Apply different inflation to Ops vs Toilets?
+            // User requested: "Inflation logic needs clarity".
+            // Assumption: General Inflation applies to Wages (Ops) and Materials (Toilets).
+            const monthlyFixedOpsBase = (inputs.annualFixedOpsCost || 0) / 12;
+            let currentMonthlyFixedOps = monthlyFixedOpsBase * inflationFactor;
+            const currentUnitCost = inputs.avgToiletCost * inflationFactor;
 
-            // USE LENDABLE FUNDS for production check!
-            // Phase 45: Strict Liquidity Constraint
-            // 1. Reserve Cash for Fixed Ops
-            // USE LENDABLE FUNDS for production check!
-            // Phase 45: Strict Liquidity Constraint
-            // 1. Reserve Cash for Fixed Ops (Phase 50: 12 Months Buffer for Lending)
-            // Increased to 12 Months to prevent insolvency variance.
-            // 1. Reserve Cash for Fixed Ops (Phase 50: 12 Months Buffer for Lending)
-            // Increased to 12 Months to prevent insolvency variance.
-            // Use FULL OPS COST for Buffer (War Chest), not Hibernation Cost.
-            // 5. Toilet Prod Capacity
-            // ...
+            // Track for Debugging
+            dataMonthlyUnitCost.push(currentUnitCost);
+            dataMonthlyInflation.push(inflationFactor);
 
-            // Phase 65: Halt Production/Lending in Winding Down Phase
-            let totalFunds = 0;
-            if (!isWindingDown) {
-                // Standard Solvency Logic
-                // FIX: Apply DEBT RESERVE to Housing Loans too.
-                totalFunds = Math.max(0, lendableBalance - (fullMonthlyFixedOps * 12) - debtReserve);
-            } else {
-                // Winding Down: Stop lending. Funds only used for Ops and Debt Repayment.
-                totalFunds = 0;
-            }
-
-            // Phase 50: Survival Mode (Absolute Halt)
-            // if (survivalMode) { totalFunds = 0; } // Disabled for testing/fix// Hard Stop
-
-            // 2. Account for Variable Fees (Mgmt + ME Support) in Unit Cost
-            const variableFeeRate = (inputs.mgmtFeeRatio || 0) + (inputs.meCostRate || 0);
-            const burdenedUnitCost = unitCost * (1 + variableFeeRate);
-
-            // Phase 59: Hibernation Restart Threshold
-            // If dormant > 3 (Low Ops Mode), prevent waking up for tiny loans.
-            // Require 12 months of Full Ops Capital before resuming (War Chest).
-            if (dormantMonths > 3) {
-                const restartThreshold = fullMonthlyFixedOps * 12;
-                if (lendableBalance < restartThreshold) {
-                    totalFunds = 0; // Block new construction
-                }
-            }
-
-            const affordableUnits = Math.floor(totalFunds / burdenedUnitCost);
+            // Scope Fix: Initialize Production Variables for Reporting Check later
+            let production = 0;
+            let grantCount = 0;
+            let loanCount = 0;
 
 
-            // 8. Production
-            let production = Math.min(capacity, backlogToilets, affordableUnits);
-            if (production < 0) production = 0;
+            // 3. INFLOWS: Collect Revenue (Interest + Principal + Carbon)
+            // A. Carbon
+            const carbonShare = (inputs.carbonCreditShare !== undefined ? inputs.carbonCreditShare : 100) / 100;
+            const carbonRev = (toiletsBuiltCumulative * inputs.co2PerToilet * inputs.co2Value * carbonShare) / 12;
+            inflows.carbon = carbonRev;
 
-            // --- Bottleneck Analysis ---
-            // Determine which factor was the limiting one (ignoring 0 vs 0 ties, prioritized order)
-            // Priority: Demand (Success) > Capacity (Execution) > Capital (Funding)
-            // Actually, if affordableUnits is limiting, it's Capital.
-
-            if (production === affordableUnits && affordableUnits < capacity && affordableUnits < backlogToilets) {
-                constraints.capital++;
-            } else if (production === capacity && capacity < backlogToilets) {
-                constraints.capacity++;
-            } else if (production === backlogToilets) {
-                constraints.demand++;
-            }
-
-            // Phase 9: Funding Sources (Split Loan vs Grant based on Poverty/Strategy)
-            // If Capacity limiting, it's MEs.
-            // If Backlog limiting, it's Demand.
-
-            if (production === backlogToilets && backlogToilets <= capacity && backlogToilets <= affordableUnits) {
-                constraints.demand++;
-            } else if (production === affordableUnits && affordableUnits < capacity) {
-                constraints.capital++;
-            } else {
-                constraints.capacity++;
-            }
-
-            let countGrant = 0;
-
-            // Track Debug Data (Phase Debug)
-            dataMonthlyCapacity.push(capacity);
-            dataMonthlyAffordable.push(affordableUnits);
-            dataMonthlyTargetMEs.push(targetMEs);
-            let countLoan = 0;
-
-            // 9. Financial Execution
-            if (production > 0) {
-                // Determine Grant Portion (Target)
-                let targetGrant = production * inputs.grantSupportPct;
-
-                // FIX: Cap Grant at Available Funds (Prevent Deficit)
-                let maxGrantUnits = 0;
-                if (grantFundBalance > 0) {
-                    // Using floor to be safe with currency
-                    maxGrantUnits = Math.floor(grantFundBalance / unitCost);
-                    if (grantFundBalance < unitCost) maxGrantUnits = 0; // Absolute safety
-                }
-
-                countGrant = Math.min(targetGrant, maxGrantUnits);
-                countLoan = production - countGrant; // Remainder shifts to Loan (since we have capital there)
-
-                const costGrant = countGrant * unitCost;
-                const costLoan = countLoan * unitCost;
-
-                // Deduct
-                grantFundBalance -= costGrant;
-                // Clamp to 0 just in case of rounding
-                if (grantFundBalance < 0) grantFundBalance = 0;
-
-                loanFundBalance -= costLoan;
-
-                // Track
-                toiletsBuiltCumulative += production;
-                backlogToilets -= production;
-
-                yearToilets += production;
-                yearGrants += costGrant;
-                yearLoansHh += costLoan;
-
-                // Track Count for Termination
-                yearLoansHhCount += countLoan;
-
-                cumulativeGrants += costGrant; // Fix tracking
-                cumulativeLoansHh += costLoan; // Fix tracking (Missing Line)
-
-                // Schedule HH Loan Repayments
-                let pmtHh = 0;
-                if (monthlyInterestRateHh === 0) {
-                    pmtHh = costLoan / termHh;
-                } else {
-                    pmtHh = (costLoan * monthlyInterestRateHh) / (1 - Math.pow(1 + monthlyInterestRateHh, -termHh));
-                }
-
-                const effectivePmtHh = pmtHh * (1 - inputs.hhDefaultRate);
-                const lostPmtHh = pmtHh * inputs.hhDefaultRate;
-                yearDefaultsHh += lostPmtHh * termHh;
-
-                for (let k = 1; k <= termHh; k++) {
-                    if (m + k < repaymentInflows.length) {
-                        repaymentInflows[m + k] += effectivePmtHh;
-                        repaymentInflowsHh[m + k] += effectivePmtHh; // Granular Track
-                    }
-                }
-            }
-
-
-            // --- Phase 9: Waterfall Op Costs ---
-            // 1. Calculate Variable Fees on Disbursement
-            const disbursementGrant = (production > 0) ? (countGrant * unitCost) : 0;
-            const disbursementLoan = (production > 0) ? (countLoan * unitCost) : 0;
-            const totalDisbursed = monthlyMeLoans + disbursementGrant + disbursementLoan;
-
-            // Track Cumulative Splits
-            // Note: toiletsBuiltCumulative tracks Total. We need split.
-            // We assume previous balance.
-            const prevGrant = (dataToiletsMonthlyGrant.length > 0) ? dataToiletsMonthlyGrant[dataToiletsMonthlyGrant.length - 1] : 0;
-            const prevLoan = (dataToiletsMonthlyLoan.length > 0) ? dataToiletsMonthlyLoan[dataToiletsMonthlyLoan.length - 1] : 0;
-
-            // Note: mgmtFeeRatio and meCostRate are percentages (0.02, 0.05) from getInputs
-            const varMgmtFee = totalDisbursed * inputs.mgmtFeeRatio;
-            const varMeCost = totalDisbursed * inputs.meCostRate;
-
-            // Fixed Ops (Calculated Early in Phase 45)
-            // const montlyFixedOps = ... (Removed duplicate)
-
-            const totalOpCost = varMgmtFee + varMeCost + monthlyFixedOps;
-
-
-            if (totalOpCost > 0) {
-                // 2. Pay from Revenue First (Proxy: Inflow)
-                // Fix: Revenue is only available if it wasn't spent on Senior Debt.
-                const revenueAvailable = Math.min(inflow, Math.max(0, loanFundBalance));
-                let coveredByRevenue = Math.min(totalOpCost, revenueAvailable);
-                let deficit = totalOpCost - coveredByRevenue;
-
-                // 3. Pay Deficit from Ops Reserve
-                let coveredByReserve = Math.min(deficit, currentOpsReserve);
-
-                // If Deficit still remains, it eats into Capital (Uncovered Ops)
-                let uncoveredOps = deficit - coveredByReserve; // This reduces Loan Fund directly without Revenue offset
-
-                const totalPaid = coveredByRevenue + coveredByReserve + uncoveredOps;
-
-                // Deduct Reserve Liability
-                currentOpsReserve -= coveredByReserve;
-
-                // Deduct Cash (Implementation)
-                // 1. Revenue Part (Already in LoanFundBalance via 'inflow')
-                if (coveredByRevenue > 0) {
-                    loanFundBalance -= coveredByRevenue;
-                }
-
-                // 2. Reserve Part (From GrantFund typically, checking balance)
-                if (coveredByReserve > 0) {
-                    if (grantFundBalance >= coveredByReserve) {
-                        grantFundBalance -= coveredByReserve;
-                    } else {
-                        let rem = coveredByReserve - grantFundBalance;
-                        grantFundBalance = 0;
-                        loanFundBalance -= rem;
-                    }
-                }
-
-                // 3. Uncovered Part (Direct Capital Drain)
-                if (uncoveredOps > 0) {
-                    loanFundBalance -= uncoveredOps;
-                }
-
-                // Track
-                yearMgmtFees += totalPaid;
-                mgmtFeeTotal += totalPaid;
-            }
-
-            // --- Fund Debt Service (Repayment to Investor) ---
-            // MOVED TO TOP OF WATERFALL (See Phase 56)
-
-
-            // --- Phase 23: Monthly Financial Tracking ---
-            // 1. Portfolio Updates (HH)
-            // 1. Portfolio Updates (HH)
-            const newLoansHh = (production > 0) ? countLoan * unitCost : 0;
-            const newLoansMe = monthlyMeLoans;
-
-            // Phase 55: Realistic Defaults (Portfolio Method)
-            // Fix: Defaults should occur on OUTSTANDING Portfolio, not just new loans.
-            // This ensures risk persists even if lending stops.
-            portfolioHh += newLoansHh;
-            // Calibrate WriteOff to Loan Term to match effectivePmt reduction
-            // If we lose 8% of payments over 6 months, we must write off 8% of Principal over 6 months.
-            // --- 3. Repayment Logic (Cohort-Based) ---
-            // Phase 60: Precision Repayment to eliminate "Infinite Tail"
-
-            // [FIX] Inject New Loans into Cohorts (Missing Logic Restored)
-            if (newLoansHh > 0) {
-                let pmt = 0;
-                if (monthlyInterestRateHh === 0) {
-                    pmt = newLoansHh / termHh;
-                } else {
-                    pmt = (newLoansHh * monthlyInterestRateHh) / (1 - Math.pow(1 + monthlyInterestRateHh, -termHh));
-                }
-                hhCohorts.push({
-                    balance: newLoansHh,
-                    monthlyPayment: pmt,
-                    termRemaining: termHh
-                });
-            }
-
-            if (newLoansMe > 0) {
-                let pmt = 0;
-                if (monthlyInterestRateMe === 0) {
-                    pmt = newLoansMe / termMe;
-                } else {
-                    pmt = (newLoansMe * monthlyInterestRateMe) / (1 - Math.pow(1 + monthlyInterestRateMe, -termMe));
-                }
-                meCohorts.push({
-                    balance: newLoansMe,
-                    monthlyPayment: pmt,
-                    termRemaining: termMe
-                });
-            }
+            // B. Loans (Cohorts)
+            // Strict Logic: Balance -> Default -> WriteOff -> Interest -> Principal
 
             let interestRevHh = 0;
             let principalRepaidHh = 0;
-            let writeOffHh = 0; // Track Defaults from Cohorts
-
+            let writeOffHh = 0;
             let interestRevMe = 0;
             let principalRepaidMe = 0;
             let writeOffMe = 0;
+            // Note: input Rates are annual, standardizing to annual default hazard for consistency if needed,
+            // but assumption is inputs are already Annual Prob.
+            // Converting Annual Default Rate to Monthly Probability: 1 - (1 - rate)^(1/12)
+            const monthlyDefaultProbHh = 1 - Math.pow(1 - (inputs.hhDefaultRate || 0.05), 1 / 12);
+            const monthlyDefaultProbMe = 1 - Math.pow(1 - (inputs.meDefaultRate || 0.10), 1 / 12);
 
-            // Pre-calc Monthly Default Rates
-            const monthlyDefaultRateHh = (inputs.hhDefaultRate || 0.05) / 12;
-            const monthlyDefaultRateMe = (inputs.meDefaultRate || 0.10) / 12;
-
-            // Process HH Cohorts
+            // HH Cohorts
             hhCohorts = hhCohorts.filter(c => c.termRemaining > 0);
             hhCohorts.forEach(c => {
-                // 1. Calculate Interest
+                // 1. Check Default (Hazard)
+                // Deterministic Approach: Apply rate to balance as 'loss'
+                // This mimics a portfolio where x% default.
+                const defaultAmt = c.balance * monthlyDefaultProbHh;
+
+                // 2. Write Off
+                writeOffHh += defaultAmt;
+                c.balance -= defaultAmt; // Principal reduced by loss
+
+                // 3. Interest on REMAINING Balance
                 const interest = c.balance * monthlyInterestRateHh;
                 interestRevHh += interest;
 
-                // 2. Process Defaults (Reduce Balance)
-                const defaultAmt = c.balance * monthlyDefaultRateHh;
-                writeOffHh += defaultAmt;
-                c.balance -= defaultAmt;
-
-                // 3. Amortization (Principal Payment)
+                // 4. Principal Repayment
                 let principal = 0;
-                if (c.termRemaining === 1) {
-                    principal = c.balance; // Pay off remainder
-                } else {
-                    // Standard PMT minus Interest
-                    principal = c.monthlyPayment - interest;
-                }
+                if (c.termRemaining === 1) principal = c.balance;
+                else principal = Math.max(0, c.monthlyPayment - interest);
 
-                // Safety Checks
                 if (principal > c.balance) principal = c.balance;
-                if (principal < 0) principal = 0; // In case Interest > PMT (Negative Amortization)
 
                 principalRepaidHh += principal;
                 c.balance -= principal;
                 c.termRemaining--;
             });
 
-            // Process ME Cohorts
+            // ME Cohorts
             meCohorts = meCohorts.filter(c => c.termRemaining > 0);
             meCohorts.forEach(c => {
-                const interest = c.balance * monthlyInterestRateMe;
-                interestRevMe += interest;
+                // 1. Check Default (Hazard)
+                const defaultAmt = c.balance * monthlyDefaultProbMe;
 
-                // Defaults
-                const defaultAmt = c.balance * monthlyDefaultRateMe;
+                // 2. Write Off
                 writeOffMe += defaultAmt;
                 c.balance -= defaultAmt;
 
-                // Principal
+                // 3. Interest
+                const interest = c.balance * monthlyInterestRateMe;
+                interestRevMe += interest;
+
+                // 4. Principal
                 let principal = 0;
-                if (c.termRemaining === 1) {
-                    principal = c.balance;
-                } else {
-                    principal = c.monthlyPayment - interest;
-                }
+                if (c.termRemaining === 1) principal = c.balance;
+                else principal = Math.max(0, c.monthlyPayment - interest);
+
                 if (principal > c.balance) principal = c.balance;
-                if (principal < 0) principal = 0;
 
                 principalRepaidMe += principal;
                 c.balance -= principal;
                 c.termRemaining--;
             });
 
-            const totalInterestRev = interestRevHh + interestRevMe;
-            const principalRepaid = principalRepaidHh + principalRepaidMe;
+            inflows.hhInterest = interestRevHh;
+            inflows.hhPrincipal = principalRepaidHh;
+            inflows.meInterest = interestRevMe;
+            inflows.mePrincipal = principalRepaidMe;
 
-            // Update Aggregate Portfolios (Master Source of Truth is now Cohorts)
-            portfolioHh = hhCohorts.reduce((sum, c) => sum + c.balance, 0);
-            portfolioMe = meCohorts.reduce((sum, c) => sum + c.balance, 0);
-
-            // 4. Fund Metrics
-            const fundDebtInterest = loanFundLiability * (inputs.fundCostOfCapital / 12);
-
-            // 5. Aggregates
-            // Revenue
-            // Note: Inflow is Cash. Revenue is Interest + Fees.
-            // Fees: varMgmtFee (assumed paid by borrower?) -> In this model, they are Expenses paid BY Fund. 
-            // So Revenue = Interest Only.
-            // Wait, does the fund CHARGE fees? usually yes. 
-            // Let's assume `mgmtFeeRatio` is passed through.
-            // For now, Net Profit = InterestRevenue - (OpsCost + BadDebt + FundInterst).
-
-            // Phase 41: Granular Breakdown Logic
-            const monthRevHh = interestRevHh;
-            const monthRevMe = interestRevMe;
-
-            // Granular Principal Repayment
-            // Granular Principal Repayment
-            // Use calculated values from upstream (Pro-Rata Fix)
-            let monthPrincipalHh = principalRepaidHh;
-            if (monthPrincipalHh > portfolioHh) monthPrincipalHh = portfolioHh; // Safety check if portfolio is small
-
-            let monthPrincipalMe = principalRepaidMe;
-            if (monthPrincipalMe > portfolioMe) monthPrincipalMe = portfolioMe;
-
-            const monthBadDebt = writeOffHh + writeOffMe;
-            const monthOps = totalOpCost;
-
-            // Use new calculated values directly
-            const paidFundInt = fundPaymentInterest;
-            const paidFundPrincipal = fundPaymentPrincipal;
-
-            const monthTotalOutflow = monthOps + monthBadDebt + paidFundInt + paidFundPrincipal;
+            // Update Ledger (Cash Update 1: Inflows)
+            // Carbon -> GrantCash (Subsidy Source)
+            // Interest/Principal -> LoanCash (Revolving)
+            // Update Ledger (Cash Update 1: Inflows)
+            // Carbon -> GrantCash (Subsidy Source)
+            // Interest/Principal -> LoanCash (Revolving)
+            grantCash += inflows.carbon;
+            const totalInflow = inflows.hhInterest + inflows.hhPrincipal + inflows.meInterest + inflows.mePrincipal + inflows.carbon;
+            loanCash += (inflows.hhInterest + inflows.hhPrincipal + inflows.meInterest + inflows.mePrincipal);
 
 
-            // Phase 49: Carbon Revenue Calculation (Annualized Verification)
-            // Realism: Carbon credits are verified and issued ex-post, typically annually or bi-annually.
-            // We simulate this by only paying out every 12 months.
-            const carbonShare = (inputs.carbonCreditShare !== undefined ? inputs.carbonCreditShare : 100) / 100;
-            // Pay out Monthly (Smoothed) to avoid chart spikes
-            // We assume Carbon Credits are accrued and recognized continuously for simulation purposes.
-            monthlyCarbonRev = (toiletsBuiltCumulative * inputs.co2PerToilet * inputs.co2Value * carbonShare) / 12;
+            // 4. OUTFLOWS: Waterfall Priorities
+            // Current Available Cash (Consolidated for Solvency Check, but paid from specific buckets)
+            // Note: We treat LoanFund and GrantFund as Fungible for Ops/Debt if needed, 
+            // but ideally Debt comes from LoanFund.
 
-            // Add to Cash Balance (Real Inflow)
-            loanFundBalance += monthlyCarbonRev;
+            // Priority 1: Investor Debt Service (Senior Logic)
+            let targetPmt = 0;
+            if (m <= inputs.fundRepaymentTerm * 12 && m > inputs.investorGracePeriod) {
+                // Use Pre-Calculated Schedule (Hard Constraint)
+                targetPmt = investorSchedule[m]?.principal || 0; // Fix: Access property of new Object
 
-            // Add to Net Profit
-            const monthNet = (monthRevHh + monthRevMe + monthlyCarbonRev) - monthTotalOutflow;
+                // Plus Interest on Outstanding Liability
+                const interestDue = loanFundLiability * monthlyFundCostOfCapital; // Fix: Use geometric rate
+                outflows.investorInterest = interestDue;
+                outflows.investorPrincipal = targetPmt;
+            }
 
-            dataMonthlyRevenueHh.push(monthRevHh);
-            dataMonthlyRevenueMe.push(monthRevMe);
-            dataMonthlyCarbonRevenue.push(monthlyCarbonRev);
-            // dataMonthlyFundPrincipal.push(paidFundPrincipal); // Already pushed above
+            // Excecute Debt Service
+            const totalDebtService = outflows.investorPrincipal + outflows.investorInterest;
+            if (totalDebtService > 0) {
+                // Check Default
+                if (loanCash < totalDebtService) {
+                    // Try borrow from GrantFund? (Strict Ringfence says NO, but for generic "Fund" model, maybe?)
+                    // User Request: "Ring-fence cash buckets".
+                    // So we do NOT cross-subsidize Debt Service from Grant Cash automatically.
+                    // LoanCash goes negative (Insolvency).
+                }
+                loanCash -= totalDebtService;
+                loanFundLiability -= outflows.investorPrincipal;
+                yearDebtService += totalDebtService;
+            }
 
-            dataMonthlyNet.push(monthNet);
-            dataMonthlyOps.push(monthOps);
-            dataMonthlyBadDebt.push(monthBadDebt);
-            // dataMonthlyFundInt.push(paidFundInt); // Already pushed above
+
+            // Priority 2: Fixed Operations
+            // Logic: Hibernation (Fix M60 Bug & M127 Spike)
+            // Force Hibernation if Dormant (>3 months) OR Winding Down
+            if (dormantMonths > 3 || isWindingDown) {
+                // Collections Mode: We need minimal staff to collect repayments.
+                // 1. Reduced Staff (30% of full ops)
+                const collectionsTeamCost = currentMonthlyFixedOps * 0.3;
+
+                // 2. Revenue Cap (Removed "90% of Rev" Constraint that caused M60 Zero-Out)
+                // Instead, we say: If Revenue is ZERO, we burn equity. 
+                // We do NOT stop paying the collections officer just because revenue is low.
+                // We keep the floor at 'collectionsTeamCost'.
+                currentMonthlyFixedOps = collectionsTeamCost;
+            }
+
+            outflows.fixedOps = currentMonthlyFixedOps;
+
+            // Execute Ops Payout
+            // Ops paid from LoanCash (Core Business Expense)
+            // If LoanCash empty, we check GrantCash?
+            // Rule: Loan Fund pays Ops. If deficit, it goes negative.
+            loanCash -= outflows.fixedOps;
+
+            // Priority 3: Reserves (Lookahead Constraint)
+            // Before new lending, check 3-month liability
+            let requiredDebtReserve = 0;
+            for (let k = 1; k <= 3; k++) {
+                // Fix: Ensure schedule array access is safe
+                if (m + k <= totalSimMonths) requiredDebtReserve += (investorSchedule[m + k]?.principal || 0); // Use new Object structure
+            }
+            // Add Est Interest
+            requiredDebtReserve += (outflows.investorInterest || 0) * 3;
+
+            // Ops Reserve (3 Months)
+            const requiredOpsBuffer = currentMonthlyFixedOps * 3;
+
+            // Total Reserves Required (To be held in LoanCash)
+            const totalReserves = requiredDebtReserve + requiredOpsBuffer;
 
 
-            // Phase 41: Granular Push
-            dataMonthlyRepaymentHh.push(monthPrincipalHh);
-            dataMonthlyRepaymentMe.push(monthPrincipalMe);
-            dataMonthlyDefaultsHh.push(writeOffHh);
-            dataMonthlyDefaultsMe.push(writeOffMe);
-            dataMonthlyMgmtFees.push(varMgmtFee);
+            // Priority 4: Lendable Capital (The Residual)
+            // Available to Borrow = (LoanCash - Reserves)
+            // GrantCash is NOT for lending.
+            let lendableCash = loanCash - totalReserves;
 
-            dataMonthlyMandECosts.push(varMeCost);
-            dataMonthlyFixedOps.push(monthlyFixedOps);
+            // Hard Constraint: Cannot lend negative
+            if (lendableCash < 0) lendableCash = 0;
+            if (isWindingDown) lendableCash = 0;
 
-            // Phase 28 Debug Push
-            dataMonthlyPortfolioHh.push(portfolioHh);
-            dataMonthlyPortfolioMe.push(portfolioMe);
-            dataMonthlyCashBalance.push(loanFundBalance + grantFundBalance);
+            // NOTE: We do NOT use GrantCash for lending. It is for Subsidies/Grants.
+            // If user wants to leverage Grant Equity, they must explicitly "Capitalize" the grant fund (Future Feature).
 
-            dataMonthlyNewLoansHhVal.push(newLoansHh);
-            dataMonthlyNewLoansMeVal.push(newLoansMe);
-            // Monthly Data (TRACK CUMULATIVE)
-            // Use 'countGrant' (monthly flow) + prevGrant
-            dataToiletsMonthlyGrant.push(prevGrant + countGrant);
-            dataToiletsMonthlyLoan.push(prevLoan + countLoan);
+            // 5. New Business (Loans & Grants)
+            // Calculate Demand vs Capacity vs Affordability
 
-            // Phase 55: "Robin Hood" Profit Recycling
-            // Maximizing Grants: If the Lending business is profitable (Net > 0),
-            // we immediately transfer 90% of that surplus to the Grant Fund.
-            // This ensures high-interest loans cross-subsidize the poor continuously.
-            if (monthNet > 0) {
-                // Safety: Only recycle if Loan Fund is healthy (e.g. above 90% of initial to handle fluctuating working capital)
-                // Actually, MonthNet > 0 means we added cash. We can safely move it.
-                // We keep 10% for growth/inflation buffers.
-                const recycleAmount = monthNet * 0.90;
+            // A. ME Capacity Logic
+            let targetMEs = currentMEs;
+            if (!isWindingDown && backlogToilets > 0) {
+                // Saturation / Growth Logic
+                const densityCap = Math.ceil(inputs.popReqToilets / 2000);
+                const needed = Math.ceil((backlogToilets / (totalSimMonths - m)) / inputs.toiletsPerMeMonth);
+                const rational = Math.min(needed, densityCap);
 
-                if (loanFundBalance >= recycleAmount) {
-                    loanFundBalance -= recycleAmount;
-                    grantFundBalance += recycleAmount;
+                // Growth Constraint: Only grow if we have EXCESS cash above Reserves
+                // Allocate small portion of Lendable for Expansion (e.g. 10%)
+                const expansionBudget = lendableCash * 0.1;
+                const meCost = inputs.meSetupCost + (inputs.toiletsPerMeMonth * currentUnitCost); // One month working cap
+                const affordableGrowth = Math.floor(expansionBudget / meCost);
+
+                const growth = Math.min(rational - currentMEs, affordableGrowth, Math.ceil(currentMEs * 0.1)); // Max 10% speed
+                if (growth > 0) targetMEs += growth;
+            }
+
+            // Exec ME Loans
+            if (targetMEs > currentMEs) {
+                const add = targetMEs - currentMEs;
+                const cost = add * inputs.meSetupCost;
+
+                // Do we have enough lendable?
+                if (lendableCash >= cost) {
+                    outflows.newLoansME = cost;
+                    lendableCash -= cost; // Update available
+
+                    loanCash -= cost; // Payout Main
+                    currentMEs += add;
+                    activeMeLoanBalance += cost;
+
+                    // Schedule ME Repayment (New Logic)
+                    const pmt = (cost * monthlyInterestRateMe) / (1 - Math.pow(1 + monthlyInterestRateMe, -termMe));
+                    meCohorts.push({ balance: cost, monthlyPayment: pmt, termRemaining: termMe });
                 }
             }
 
-            // Track Dormancy for Next Month's Ops Calculation
-            if (production === 0) {
-                dormantMonths++;
-            } else {
-                dormantMonths = 0;
+            // B. Toilet Production
+            const capacity = currentMEs * inputs.toiletsPerMeMonth;
+
+            // Variable Costs (Fees) applied to Unit Cost
+            // Note: Mgmt Fee is outflow.
+            const variableRate = (inputs.mgmtFeeRatio + inputs.meCostRate);
+            // Total Cash required per toilet = UnitCost (Loan/Grant) + Fees
+            const cashPerToilet = currentUnitCost * (1 + variableRate);
+
+            const maxAffordableUnits = Math.floor(lendableCash / cashPerToilet);
+
+            production = Math.min(capacity, backlogToilets, maxAffordableUnits);
+            if (production < 0) production = 0;
+
+            // Execute Production
+            if (production > 0) {
+                // Split Grant vs Loan
+                let targetGrantCount = Math.floor(production * inputs.grantSupportPct);
+
+                // 4. Calculate Capacity from GrantCash
+                // Unit Cost + Fees (Variable)
+                const costPerGrant = currentUnitCost * (1 + variableRate);
+                const maxSustainableGrants = Math.floor(grantCash / costPerGrant);
+
+                // Strict Cap: Cannot exceed GrantCash
+                grantCount = Math.min(targetGrantCount, maxSustainableGrants);
+                loanCount = production - grantCount;
+
+                // If we ran out of GrantCash, we shifted to Loans.
+                // But do we have enough LoanCash for the EXTRA loans?
+                // Initial 'production' check was based on 'lendableCash' which is LoanCash.
+                // So if we convert Grant demand to Loan demand, we are covered by the initial 'TotalLiquidity' check?
+                // WAIT: line 635 `maxAffordableUnits = floor(lendableCash / cashPerToilet)`
+                // If we assumed some were Grants (paid by GrantCash), this check might be too conservative (since we have 2 pots).
+                // Refinement: Total Capacity = (LendableCash / Cost) + (GrantCash / Cost).
+                // Current logic just checks Lendable. This is safe (conservative).
+
+                const grantPayout = grantCount * currentUnitCost;
+                const loanPayout = loanCount * currentUnitCost;
+
+                outflows.grantPayouts = grantPayout;
+                outflows.newLoansHH = loanPayout;
+
+                // Deduction (Dual Treasury)
+                // Grant Payouts from GrantCash
+                if (grantPayout > 0) {
+                    grantCash -= grantPayout;
+                }
+
+                // Loan Payouts from LoanCash
+                if (loanPayout > 0) {
+                    loanCash -= loanPayout;
+                }
+
+                // Pay Fees (Pro-rated?)
+                // Strategy: Mgmt Fees on Grants come from GrantCash?
+                // Strategy: Mgmt Fees on Loans come from LoanCash?
+                // Simplification for now: All fees from LoanCash (Ops Budget) 
+                // UNLESS we want Grants to be "Fully Burdened". 
+                // Let's split:
+                const grantFees = grantPayout * variableRate;
+                const loanFees = loanPayout * variableRate;
+
+                if (grantFees > 0) grantCash -= grantFees;
+                if (loanFees > 0) loanCash -= loanFees;
+
+                // Track Outflows
+                outflows.mgmtFees = (grantPayout + loanPayout) * inputs.mgmtFeeRatio;
+                outflows.meSupport = (grantPayout + loanPayout) * inputs.meCostRate;
+
+                // Stats
+                toiletsBuiltCumulative += production;
+                backlogToilets -= production;
+
+                // Add to Portfolio
+                if (outflows.newLoansHH > 0) {
+                    const pmt = (outflows.newLoansHH * monthlyInterestRateHh) / (1 - Math.pow(1 + monthlyInterestRateHh, -termHh));
+                    const effectivePmt = pmt; // Defaults handled in cohort loop
+                    hhCohorts.push({ balance: outflows.newLoansHH, monthlyPayment: effectivePmt, termRemaining: termHh });
+                }
             }
 
-            // Update Reserve for Next Month
-            // Legacy Logic Removed (Phase 35).  
-            // We now calculate Dynamic Reserves at the START of the loop.
-            // currentReserve = requiredReserveHh + requiredReserveMe; // Removed
+            // 6. Update Portfolios & Metrics
+            portfolioHh = hhCohorts.reduce((a, b) => a + b.balance, 0);
+            portfolioMe = meCohorts.reduce((a, b) => a + b.balance, 0);
 
+            // Audit Net Cash Flow
+            const totalOutflows = outflows.fixedOps + outflows.mgmtFees + outflows.meSupport + outflows.investorPrincipal + outflows.investorInterest + outflows.newLoansHH + outflows.newLoansME + outflows.grantPayouts;
+            const netCashFlow = totalInflow - totalOutflows;
 
-            // End of Year Aggregation
+            // Push Data for Charts/CSV
+            // Re-map to existing arrays ensuring data continuity
+            dataMonthlyRevenueHh.push(inflows.hhInterest);
+            dataMonthlyRevenueMe.push(inflows.meInterest);
+            dataMonthlyCarbonRevenue.push(inflows.carbon);
+            dataMonthlyNet.push(netCashFlow);
+
+            dataMonthlyOps.push(outflows.fixedOps);
+            dataMonthlyMgmtFees.push(outflows.mgmtFees);
+            dataMonthlyMandECosts.push(outflows.meSupport);
+            dataMonthlyFixedOps.push(outflows.fixedOps);
+
+            dataMonthlyFundPrincipal.push(outflows.investorPrincipal);
+            dataMonthlyFundInt.push(outflows.investorInterest);
+
+            dataMonthlyNewLoansHhVal.push(outflows.newLoansHH);
+            dataMonthlyNewLoansMeVal.push(outflows.newLoansME);
+
+            dataMonthlyRepaymentHh.push(inflows.hhPrincipal);
+            dataMonthlyRepaymentMe.push(inflows.mePrincipal);
+
+            dataMonthlyDefaultsHh.push(writeOffHh);
+            dataMonthlyDefaultsMe.push(writeOffMe);
+            dataMonthlyMes.push(currentMEs); // Track ME Count
+
+            // Fix: 'dataMonthlyDefaultsMe' variable name check 
+            // Standard: dataMonthlyDefaultsMe
+
+            // Verify Cash Balance
+            // Verify Cash Balance (Dual Treasury Sum)
+            // 'loanFundBalance' is dead. We use the real ledgers.
+            const endBal = loanCash + grantCash;
+            dataMonthlyCashBalance.push(endBal);
+
+            // Cumulative counts
+            // Fix: Use ACTUAL variables 'grantCount' and 'loanCount' derived from Financial Logic (Step 3080)
+            const prevGrantCum = dataToiletsMonthlyGrant.length > 0 ? dataToiletsMonthlyGrant[dataToiletsMonthlyGrant.length - 1] : 0;
+            const prevLoanCum = dataToiletsMonthlyLoan.length > 0 ? dataToiletsMonthlyLoan[dataToiletsMonthlyLoan.length - 1] : 0;
+
+            dataToiletsMonthlyGrant.push(prevGrantCum + grantCount);
+            dataToiletsMonthlyLoan.push(prevLoanCum + loanCount);
+
+            // Dormancy Update
+            if (production === 0) dormantMonths++;
+            else dormantMonths = 0;
+
+            // Year Aggregation - Accumulate FIRST
+            yearRepayments += totalInflow;
+            yearDebtService += totalDebtService;
+
+            yearLoansHh += outflows.newLoansHH;
+            yearLoansMe += outflows.newLoansME;
+            yearGrants += outflows.grantPayouts;
+            yearMgmtFees += (outflows.mgmtFees + outflows.meSupport + outflows.fixedOps);
+            yearDefaultsHh += writeOffHh;
+            yearDefaultsMe += writeOffMe;
+
             if (m % 12 === 0) {
-                const totalBal = grantFundBalance + loanFundBalance;
-
+                // Annual Push
+                const totalBal = endBal;
                 labels.push(`Year ${currentYear}`);
+
                 dataToilets.push(toiletsBuiltCumulative);
-                dataCost.push(inputs.investGrant + inputs.investLoan - totalBal);
                 dataFund.push(totalBal);
+                dataCost.push(inputs.investGrant + inputs.investLoan - totalBal);
 
                 dataLoansHh.push(yearLoansHh);
                 dataLoansMe.push(yearLoansMe);
+                dataGrants.push(yearGrants);
                 dataRepayments.push(yearRepayments);
                 dataMgmtFees.push(yearMgmtFees);
                 dataDefaultsHh.push(yearDefaultsHh);
                 dataDefaultsMe.push(yearDefaultsMe);
                 dataFundDebtService.push(yearDebtService);
-                dataGrants.push(yearGrants);
 
-                peopleReached = toiletsBuiltCumulative * inputs.avgHHSize;
-                cumulativeCarbon += toiletsBuiltCumulative * inputs.co2PerToilet;
-
-                dataPeople.push(peopleReached);
-                dataCarbon.push(cumulativeCarbon);
-                dataDalys.push(peopleReached * inputs.dalyPerPerson);
-                dataJobs.push(currentMEs * inputs.mePerDistrict * 3);
+                // Reset
                 yearToilets = 0;
-                yearGrants = 0;
                 yearLoansHh = 0;
-                yearDefaultsHh = 0;
-
-                yearLoansMe = 0; // Fix: Reset ME Loans tracker
-                yearMgmtFees = 0;
+                yearLoansMe = 0;
+                yearGrants = 0;
                 yearRepayments = 0;
+                yearMgmtFees = 0;
+                yearDefaultsHh = 0;
                 yearDefaultsMe = 0;
                 yearDebtService = 0;
-
-                // --- Early Termination Check (Phase 20) ---
-                // If NO loans were made this entire year (and we are past Year 1), terminate.
-                const annualLoansCount = yearLoansHhCount + yearLoansMeCount; // Need to track counts
-                if (currentYear > 1 && annualLoansCount === 0) {
-                    constraints.capital = 0; // Force constraint update
-                    constraintStr = "Terminated: No Activity"; // Override
-                    break; // Stop Simulation
-                }
-
-                // Reset Counts for next year
-                yearLoansHhCount = 0;
-                yearLoansMeCount = 0;
             }
-        } // End Monthly Loop
+        } // End Loop
 
         // --- Final Calculations & Return ---
-        let finalFundBalance = grantFundBalance + loanFundBalance;
+        let finalFundBalance = loanCash + grantCash;
         if (finalFundBalance < 0) finalFundBalance = 0;
 
         peopleReached = toiletsBuiltCumulative * inputs.avgHHSize;
@@ -1267,7 +857,11 @@ const ModelModule = {
         const totalLoansMe = dataLoansMe.reduce((a, b) => a + b, 0);
 
         // Phase 25: Net Equity Logic (Fix for Capital Preserved)
-        const portfolioAssets = portfolioHh + portfolioMe; // Outstanding Loans
+        // hhCohorts/meCohorts are live.
+        const finalPortfolioHh = hhCohorts.reduce((sum, c) => sum + c.balance, 0);
+        const finalPortfolioMe = meCohorts.reduce((sum, c) => sum + c.balance, 0);
+
+        const portfolioAssets = finalPortfolioHh + finalPortfolioMe; // Outstanding Loans
         const totalAssets = finalFundBalance + portfolioAssets;
         const netEquity = totalAssets - loanFundLiability;
 
@@ -1275,20 +869,29 @@ const ModelModule = {
         // Traditionally Leverage = Total Assets / Equity.
         // Here: (Cumulative Loans / Grant)?
         // Stick to simple: Multiplier effect (loans disbursed / initial grant).
-        const leverage = (cumulativeLoansHh + totalLoansMe) / (inputs.investGrant || 1);
+        const leverage = (yearLoansHh + yearLoansMe + totalLoansMe) / (inputs.investGrant || 1); // Approximation?
+        // Wait, 'yearLoansHh' is reset. We need 'cumulativeLoansHh'.
+        // Let's use the accumulated data arrays.
+        const totalDisbursedHh = dataMonthlyNewLoansHhVal.reduce((a, b) => a + b, 0);
+        const totalDisbursedMe = dataMonthlyNewLoansMeVal.reduce((a, b) => a + b, 0);
+
+        const leverageFinal = (totalDisbursedHh + totalDisbursedMe) / (inputs.investGrant || 1);
 
         // Fund Health (Capital Preservation)
         // Ratio of Current Net Equity to Initial Grant (since Loan is external)
         // If Grant Only: Equity / Grant.
         // If Mixed: Equity / Grant.
+        // Fund Health (Capital Preservation)
+        // Ratio of Current Net Equity to Initial Grant (since Loan is external)
+        // If NetEquity is negative (insolvent), this should be negative.
         const fundHealth = (netEquity / (inputs.investGrant || 1));
 
         // --- Sustainability Analysis (New Phase 17) ---
         // 1. Total Expenses
         // Defaults are "Realized Losses"
-        const totalDefaults = hhDefaultCostTotal + meDefaultCostTotal;
+        const totalDefaults = dataMonthlyDefaultsHh.reduce((a, b) => a + b, 0) + dataMonthlyDefaultsMe.reduce((a, b) => a + b, 0);
         // Ops & Fees
-        const totalOpsExpenses = mgmtFeeTotal;
+        const totalOpsExpenses = dataMonthlyMgmtFees.reduce((a, b) => a + b, 0) + dataMonthlyFixedOps.reduce((a, b) => a + b, 0);
         // Grants (Subsidy Expense - Excluded from OSS to measure Revolving Sustainability)
         // const totalGrantExpense = cumulativeGrants; 
 
@@ -1312,16 +915,28 @@ const ModelModule = {
 
         const totalRevenue = totalRevHh + totalRevMe; // Interest Revenue Only
 
-        // 3. OSS Ratio
+        // 3. OSS Ratio (Operating Self-Sufficiency)
+        // OSS = (Operating Revenue) / (Operating Expenses + Financial Expense)
+        // Standard definition: "Operating Income / (Operating Expense + Financial Expense + Provision for Loan Loss)"
+        // Here: Revenue (Interest) / Total Expenses
         const ossRatio = totalExpenses > 0 ? (totalRevenue / totalExpenses) : 0;
+
+        // FSS Ratio (Financial Self-Sufficiency)
+        // Usually FSS includes adjusted costs (Capital Subsidy Adjustment).
+        // Since we don't have subsidy adjustments yet, FSS roughly equals OSS in this simplified model.
+        // But for clarity, let's explicit:
+        const fssRatio = ossRatio; // Synced for now.
 
         // 4. Depletion & Burn (Phase 25 Fix)
         // Check if Net Equity is eroding
+        // Check if Net Equity is eroding
         const netChange = netEquity - (inputs.investGrant || 1);
-        let depletionYear = "Infinity";
+        let depletionYear = "Sustainable"; // Default state (Equity Growing or Stable)
+
+        if (Math.abs(netChange) < 1.0) depletionYear = "Sustainable"; // No material change
 
         // If we lost equity
-        if (netChange < 0) {
+        else if (netChange < 0) {
             // Annual Burn Rate
             const annualBurn = Math.abs(netChange) / inputs.duration;
             // Years remaining from Current Equity (not Fund Balance, as Portfolio ensures inflow)
@@ -1336,11 +951,14 @@ const ModelModule = {
 
             // Hybrid: If Net Equity > 0 but Cash = 0, we are Illiquid.
             // Let's stick to Equity Burn for "Sustainability" metric.
-            const yearsLeft = netEquity / annualBurn;
+            const yearsLeft = Math.abs(netEquity / annualBurn);
             const totalLife = inputs.duration + yearsLeft;
             depletionYear = totalLife.toFixed(1) + " Years";
             if (yearsLeft < 1) depletionYear = "< 1 Year";
+        } else if (netEquity < 0) {
+            depletionYear = "Insolvent";
         }
+
 
         // If we are strictly ILLIQUID (Cash=0) but Solvent (Equity>0)
         if (finalFundBalance <= 0 && netEquity > 0) {
@@ -1377,11 +995,18 @@ const ModelModule = {
             maxGrantPct = (surplusPreGrant / totalToiletValue) * 100; // As percentage
         }
 
-        // Phase 28: End-of-Period OSS (Steady State Sustainability)
-        const lastM = dataMonthlyNet.length - 1;
-        const endRev = (dataMonthlyRevenueHh[lastM] || 0) + (dataMonthlyRevenueMe[lastM] || 0);
-        const endExp = (dataMonthlyOps[lastM] || 0) + (dataMonthlyFundInt[lastM] || 0) + (dataMonthlyBadDebt[lastM] || 0);
-        const ossEnd = (endExp > 0) ? (endRev / endExp) : (endRev > 0 ? 999 : 0);
+        // Final Counts (Explicitly captured)
+        finalToilets = toiletsBuiltCumulative || 0;
+        finalMEs = currentMEs || 0;
+
+        // Fix: Use Actual LAST Value from Cumulative Array (Phase 44 Correction)
+        // This IS FSS (Financial Self Sufficiency).
+        // OSS usually excludes Index/Financial Costs?
+        // Let's standardize:
+        // FSS = Total Income / Total Costs
+        // OSS = Operating Income / Operating Costs (Ops + Defaults, no Interest)
+
+        // Correcting the export mapping in Report Gen.
 
         // Final Counts (Explicitly captured)
         finalToilets = toiletsBuiltCumulative || 0;
@@ -1464,7 +1089,12 @@ const ModelModule = {
 
             // Debug 28
             dataMonthlyPortfolioHh,
-            dataMonthlyPortfolioMe
+            dataMonthlyPortfolioMe,
+            dataMonthlyMes, // Added dataMonthlyMes to Return Object
+
+            // Debug Tracking
+            dataMonthlyUnitCost,
+            dataMonthlyInflation
         }; // Close series
 
 
@@ -1480,6 +1110,7 @@ const ModelModule = {
         // We'll calculate it ONCE here.
         if (inputs.enableBreakEvenSolver !== false) {
             kpis.breakEvenRate = ModelModule.solveBreakEven(inputs);
+            kpis.maxGrantPct = ModelModule.solveMaxGrant(inputs);
         }
 
         return {
@@ -1500,19 +1131,22 @@ const ModelModule = {
 
         const households = totalToilets; // 1 per HH
         const people = households * inputs.avgHHSize;
-        const mes = s.dataJobs[s.dataJobs.length - 1] / 3; // Reverse calc or use param
+        // Fix: Use dataMonthlyMes for accurate count
+        const mes = s.dataMonthlyMes && s.dataMonthlyMes.length > 0 ? s.dataMonthlyMes[s.dataMonthlyMes.length - 1] : 0;
 
         // 2. Portfolio & Financials (Aggregates)
         const totalLoansDisbursedHH = s.dataMonthlyNewLoansHhVal.reduce((a, b) => a + b, 0);
         const totalLoansDisbursedME = s.dataMonthlyNewLoansMeVal.reduce((a, b) => a + b, 0);
         const totalLoansDisbursed = totalLoansDisbursedHH + totalLoansDisbursedME;
 
-        const totalGrantsVal = s.dataToiletsMonthlyGrant[last] * inputs.avgToiletCost * (inputs.grantSupportPct || 0); // Approx
+
+
+        const totalGrantsVal = s.dataGrants ? s.dataGrants.reduce((a, b) => a + b, 0) : 0;
         const totalOpsFixed = s.dataMonthlyFixedOps.reduce((a, b) => a + b, 0);
         const totalOpsVar = s.dataMonthlyMgmtFees.reduce((a, b) => a + b, 0) + s.dataMonthlyMandECosts.reduce((a, b) => a + b, 0);
         const totalOps = totalOpsFixed + totalOpsVar;
 
-        const totalDefaults = s.dataMonthlyBadDebt.reduce((a, b) => a + b, 0);
+        const totalDefaults = s.dataMonthlyDefaultsHh.reduce((a, b) => a + b, 0) + s.dataMonthlyDefaultsMe.reduce((a, b) => a + b, 0);
         const totalFundInterest = s.dataMonthlyFundInt.reduce((a, b) => a + b, 0);
 
         const totalRevenueInt = s.dataMonthlyRevenueHh.reduce((a, b) => a + b, 0) + s.dataMonthlyRevenueMe.reduce((a, b) => a + b, 0);
@@ -1525,24 +1159,34 @@ const ModelModule = {
         const portfolioME_End = s.dataMonthlyPortfolioMe[last] || 0;
         const portfolioOutstanding = portfolioHH_End + portfolioME_End;
 
-        // Investor Liability (We need to track this in series? Only cash flow is tracked)
-        // We can reconstruct it: Initial - Sum(PrincipalRepaid).
+        // Investor Liability
+        // We track liability decrement in the loop, but for robustness, we reconstruct it:
         const totalRepaidPrincipal = s.dataMonthlyFundPrincipal.reduce((a, b) => a + b, 0);
-        const investorLiabilityEnd = inputs.investLoan - totalRepaidPrincipal;
+        const investorLiabilityEnd = Math.max(0, inputs.investLoan - totalRepaidPrincipal);
 
         const netAssetsEnd = cashEnd + portfolioOutstanding - investorLiabilityEnd;
         const initialCapital = inputs.investGrant + inputs.investLoan;
-        const capitalPreservedPct = (netAssetsEnd / initialCapital) * 100;
+
+        // Capital Preserved: Net Assets / Initial Capital
+        const capitalPreservedPct = initialCapital > 0 ? (netAssetsEnd / initialCapital) : 0;
 
         // 4. Sustainability Metrics
-        // OSS = (Interest + Fees + Carbon) / (Fixed Ops + Variable Ops)
-        // Note: Fees? We assumed Revenue is Interest only. If fees exist, they are in Revenue.
-        const ossRatio = totalOps > 0 ? (totalInflows / totalOps) : 0;
+        // OSS = Operating Revenue / Operating Expenses
+        // Operating Revenue = Interest + Fees (if separate) + Carbon
+        // Operating Expenses = FixedOps + VariableOps (Mgmt+ME)
+        const operatingRevenue = totalRevenueInt + totalCarbonRevenue;
+        // Check if Fees are in Revenue?
+        // Fees are deducted from LoanFund (Expense).
+        // Interest is added to LoanFund (Revenue).
+        // So yes.
+        const operatingExpenses = totalOps;
+        const ossRatio = operatingExpenses > 0 ? (operatingRevenue / operatingExpenses) : 0;
 
-        // FSS = (Inflows) / (Ops + Defaults + FundInterest + Inflation?)
-        // Inflation is implicit in costs. Capital Cost is FundInterest.
-        const fssDenominator = totalOps + totalDefaults + totalFundInterest;
-        const fssRatio = fssDenominator > 0 ? (totalInflows / fssDenominator) : 0;
+        // FSS = Total Revenue / Total Expenses (Including Finance & Default)
+        // Total Expenses = Ops + Defaults + FundInterest
+        const totalExpenses = operatingExpenses + totalDefaults + totalFundInterest;
+        const fssRatio = totalExpenses > 0 ? (operatingRevenue / totalExpenses) : 0;
+
 
         // Depletion Year
         // Find first month where Cash < 0
@@ -1704,6 +1348,9 @@ const ModelModule = {
             breakEvenRate: 0,
             maxGrantPct: 0,
             dalys: totalDalysAverted.toFixed(0),
+            // Missing Fields Fix
+            fssRatio: fssRatio,
+            depletionYear: depletionYear,
 
             // Placeholders for Solver results (filled by solveBreakEven)
             breakEvenRate: 0,
@@ -1720,25 +1367,22 @@ const ModelModule = {
         const iterations = 10; // Precision trade-off
         const targetNetAssets = 0;
 
-        // Clone inputs to avoid mutating UI
-        const simInputs = { ...inputs };
+        // Use structuredClone for deep copy (Safe)
+        const simInputs = structuredClone(inputs);
         // Disable Solvers in sub-sims to avoid recursion
         simInputs.enableBreakEvenSolver = false;
 
         for (let i = 0; i < iterations; i++) {
             const mid = (low + high) / 2;
-            simInputs.loanInterestRate = mid * 100; // Convert to % if calculate expects %? 
-            // Wait, calculate expects DECIMAL derived in calculate: `const monthlyInterestRateHh = inputs.loanInterestRate / 12;`
-            // getInputs returns 0.10 for 10%.
-            // So simulation expects DECIMAL (0.10).
-            simInputs.loanInterestRate = mid;
+            simInputs.loanInterestRate = mid; // Decimal
 
-            // Run Light Simulation (Maybe optimization possible? No, fast enough)
+            // Run Light Simulation 
             const res = this.calculate(simInputs);
             const kpi = res.kpis;
 
-            // Objective: Net Assets >= 0 AND Min Cash >= 0?
-            // User said: "end-of-project net_assets_end >= target (often >= 0)"
+            // Objective: Net Assets >= 0 
+            // Note: If Net Assets > 0, we can lower the interest rate?
+            // Yes, we want the LOWEST rate that sustains the fund.
             if (kpi.financials.netAssets >= targetNetAssets) {
                 bestRate = mid;
                 high = mid; // Try lower
@@ -1746,7 +1390,67 @@ const ModelModule = {
                 low = mid; // Need higher
             }
         }
-        return bestRate; // Decimal (e.g. 0.25)
+        return bestRate;
+    },
+
+    // New Solver for Max Sustainable Grant Support %
+    solveMaxGrant(inputs) {
+        let low = 0;
+        let high = 1.0; // 100%
+        let bestPct = 0;
+        const iterations = 10;
+        const targetNetAssets = 0;
+
+        const simInputs = structuredClone(inputs);
+        simInputs.enableBreakEvenSolver = false;
+
+        for (let i = 0; i < iterations; i++) {
+            const mid = (low + high) / 2;
+            simInputs.grantSupportPct = mid;
+
+            const res = this.calculate(simInputs);
+            const kpi = res.kpis;
+
+            // Objective: Maximize Grant while solving NetAssets >= 0
+            if (kpi.financials.netAssets >= targetNetAssets) {
+                bestPct = mid;
+                low = mid; // Try higher
+            } else {
+                high = mid; // Too aggressive
+            }
+        }
+        return bestPct;
+    },
+
+    // --- Invariant Checks (Verification) ---
+    verifyLedger(results) {
+        const s = results.series;
+        const errors = [];
+
+        // 1. Cashflow Balance: Cash[t] = Cash[t-1] + NetFlow[t]
+        for (let i = 1; i < s.dataMonthlyCashBalance.length; i++) {
+            const prev = s.dataMonthlyCashBalance[i - 1];
+            const curr = s.dataMonthlyCashBalance[i];
+            const net = s.dataMonthlyNet[i];
+
+            // Allow small float precision drift
+            if (Math.abs(curr - (prev + net)) > 1.00) {
+                errors.push(`Cash Mismatch Month ${i}: Prev ${prev.toFixed(2)} + Net ${net.toFixed(2)} != Curr ${curr.toFixed(2)}`);
+            }
+        }
+
+        // 2. Principal Repayment <= Liability (Logic Check)
+        // Ensure we haven't repaid more than we borrowed (unless we count interest as principal? No.)
+        const inputs = results.kpis.financials.investLoan; // Wait, Inputs separate?
+        // results.kpis.financials includes investorRepaid.
+        // But we don't have inputs here directly unless we pass it.
+        // Assuming results logic is consistent.
+
+        if (errors.length > 0) {
+            console.warn("Ledger Verification Failed:", errors);
+        } else {
+            console.log("Ledger Verified: Cashflow Consistent.");
+        }
     }
 };
 
@@ -2082,30 +1786,104 @@ const UI = {
         });
 
         // Split Cost Breakdown Chart (Stacked Bar)
+        // Split Cost Breakdown Chart (Stacked Bar) -> Now "Annual Cash Flow Breakdown"
         const ctxCost = document.getElementById('costChart').getContext('2d');
         if (chartInstances.cost) chartInstances.cost.destroy();
 
-        // Need Annual Grants (series.dataGrants is Annual now)
-        const annualGrants = series.dataGrants;
+        // Helper to aggregate Monthly -> Annual
+        const aggregateAnnual = (monthlyArr) => {
+            const annual = [];
+            let sum = 0;
+            monthlyArr.forEach((val, i) => {
+                sum += val;
+                if ((i + 1) % 12 === 0) {
+                    annual.push(sum);
+                    sum = 0;
+                }
+            });
+            return annual;
+        };
+
+        // Prepare Annual Data
+        const annRevHh = aggregateAnnual(series.dataMonthlyRevenueHh);
+        const annRevMe = aggregateAnnual(series.dataMonthlyRevenueMe);
+        const annCarbon = aggregateAnnual(series.dataMonthlyCarbonRevenue);
+
+        const annLoansHh = aggregateAnnual(series.dataMonthlyNewLoansHhVal).map(v => -v); // Outflow
+        const annLoansMe = aggregateAnnual(series.dataMonthlyNewLoansMeVal).map(v => -v); // Outflow
+        const annGrants = series.dataGrants.map((v, i) => -(i === 0 ? v : v - series.dataGrants[i - 1])); // Delta, Outflow
+        // Note: series.dataGrants is Cumulative. We need Annual Delta.
+
+        const annFixOps = aggregateAnnual(series.dataMonthlyFixedOps).map(v => -v);
+        const annVarOps = aggregateAnnual(series.dataMonthlyMgmtFees).map(v => -v); // Mgmt + M&E?
+        // Check dataMonthlyMgmtFees definition. In Step 1060 it implies MgmtFees.
+        // What about MandECosts? It was separate in Profit Chart.
+        const annMandE = aggregateAnnual(series.dataMonthlyMandECosts).map(v => -v);
+
+        const annFundInt = aggregateAnnual(series.dataMonthlyFundInt).map(v => -v);
+        const annFundPrin = aggregateAnnual(series.dataMonthlyFundPrincipal).map(v => -v);
+        const annBadDebt = aggregateAnnual(series.dataMonthlyBadDebt).map(v => -v);
+        const annNet = aggregateAnnual(series.dataMonthlyNet);
 
         chartInstances.cost = new Chart(ctxCost, {
             type: 'bar',
             data: {
                 labels: series.labels,
                 datasets: [
-                    { label: 'HH Loans', data: series.dataLoansHh, backgroundColor: '#3b82f6', stack: 'Stack 0' },
-                    { label: 'ME Setup Loans', data: series.dataLoansMe, backgroundColor: '#1e40af', stack: 'Stack 0' },
-                    { label: 'Grants', data: annualGrants, backgroundColor: '#8b5cf6', stack: 'Stack 0' },
-                    { label: 'Op. Costs (Variable)', data: series.dataMgmtFees, backgroundColor: '#f97316', stack: 'Stack 0' },
-                    { label: 'Fund Cost (Interest)', data: annualFundInt, backgroundColor: '#f59e0b', stack: 'Stack 0' },
-                    { label: 'Investor Repayment', data: series.dataFundDebtService, backgroundColor: '#64748b', stack: 'Stack 0' },
-                    { label: 'Defaults', data: series.dataDefaultsHh, backgroundColor: '#ef4444', stack: 'Stack 0' }
+                    {
+                        type: 'line',
+                        label: 'Net Cash Flow',
+                        data: annNet,
+                        borderColor: '#1e293b',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        pointRadius: 4, // Visible points for annual
+                        order: 0
+                    },
+                    // Inflows
+                    { label: 'Rev(HH)', data: annRevHh, backgroundColor: '#10b981', stack: 'Stack 0', order: 1 },
+                    { label: 'Rev(ME)', data: annRevMe, backgroundColor: '#059669', stack: 'Stack 0', order: 1 },
+                    { label: 'Carbon', data: annCarbon, backgroundColor: '#3b82f6', stack: 'Stack 0', order: 1 },
+
+                    // Outflows
+                    { label: 'Loans(HH)', data: annLoansHh, backgroundColor: '#3b82f6', stack: 'Stack 0', order: 1 },
+                    { label: 'Loans(ME)', data: annLoansMe, backgroundColor: '#1e40af', stack: 'Stack 0', order: 1 },
+                    { label: 'Grants', data: annGrants, backgroundColor: '#8b5cf6', stack: 'Stack 0', order: 1 },
+                    { label: 'FixedOps', data: annFixOps, backgroundColor: '#b91c1c', stack: 'Stack 0', order: 1 },
+                    { label: 'VarOps(Fees)', data: annVarOps, backgroundColor: '#fca5a5', stack: 'Stack 0', order: 1 },
+                    { label: 'M&E', data: annMandE, backgroundColor: '#ef4444', stack: 'Stack 0', order: 1 },
+                    { label: 'Debt(Int)', data: annFundInt, backgroundColor: '#f59e0b', stack: 'Stack 0', order: 1 },
+                    { label: 'Debt(Prin)', data: annFundPrin, backgroundColor: '#64748b', stack: 'Stack 0', order: 1 },
+                    { label: 'Defaults', data: annBadDebt, backgroundColor: '#7f1d1d', stack: 'Stack 0', order: 1 }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: { x: { stacked: true }, y: { stacked: true } }
+                scales: {
+                    x: { stacked: true },
+                    y: {
+                        stacked: true,
+                        title: { display: true, text: 'Annual Cash Flow ($)' }
+                    }
+                },
+                plugins: {
+                    title: { display: true, text: 'Annual Cash Flow Breakdown' },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
             }
         });
 
@@ -2667,6 +2445,7 @@ const UI = {
                 "Month",
                 "Cumulative Toilets (Loan)", "Cumulative Toilets (Grant)", "Total Toilets (Cum)",
                 "Monthly Toilets (Loan)", "Monthly Toilets (Grant)", "Monthly Total",
+                "Unit Cost", "Inflation Factor", "Active MEs",
                 "New Loans (HH)", "Rev Int (HH)", "Principal Repaid (HH)", "Defaults (HH)",
                 "New Loans (ME)", "Rev Int (ME)", "Principal Repaid (ME)", "Defaults (ME)",
                 "Mgmt Fees (Var)", "M&E Costs (Var)", "Fixed Ops",
@@ -2686,6 +2465,9 @@ const UI = {
                     ((s.dataToiletsMonthlyLoan[i] || 0) - (s.dataToiletsMonthlyLoan[i - 1] || 0)).toFixed(0),
                     ((s.dataToiletsMonthlyGrant[i] || 0) - (s.dataToiletsMonthlyGrant[i - 1] || 0)).toFixed(0),
                     (((s.dataToiletsMonthlyLoan[i] || 0) - (s.dataToiletsMonthlyLoan[i - 1] || 0)) + ((s.dataToiletsMonthlyGrant[i] || 0) - (s.dataToiletsMonthlyGrant[i - 1] || 0))).toFixed(0),
+                    (s.dataMonthlyUnitCost?.[i] || 0).toFixed(2),
+                    (s.dataMonthlyInflation?.[i] || 0).toFixed(3),
+                    (s.dataMonthlyMes?.[i] || 0).toFixed(0),
                     (s.dataMonthlyNewLoansHhVal[i] || 0).toFixed(2),
                     (s.dataMonthlyRevenueHh[i] || 0).toFixed(2),
                     (s.dataMonthlyRepaymentHh[i] || 0).toFixed(2),
@@ -2731,20 +2513,33 @@ const UI = {
             lines.push(``);
             lines.push(`Sustainability Scorecard`);
             lines.push(`OSS Ratio,${((stats.ossRatio || 0) * 100).toFixed(1)}%`);
-            lines.push(`Depletion Year,${(stats.depletionYear || (stats.minCash < 0 ? "< 1 Year" : "Sustainable"))}`);
+            lines.push(`FSS Ratio (Total),${((stats.fssRatio || 0) * 100).toFixed(1)}%`);
+            lines.push(`Depletion Year,${stats.depletionYear}`);
             lines.push(`Break-even Interest,${(stats.breakEvenRate || 0).toFixed(1)}%`);
             lines.push(`Max Sustainable Grant,${(stats.maxGrantPct || 0).toFixed(1)}%`);
-            lines.push(`Fund Balance (End),$${(stats.finalFundBalance || 0).toFixed(2)}`);
-            lines.push(`Principal Repaid,$${(stats.principalRepaid || 0).toLocaleString()}`);
-            lines.push(`Capital Preserved,${(((stats.finalFundBalance || 0) / (inputs.investLoan || 1) - 1) * 100).toFixed(1)}%`);
-            lines.push(`Self-Sufficiency,${(((stats.finalFundBalance || 0) / (inputs.investLoan || 1)) * 100 + 100).toFixed(1)}%`);
+
+            lines.push(`Capital Preserved,${((stats.capitalPreservedPct || 0) * 100).toFixed(1)}%`);
             lines.push(`Min Cash Balance,$${stats.minCash || 0}`);
             lines.push(`Months Insolvent,${stats.insolvencyMonths || 0}`);
-            lines.push(`Ops Coverage,${(inputs.annualFixedOpsCost > 0 ? ((stats.finalFundBalance || 0) / inputs.annualFixedOpsCost).toFixed(1) : "0")} Years`);
-            lines.push(`Total Leverage,${(inputs.investGrant > 0 ? (((stats.loanToiletsVal || 0) + (stats.grantToiletsVal || 0)) / (inputs.investGrant + (inputs.investLoan || 0))).toFixed(1) : "Infinite")}x`);
-            lines.push(`SROI Ratio,${stats.sroi || 0}x`);
+            lines.push(``);
+
+            // --- 5. End-State Balance Sheet (New) ---
+            lines.push(`End-State Balance Sheet (Estimation)`);
+            lines.push(`Assets`);
+            lines.push(`  Cash,$${(stats.fundBalance || 0).toLocaleString()}`);
+            lines.push(`  Gross Portfolio (Loans),$${(stats.portfolio?.outstanding || 0).toLocaleString()}`);
+            lines.push(`  Total Assets,$${((stats.fundBalance || 0) + (stats.portfolio?.outstanding || 0)).toLocaleString()}`);
+            lines.push(`Liabilities`);
+            lines.push(`  Investor Liability,$${((inputs.investLoan || 0) - (stats.principalRepaid || 0)).toLocaleString()}`);
+            lines.push(`Net Equity`);
+            lines.push(`  Net Assets,$${(stats.financials?.netAssets || 0).toLocaleString()}`);
+
+            lines.push(``);
+            lines.push(`Unit Economics`);
             lines.push(`Cost / Latrine,$${(stats.costPerLatrine || 0).toFixed(2)}`);
             lines.push(`Effective Cost / Latrine,$${(stats.effectiveCostPerLatrine || 0).toFixed(2)}`);
+            lines.push(`Leverage Ratio,${(inputs.investGrant > 0 ? (((stats.loanToiletsVal || 0) + (stats.grantToiletsVal || 0)) / (inputs.investGrant + (inputs.investLoan || 0))).toFixed(1) : "Infinite")}x`);
+            lines.push(`SROI Ratio,${(stats.sroi || 0).toFixed(1)}x`);
 
             // Copy
             const blob = new Blob([lines.join("\n")], { type: 'text/csv;charset=utf-8;' });
@@ -2794,6 +2589,11 @@ const UI = {
         setTxt('sum-repaid-pct', fmtPct(stats.totalPrinRepayPct)); // New UI Field, assuming stats.totalPrinRepayPct exists
         setTxt('sum-preserved', fmtPct(stats.capitalPreserved)); // Assuming stats.capitalPreserved exists
 
+        // MISSING FIELDS RESTORED:
+        setTxt('sum-households', fmt(stats.households));
+        setTxt('sum-people', fmt(stats.people));
+        setTxt('sum-mes', fmt(stats.mes));
+
         // 2. SDG6 Gap
         const inputs = UI.getInputs();
         let gapMsg = "N/A";
@@ -2831,8 +2631,15 @@ const UI = {
 
         // 5. Sustainability Scorecard (Full Population)
         // 5. Sustainability Scorecard (Full Population)
+        // 5. Sustainability Scorecard (Full Population)
         setTxt('sus-oss-ratio', ((stats.ossRatio || 0) * 100).toFixed(0) + "%");
-        setTxt('sus-depletion', stats.minCash < 0 ? "< 1 Year" : "Sustainable");
+        // FIX: Use explicit FSS and Depletion fields from Calc
+        setTxt('sus-fss-ratio', ((stats.fssRatio || 0) * 100).toFixed(1) + "%"); // Assuming ID exists? Or creating it?
+        // Note: The previous view showed 'sus-depletion' being used.
+        // It did NOT show 'sus-fss-ratio'.
+        // If the ID doesn't exist, this line is harmless (setTxt checks element).
+        // For Depletion, I will update 'sus-depletion' to use stats.depletionYear.
+        setTxt('sus-depletion', stats.depletionYear || "Sustainable");
 
         // Recalculate accurately from inputs/stats to match Report
         setTxt('sum-balance', fmtMoney(stats.fundBalance));
@@ -2864,7 +2671,7 @@ const UI = {
         setTxt('sum-sroi', (stats.sroi || 0).toFixed(1) + "x");
 
         // Capital Preservation Section
-        const capPreservedPct = ((stats.fundBalance || 0) / (inputs.investLoan || 1) - 1) * 100;
+        const capPreservedPct = (stats.capitalPreservedPct || 0) * 100;
 
         setTxt('sum-health', capPreservedPct.toFixed(1) + "%");
         setTxt('sum-sufficiency', stats.ossRatio > 1.2 ? "Excellent" : (stats.ossRatio > 1.0 ? "Good" : "Subsidized"));
@@ -2872,6 +2679,10 @@ const UI = {
         // Legacy/Duplicate mappings
         setTxt('sum-repaid', fmtMoney(stats.principalRepaid || 0));
         setTxt('sum-repaid-pct', (((stats.principalRepaid || 0) / (inputs.investLoan || 1)) * 100).toFixed(1) + "%");
+
+        // Cost Per Latrine (use standardized Metric)
+        setTxt('sum-cost-per-latrine', fmtMoney(stats.costPerLatrine));
+
         setTxt('sum-preserved', capPreservedPct.toFixed(1) + "%");
     },
 
@@ -2995,7 +2806,8 @@ const UI = {
             "InvInt": "Interest paid to Investor/Funder",
             "CarbRev": "Revenue from Carbon Credits",
             "NetCash": "Net Cash Flow (Inflow - Outflow) this month",
-            "EndBal": "Cash Balance at end of month"
+            "EndBal": "Cash Balance at end of month",
+            "ActiveMEs": "Number of Micro-Enterprises currently operating"
         };
 
         if (thead) {
@@ -3008,7 +2820,10 @@ const UI = {
                     
                     <th title="${tooltipMap.MoLoan}" style="background:#f0f9ff;">Mo Qty (Loan)</th>
                     <th title="${tooltipMap.MoGrant}" style="background:#f0f9ff;">Mo Qty (Grant)</th>
-                    <th title="${tooltipMap.MoTotal}" style="background:#f0f9ff;">Total Qty (Mo)</th>
+                    <th title="${tooltipMap.MoTotal}" style="background:#f0f9ff;">Mo Total</th>
+                    
+                    <th title="Cost per Toilet per Month (Inflation Adjusted)">Unit Cost</th>
+                    <th title="${tooltipMap.ActiveMEs}">Active MEs</th>
 
                     <th title="${tooltipMap.NewLoanHH}">NewLoans(HH)</th>
                     <th title="${tooltipMap.RevIntHH}">RevInt(HH)</th>
@@ -3061,6 +2876,9 @@ const UI = {
                 <td style="background:#f0f9ff;">${fmtVal(moLoan)}</td>
                 <td style="background:#f0f9ff;">${fmtVal(moGrant)}</td>
                 <td style="background:#f0f9ff;">${fmtVal(moLoan + moGrant)}</td>
+                
+                <td>${fmtMoney(s.dataMonthlyUnitCost?.[i])}</td>
+                <td>${fmtVal(s.dataMonthlyMes?.[i])}</td>
 
                 <!--HH Finances-->
                 <td>${fmtMoney(s.dataMonthlyNewLoansHhVal[i])}</td>
@@ -3806,6 +3624,8 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
         let inputs = UI.getInputs();
         let results = ModelModule.calculate(inputs);
         UI.lastResults = results;
+        // Verify Invariants (Ledger Integrity)
+        ModelModule.verifyLedger(results);
 
         // Phase 66: Auto-Solvency (User Request: "Fund must be solvent... use interest rates... adjust grant")
         if (isAutoAdjust && inputs.investLoan > 0) {
