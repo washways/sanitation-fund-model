@@ -238,7 +238,7 @@ const ModelModule = {
         let repaymentInflowsHh = new Array(totalMonths + 24).fill(0); // Granular
         const repaymentInflowsMe = new Array(totalMonths + 60).fill(0); // Granular
         // Reset Global Schedule for ME Cap (Hack for loop persistence)
-        window.mePrincipalSchedule = new Array(360).fill(0);
+        const mePrincipalSchedule = new Array(360).fill(0);
 
         // --- Annual Aggregation Buckets ---
         let labels = [];
@@ -294,6 +294,7 @@ const ModelModule = {
         const dataMonthlyMes = []; // New Tracker for ME Count
         // Phase 49: Carbon Revenue Data
         let dataMonthlyCarbonRevenue = [];
+        let dataMonthlyGrantDisbursed = [];
 
         // Debug Arrays (Capacity Check)
         let dataMonthlyCapacity = [];
@@ -386,6 +387,9 @@ const ModelModule = {
             });
         }
 
+        // Fix: Expose Startup Metrics for M0 Row
+
+
         // Update Lendable (Cash dropped)
         lendableBalance = loanCash - currentReserve;
 
@@ -397,8 +401,7 @@ const ModelModule = {
 
         // --- Pre-Calculation: Investor Repayment Schedule (Generalised) ---
         // Dynamically calculate the Principal Due based on Inputs (Term & Amount).
-        // Localize ME Principle Schedule (Fixes Global Leak)
-        const mePrincipalSchedule = new Array(360).fill(0);
+        // mePrincipalSchedule initialized above (Line 241)
 
         // --- Simulation Loop (Monthly) ---
         for (let m = 1; m <= totalSimMonths; m++) {
@@ -450,9 +453,8 @@ const ModelModule = {
 
             // 3. INFLOWS: Collect Revenue (Interest + Principal + Carbon)
             // A. Carbon
-            const carbonShare = (inputs.carbonCreditShare !== undefined ? inputs.carbonCreditShare : 100) / 100;
-            const carbonRev = (toiletsBuiltCumulative * inputs.co2PerToilet * inputs.co2Value * carbonShare) / 12;
-            inflows.carbon = carbonRev;
+            // A. Carbon (MOVED to after stats to use production)
+            // flows updated in step 6
 
             // B. Loans (Cohorts)
             // Strict Logic: Balance -> Default -> WriteOff -> Interest -> Principal
@@ -534,8 +536,8 @@ const ModelModule = {
             // Update Ledger (Cash Update 1: Inflows)
             // Carbon -> GrantCash (Subsidy Source)
             // Interest/Principal -> LoanCash (Revolving)
-            grantCash += inflows.carbon;
-            const totalInflow = inflows.hhInterest + inflows.hhPrincipal + inflows.meInterest + inflows.mePrincipal + inflows.carbon;
+            // grantCash += inflows.carbon; // Deferred to end of month
+            let totalInflow = inflows.hhInterest + inflows.hhPrincipal + inflows.meInterest + inflows.mePrincipal; // Carbon added later
             loanCash += (inflows.hhInterest + inflows.hhPrincipal + inflows.meInterest + inflows.mePrincipal);
 
 
@@ -551,7 +553,7 @@ const ModelModule = {
                 targetPmt = investorSchedule[m]?.principal || 0; // Fix: Access property of new Object
 
                 // Plus Interest on Outstanding Liability
-                const interestDue = loanFundLiability * monthlyFundCostOfCapital; // Fix: Use geometric rate
+                const interestDue = loanFundLiability * monthlyFundCostOfCapital;
                 outflows.investorInterest = interestDue;
                 outflows.investorPrincipal = targetPmt;
             }
@@ -706,6 +708,7 @@ const ModelModule = {
                 const loanPayout = loanCount * currentUnitCost;
 
                 outflows.grantPayouts = grantPayout;
+                dataMonthlyGrantDisbursed.push(grantPayout);
                 outflows.newLoansHH = loanPayout;
 
                 // Deduction (Dual Treasury)
@@ -746,6 +749,19 @@ const ModelModule = {
                     hhCohorts.push({ balance: outflows.newLoansHH, monthlyPayment: effectivePmt, termRemaining: termHh });
                 }
             }
+
+            // P0: Incremental Carbon Revenue (Calculated after production)
+            const carbonShare = (inputs.carbonCreditShare !== undefined ? inputs.carbonCreditShare : 100) / 100;
+            // User Instruction: monthlyCarbonTons = (monthlyTotalToilets * co2PerToilet) / 1000
+            const monthlyCarbonTons = (production * inputs.co2PerToilet) / 1000;
+            const carbonRev = monthlyCarbonTons * inputs.co2Value * carbonShare;
+
+            inflows.carbon = carbonRev;
+            cumulativeCarbon += monthlyCarbonTons;
+
+            // Add to Cash Flow
+            grantCash += carbonRev;
+            totalInflow += carbonRev;
 
             // 6. Update Portfolios & Metrics
             portfolioHh = hhCohorts.reduce((a, b) => a + b.balance, 0);
@@ -891,7 +907,14 @@ const ModelModule = {
         // Defaults are "Realized Losses"
         const totalDefaults = dataMonthlyDefaultsHh.reduce((a, b) => a + b, 0) + dataMonthlyDefaultsMe.reduce((a, b) => a + b, 0);
         // Ops & Fees
-        const totalOpsExpenses = dataMonthlyMgmtFees.reduce((a, b) => a + b, 0) + dataMonthlyFixedOps.reduce((a, b) => a + b, 0);
+        const totalOpsExpenses = dataMonthlyMgmtFees.reduce((a, b) => a + b, 0)
+            + dataMonthlyMandECosts.reduce((a, b) => a + b, 0)
+            + dataMonthlyFixedOps.reduce((a, b) => a + b, 0);
+
+        // Sanity Check
+        if (dataMonthlyFixedOps.reduce((a, b) => a + b, 0) > 0 && totalOpsExpenses <= dataMonthlyMgmtFees.reduce((a, b) => a + b, 0)) {
+            console.warn("Assertion Failed: Ops Expenses missing components.");
+        }
         // Grants (Subsidy Expense - Excluded from OSS to measure Revolving Sustainability)
         // const totalGrantExpense = cumulativeGrants; 
 
@@ -1058,6 +1081,7 @@ const ModelModule = {
 
             // Monthly Arrays (Granular)
             monthlyLabels,
+            dataMonthlyGrantDisbursed,
             dataToiletsMonthlyGrant,
             dataToiletsMonthlyLoan,
 
@@ -1094,7 +1118,11 @@ const ModelModule = {
 
             // Debug Tracking
             dataMonthlyUnitCost,
-            dataMonthlyInflation
+            dataMonthlyInflation,
+
+            // Startup Metrics (Fix for M0 Row)
+            startupCost: startLoanVolume,
+            startMEs: startMEs
         }; // Close series
 
 
@@ -1141,13 +1169,15 @@ const ModelModule = {
 
 
 
-        const totalGrantsVal = s.dataGrants ? s.dataGrants.reduce((a, b) => a + b, 0) : 0;
+        const totalGrantsVal = s.dataMonthlyGrantDisbursed ? s.dataMonthlyGrantDisbursed.reduce((a, b) => a + b, 0) : 0;
         const totalOpsFixed = s.dataMonthlyFixedOps.reduce((a, b) => a + b, 0);
         const totalOpsVar = s.dataMonthlyMgmtFees.reduce((a, b) => a + b, 0) + s.dataMonthlyMandECosts.reduce((a, b) => a + b, 0);
         const totalOps = totalOpsFixed + totalOpsVar;
 
         const totalDefaults = s.dataMonthlyDefaultsHh.reduce((a, b) => a + b, 0) + s.dataMonthlyDefaultsMe.reduce((a, b) => a + b, 0);
         const totalFundInterest = s.dataMonthlyFundInt.reduce((a, b) => a + b, 0);
+        // P2: Economic Cost Metric
+        const economicCostPerLatrine = totalToilets > 0 ? ((totalOps + totalDefaults + totalGrantsVal + totalFundInterest) / totalToilets) : 0;
 
         const totalRevenueInt = s.dataMonthlyRevenueHh.reduce((a, b) => a + b, 0) + s.dataMonthlyRevenueMe.reduce((a, b) => a + b, 0);
         const totalCarbonRevenue = s.dataMonthlyCarbonRevenue.reduce((a, b) => a + b, 0);
@@ -1167,8 +1197,8 @@ const ModelModule = {
         const netAssetsEnd = cashEnd + portfolioOutstanding - investorLiabilityEnd;
         const initialCapital = inputs.investGrant + inputs.investLoan;
 
-        // Capital Preserved: Net Assets / Initial Capital
-        const capitalPreservedPct = initialCapital > 0 ? (netAssetsEnd / initialCapital) : 0;
+        // Capital Preserved: (Ending Cash + Repaid Principal) / Initial Capital
+        const capitalPreservedPct = initialCapital > 0 ? ((cashEnd + totalRepaidPrincipal) / initialCapital) : 0;
 
         // 4. Sustainability Metrics
         // OSS = Operating Revenue / Operating Expenses
@@ -1230,7 +1260,8 @@ const ModelModule = {
         // Total Impact is NOT Sum(Snapshots).
         // Total Impact so far = Last Snapshot.
         // Correct Logic:
-        const totalDalysAverted = (people * (inputs.dalyPerPerson || 0)); // Total for cumulative people?
+        const totalDalysAverted = people * (inputs.dalyPerPerson || 0);
+        if (inputs.dalyPerPerson > 0 && people > 0 && totalDalysAverted === 0) console.warn("DALY Calc Error");
         // Actually, DALYs are per year.
         // The loop calculated `peopleReached` (Stocks).
         // DALYs averted = Stock * Years?
@@ -1288,7 +1319,9 @@ const ModelModule = {
                 netAssets: netAssetsEnd,
                 capitalPreservedPct: capitalPreservedPct,
                 investorRepaid: totalRepaidPrincipal,
-                investorRepaidPct: inputs.investLoan > 0 ? (totalRepaidPrincipal / inputs.investLoan) : 0
+                investorRepaidPct: inputs.investLoan > 0 ? (totalRepaidPrincipal / inputs.investLoan) : 0,
+                // Fund Health = (Ending Balance + Repaid Principal) / Initial Loan
+                fundHealth: inputs.investLoan > 0 ? ((cashEnd + totalRepaidPrincipal) / inputs.investLoan) : 0
             },
             sustainability: {
                 oss: ossRatio,
@@ -1345,6 +1378,7 @@ const ModelModule = {
             insolvencyMonths: monthsInsolvent,
             costPerLatrine: costPerLatrine,
             effectiveCostPerLatrine: effectiveCostPerLatrine,
+            economicCostPerLatrine: economicCostPerLatrine,
             breakEvenRate: 0,
             maxGrantPct: 0,
             dalys: totalDalysAverted.toFixed(0),
@@ -2346,7 +2380,8 @@ const UI = {
             `GrantSupportPct,${(inputs.grantSupportPct * 100).toFixed(0)}%`,
             `GrantSupportPct,${(inputs.grantSupportPct * 100).toFixed(0)}%`,
             `BadDebtBuffer,5x Expected Loss`,
-            `CostPerLatrine,$${(document.getElementById('sum-cost-per-latrine')?.innerText || '0').replace('$', '')}` // Add Metric
+            `CostPerLatrine,$${(document.getElementById('sum-cost-per-latrine')?.innerText || '0').replace('$', '')}`,
+            `EconomicCostPerLatrine,$${(s && s.economicCostPerLatrine ? s.economicCostPerLatrine.toFixed(2) : '0')}`
         ];
 
         const s = this.lastResults.series;
@@ -2359,6 +2394,26 @@ const UI = {
         ];
 
         const rows = [...paramRows, "", headers.join(",")];
+
+        // P2: M0 Startup Row (Refined)
+        // Only show if there are actual upfront costs. 
+        // Current model starts with 0 MEs and grows them, so M0 startup cost is effectively 0.
+        // We will output a clean M0 row showing the Initial Balance.
+        const startupCost = s.startupCost || 0;
+        const initialCash = inputs.investGrant + inputs.investLoan;
+
+        const m0Row = [
+            "M0 (Startup)",
+            0, 0, 0,
+            startupCost.toFixed(2), // NewLoanValME
+            0, 0, 0, // RevHH, RevME, FundPrin
+            0, 0, 0, // Ops, BadDebt, FundInt
+            (-startupCost).toFixed(2), // NetCash
+            0, // PortfolioHH
+            startupCost.toFixed(2), // PortfolioME
+            (initialCash - startupCost).toFixed(2) // CashBalance
+        ];
+        rows.push(m0Row.join(","));
         const len = s.monthlyLabels.length;
 
         for (let i = 0; i < len; i++) {
@@ -2455,6 +2510,25 @@ const UI = {
             lines.push(headers.join(","));
 
             // --- 3. Data Rows ---
+            // --- 3. Data Rows ---
+            const startupCost = s.startupCost || 0;
+            const startupMEs = s.startMEs || 0;
+            const initialCash = inputs.investGrant + inputs.investLoan;
+
+            const m0Row = [
+                "M0 (Startup)",
+                "0", "0", "0", // Cummings
+                "0", "0", "0", // Monthlys
+                "0.00", "1.000", startupMEs, // UnitCost, Inflation, MEs
+                "0.00", "0.00", "0.00", "0.00", // HH Loan
+                startupCost.toFixed(2), "0.00", "0.00", "0.00", // ME Loan
+                "0.00", "0.00", "0.00", // Ops
+                "0.00", "0.00", "0.00", // Fund
+                (-startupCost).toFixed(2), // NetCash
+                (initialCash - startupCost).toFixed(2) // CashBalance
+            ];
+            lines.push(m0Row.join(","));
+
             const len = s.monthlyLabels.length;
             for (let i = 0; i < len; i++) {
                 const row = [
@@ -2518,7 +2592,7 @@ const UI = {
             lines.push(`Break-even Interest,${(stats.breakEvenRate || 0).toFixed(1)}%`);
             lines.push(`Max Sustainable Grant,${(stats.maxGrantPct || 0).toFixed(1)}%`);
 
-            lines.push(`Capital Preserved,${((stats.capitalPreservedPct || 0) * 100).toFixed(1)}%`);
+            lines.push(`Capital Preserved,${((stats.capitalPreserved || 0) * 100).toFixed(1)}%`);
             lines.push(`Min Cash Balance,$${stats.minCash || 0}`);
             lines.push(`Months Insolvent,${stats.insolvencyMonths || 0}`);
             lines.push(``);
@@ -2536,7 +2610,8 @@ const UI = {
 
             lines.push(``);
             lines.push(`Unit Economics`);
-            lines.push(`Cost / Latrine,$${(stats.costPerLatrine || 0).toFixed(2)}`);
+            lines.push(`Total Cash Deployed / Latrine,$${(stats.costPerLatrine || 0).toFixed(2)}`);
+            lines.push(`Economic Cost / Latrine,$${(stats.economicCostPerLatrine || 0).toFixed(2)}`);
             lines.push(`Effective Cost / Latrine,$${(stats.effectiveCostPerLatrine || 0).toFixed(2)}`);
             lines.push(`Leverage Ratio,${(inputs.investGrant > 0 ? (((stats.loanToiletsVal || 0) + (stats.grantToiletsVal || 0)) / (inputs.investGrant + (inputs.investLoan || 0))).toFixed(1) : "Infinite")}x`);
             lines.push(`SROI Ratio,${(stats.sroi || 0).toFixed(1)}x`);
@@ -2663,6 +2738,12 @@ const UI = {
         const totalInv = (inputs.investGrant || 0) + (inputs.investLoan || 0);
         const costPer = stats.totalLatrines > 0 ? (totalInv / stats.totalLatrines) : 0;
         setTxt('sum-cost-per-latrine', fmtMoney(costPer));
+
+        // Effective Cost (Grant Only)
+        setTxt('sum-cost-per-latrine', fmtMoney(costPer));
+
+        // Economic Cost (New Field)
+        setTxt('sum-economic-cost', fmtMoney(stats.economicCostPerLatrine));
 
         // Effective Cost (Grant Only)
         setTxt('sum-effective-cost', fmtMoney(stats.effectiveCostPerLatrine));
@@ -2852,7 +2933,48 @@ const UI = {
 
 
         const len = s.monthlyLabels.length;
+
         let html = '';
+
+        // P2: M0 Startup Row (UI Table)
+        const startupCost = s.startupCost || 0;
+        const initialCash = inputs.investGrant + inputs.investLoan;
+        const startMEs = s.startMEs || 0;
+
+        if (startupCost > 0 || startMEs > 0) {
+            html += `<tr>
+                <td style="color:#64748b; font-weight:bold;">M0 (Startup)</td>
+                
+                <!--Cumulative -->
+                <td>0</td><td>0</td><td>0</td>
+
+                <!--Monthly(Delta) -->
+                <td style="background:#f0f9ff;">0</td>
+                <td style="background:#f0f9ff;">0</td>
+                <td style="background:#f0f9ff;">0</td>
+                
+                <td>$0</td>
+                <td>${startMEs}</td>
+
+                <!--HH Finances-->
+                <td>$0</td><td>$0</td><td>$0</td><td>$0</td>
+                
+                <!--ME Finances-->
+                <td>${startMEs}</td> <!-- Initial MEs counted as 'New Loans' context or just active? -->
+                <td>${fmtMoney(startupCost)}</td> <!-- Value -->
+                <td>$0</td><td>$0</td><td>$0</td>
+                
+                <!--Ops -->
+                <td>$0</td><td>$0</td><td>$0</td>
+                
+                <!--Fund -->
+                <td>$0</td><td>$0</td><td>$0</td>
+                
+                <!--Summary -->
+                <td class="text-red">${fmtMoney(-startupCost)}</td>
+                <td>${fmtMoney(initialCash - startupCost)}</td>
+            </tr>`;
+        }
 
         for (let i = 0; i < len; i++) {
             // Delta Calculations
