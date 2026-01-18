@@ -1252,15 +1252,19 @@ const UI = {
         const annGrants = series.dataGrants.map((v, i) => -(i === 0 ? v : v - series.dataGrants[i - 1])); // Delta, Outflow
         // Note: series.dataGrants is Cumulative. We need Annual Delta.
 
-        const annFixOps = aggregateAnnual(series.dataMonthlyFixedOps).map(v => -v);
-        const annVarOps = aggregateAnnual(series.dataMonthlyMgmtFees).map(v => -v); // Mgmt + M&E?
-        // Check dataMonthlyMgmtFees definition. In Step 1060 it implies MgmtFees.
-        // What about MandECosts? It was separate in Profit Chart.
-        const annMandE = aggregateAnnual(series.dataMonthlyMandECosts).map(v => -v);
+        const annFixOps = aggregateAnnual(series.dataMonthlyOps).map(v => -v); // Fixed
+        const annVarOps = aggregateAnnual(series.dataMonthlyFees).map(v => -v); // Variable (Mgmt + M&E)
 
         const annFundInt = aggregateAnnual(series.dataMonthlyFundInt).map(v => -v);
         const annFundPrin = aggregateAnnual(series.dataMonthlyFundPrincipal).map(v => -v);
-        const annBadDebt = aggregateAnnual(series.dataMonthlyBadDebt).map(v => -v);
+        // Defaults (HH + ME)
+        const annDefaults = aggregateAnnual(series.dataMonthlyDefaultsHh).map((v, i) => {
+            const meDef = series.dataMonthlyDefaultsMe[i * 12 + 11] ? 0 : 0; // Just aggregating same way
+            // Wait, aggregateAnnual handles monthly array.
+            // But we need to sum HH and ME defaults.
+            // Let's optimize: sum monthly first? Or just map two annual arrays.
+            return -(v + (aggregateAnnual(series.dataMonthlyDefaultsMe)[i] || 0));
+        });
         const annNet = aggregateAnnual(series.dataMonthlyNet);
 
         chartInstances.cost = new Chart(ctxCost, {
@@ -1275,7 +1279,7 @@ const UI = {
                         borderColor: '#1e293b',
                         borderWidth: 2,
                         tension: 0.1,
-                        pointRadius: 4, // Visible points for annual
+                        pointRadius: 4,
                         order: 0
                     },
                     // Inflows
@@ -1288,11 +1292,10 @@ const UI = {
                     { label: 'Loans(ME)', data: annLoansMe, backgroundColor: '#1e40af', stack: 'Stack 0', order: 1 },
                     { label: 'Grants', data: annGrants, backgroundColor: '#8b5cf6', stack: 'Stack 0', order: 1 },
                     { label: 'FixedOps', data: annFixOps, backgroundColor: '#b91c1c', stack: 'Stack 0', order: 1 },
-                    { label: 'VarOps(Fees)', data: annVarOps, backgroundColor: '#fca5a5', stack: 'Stack 0', order: 1 },
-                    { label: 'M&E', data: annMandE, backgroundColor: '#ef4444', stack: 'Stack 0', order: 1 },
+                    { label: 'VarOps', data: annVarOps, backgroundColor: '#fca5a5', stack: 'Stack 0', order: 1 },
                     { label: 'Debt(Int)', data: annFundInt, backgroundColor: '#f59e0b', stack: 'Stack 0', order: 1 },
                     { label: 'Debt(Prin)', data: annFundPrin, backgroundColor: '#64748b', stack: 'Stack 0', order: 1 },
-                    { label: 'Defaults', data: annBadDebt, backgroundColor: '#7f1d1d', stack: 'Stack 0', order: 1 }
+                    { label: 'Defaults', data: annDefaults, backgroundColor: '#7f1d1d', stack: 'Stack 0', order: 1 }
                 ]
             },
             options: {
