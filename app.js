@@ -213,6 +213,7 @@ const ModelModule = {
         const dataMonthlyRepaymentMe = [];
         const dataMonthlyDefaultsHh = [];
         const dataMonthlyDefaultsMe = [];
+        const dataMonthlyMes = [];
         const dataMonthlyOps = []; // Fixed
         const dataMonthlyFees = []; // Variable
         const dataMonthlyFundPrincipal = [];
@@ -223,6 +224,8 @@ const ModelModule = {
         const dataMonthlyCarbonRevenue = [];
         const dataToiletsMonthlyLoan = [];
         const dataToiletsMonthlyGrant = [];
+        const dataMonthlyPortfolioHh = [];
+        const dataMonthlyPortfolioMe = [];
 
         // Impact AUC Arrays
         const dataMonthlyHoursSaved = [];
@@ -491,6 +494,11 @@ const ModelModule = {
             dataMonthlyOps.push(outflows.fixed);
             dataMonthlyFees.push(outflows.varFees);
 
+            // Portfolio Snapshots
+            dataMonthlyPortfolioHh.push(hhCohorts.reduce((s, c) => s + c.balance, 0));
+            dataMonthlyPortfolioMe.push(meCohorts.reduce((s, c) => s + c.balance, 0));
+            dataMonthlyMes.push(currentMEs);
+
             // Cumulative Toilet Tracks
             const prevGrant = dataToiletsMonthlyGrant.length ? dataToiletsMonthlyGrant[dataToiletsMonthlyGrant.length - 1] : 0;
             const prevLoan = dataToiletsMonthlyLoan.length ? dataToiletsMonthlyLoan[dataToiletsMonthlyLoan.length - 1] : 0;
@@ -538,6 +546,8 @@ const ModelModule = {
             dataMonthlyCarbonRevenue,
             dataMonthlyNewLoansHhVal,
             dataMonthlyNewLoansMeVal,
+            dataMonthlyRevenueHh,
+            dataMonthlyRevenueMe,
             dataMonthlyRepaymentHh,
             dataMonthlyRepaymentMe,
             dataMonthlyDefaultsHh,
@@ -558,6 +568,9 @@ const ModelModule = {
             dataMonthlyDalysAverted,
             dataMonthlyActiveToilets,
             dataPeople,
+            dataMonthlyPortfolioHh,
+            dataMonthlyPortfolioMe,
+            dataMonthlyMes,
 
             // Startup
             startupCost: startLoanVolume,
