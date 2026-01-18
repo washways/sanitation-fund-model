@@ -596,12 +596,13 @@ const ModelModule = {
 
 
         const totalGrantsVal = s.dataMonthlyGrantDisbursed ? s.dataMonthlyGrantDisbursed.reduce((a, b) => a + b, 0) : 0;
-        const totalOpsFixed = s.dataMonthlyFixedOps.reduce((a, b) => a + b, 0);
-        const totalOpsVar = s.dataMonthlyMgmtFees.reduce((a, b) => a + b, 0) + s.dataMonthlyMandECosts.reduce((a, b) => a + b, 0);
+        const totalOpsFixed = s.dataMonthlyOps ? s.dataMonthlyOps.reduce((a, b) => a + b, 0) : 0;
+        const totalOpsVar = s.dataMonthlyFees ? s.dataMonthlyFees.reduce((a, b) => a + b, 0) : 0;
         const totalOps = totalOpsFixed + totalOpsVar;
 
-        const totalDefaults = s.dataMonthlyDefaultsHh.reduce((a, b) => a + b, 0) + s.dataMonthlyDefaultsMe.reduce((a, b) => a + b, 0);
-        const totalFundInterest = s.dataMonthlyFundInt.reduce((a, b) => a + b, 0);
+        const totalDefaults = (s.dataMonthlyDefaultsHh ? s.dataMonthlyDefaultsHh.reduce((a, b) => a + b, 0) : 0) +
+            (s.dataMonthlyDefaultsMe ? s.dataMonthlyDefaultsMe.reduce((a, b) => a + b, 0) : 0);
+        const totalFundInterest = s.dataMonthlyFundInt ? s.dataMonthlyFundInt.reduce((a, b) => a + b, 0) : 0;
         // P2: Economic Cost Metric
         const economicCostPerLatrine = totalToilets > 0 ? ((totalOps + totalDefaults + totalGrantsVal + totalFundInterest) / totalToilets) : 0;
 
@@ -1478,30 +1479,30 @@ const UI = {
                         order: 1
                     },
                     {
-                        label: 'MgmtFees(Var)',
-                        data: series.dataMonthlyMgmtFees.map(v => -v),
+                        label: 'Variable Ops',
+                        data: series.dataMonthlyFees.map(v => -v),
                         backgroundColor: '#fca5a5', // Red 300
                         stack: 'stack1',
                         order: 1
                     },
                     {
-                        label: 'MandECosts(Var)',
-                        data: series.dataMonthlyMandECosts.map(v => -v),
-                        backgroundColor: '#ef4444', // Red 500
-                        stack: 'stack1',
-                        order: 1
-                    },
-                    {
-                        label: 'FixedOps',
-                        data: series.dataMonthlyFixedOps.map(v => -v),
+                        label: 'Fixed Ops',
+                        data: series.dataMonthlyOps.map(v => -v),
                         backgroundColor: '#b91c1c', // Red 700
                         stack: 'stack1',
                         order: 1
                     },
                     {
-                        label: 'Defaults(Total)',
-                        data: series.dataMonthlyBadDebt.map(v => -v),
+                        label: 'Defaults(HH)',
+                        data: series.dataMonthlyDefaultsHh.map(v => -v),
                         backgroundColor: '#7f1d1d', // Dark Red
+                        stack: 'stack1',
+                        order: 1
+                    },
+                    {
+                        label: 'Defaults(ME)',
+                        data: series.dataMonthlyDefaultsMe.map(v => -v),
+                        backgroundColor: '#991b1b', // Red 800
                         stack: 'stack1',
                         order: 1
                     },
