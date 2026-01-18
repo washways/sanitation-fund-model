@@ -243,6 +243,7 @@ const ModelModule = {
         const dataDefaultsMe = [];
         const dataFundDebtService = [];
         const dataPeople = []; // Annual Snapshot
+        const dataCarbon = []; // Annual Snapshot
 
         // Sim Helpers
         let yearLoansHh = 0, yearLoansMe = 0, yearGrants = 0, yearRepayments = 0, yearDefaultsHh = 0, yearDefaultsMe = 0, yearDebtService = 0;
@@ -519,6 +520,7 @@ const ModelModule = {
                 dataToilets.push(toiletsBuiltCumulative);
                 // Snapshot People for Legacy Charts (optional)
                 dataPeople.push(toiletsBuiltCumulative * inputs.avgHHSize);
+                dataCarbon.push(cumulativeCarbon);
 
                 dataLoansHh.push(yearLoansHh);
                 dataLoansMe.push(yearLoansMe);
@@ -571,6 +573,7 @@ const ModelModule = {
             dataMonthlyPortfolioHh,
             dataMonthlyPortfolioMe,
             dataMonthlyMes,
+            dataCarbon, // Added to fix TypeError
 
             // Startup
             startupCost: startLoanVolume,
