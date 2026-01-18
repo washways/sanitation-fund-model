@@ -846,6 +846,10 @@ const ModelModule = {
                 dataDefaultsMe.push(yearDefaultsMe);
                 dataFundDebtService.push(yearDebtService);
 
+                // Fix: Populate dataPeople and dataDalys (Annual Snapshot)
+                dataPeople.push(toiletsBuiltCumulative * inputs.avgHHSize);
+                dataDalys.push((toiletsBuiltCumulative * inputs.avgHHSize) * inputs.dalyPerPerson);
+
                 // Reset
                 yearToilets = 0;
                 yearLoansHh = 0;
@@ -1140,6 +1144,9 @@ const ModelModule = {
             kpis.breakEvenRate = ModelModule.solveBreakEven(inputs);
             kpis.maxGrantPct = ModelModule.solveMaxGrant(inputs);
         }
+
+        // Run Verification
+        ModelModule.verifyLedger({ series, kpis }, inputs);
 
         return {
             series,
@@ -1457,33 +1464,60 @@ const ModelModule = {
     },
 
     // --- Invariant Checks (Verification) ---
-    verifyLedger(results) {
+    verifyLedger(results, inputs) {
         const s = results.series;
+        const k = results.kpis;
         const errors = [];
 
-        // 1. Cashflow Balance: Cash[t] = Cash[t-1] + NetFlow[t]
+        // 1. Cashflow Identity: Cash[t] = Cash[t-1] + NetFlow[t]
+        // Including M0 check if possible, else start M1
         for (let i = 1; i < s.dataMonthlyCashBalance.length; i++) {
             const prev = s.dataMonthlyCashBalance[i - 1];
             const curr = s.dataMonthlyCashBalance[i];
             const net = s.dataMonthlyNet[i];
-
-            // Allow small float precision drift
+            // Fix: NetCashFlow in array already includes all flows?
+            // Yes, calculated as Inflow - Outflow.
             if (Math.abs(curr - (prev + net)) > 1.00) {
-                errors.push(`Cash Mismatch Month ${i}: Prev ${prev.toFixed(2)} + Net ${net.toFixed(2)} != Curr ${curr.toFixed(2)}`);
+                errors.push(`Identity Fail (Cash): M${i} Prev ${prev.toFixed(2)} + Net ${net.toFixed(2)} != Curr ${curr.toFixed(2)}`);
             }
         }
 
-        // 2. Principal Repayment <= Liability (Logic Check)
-        // Ensure we haven't repaid more than we borrowed (unless we count interest as principal? No.)
-        const inputs = results.kpis.financials.investLoan; // Wait, Inputs separate?
-        // results.kpis.financials includes investorRepaid.
-        // But we don't have inputs here directly unless we pass it.
-        // Assuming results logic is consistent.
+        // 2. Investor Repayment Sum (Must equal Input Principal)
+        const totalPrincipalRepaid = s.dataMonthlyFundPrincipal.reduce((a, b) => a + b, 0);
+        const expectedPrincipal = inputs.investLoan || 0;
+        // Allow tiny rounding
+        if (Math.abs(totalPrincipalRepaid - expectedPrincipal) > 5.0) { // $5 tolerance
+            // Only fails if term is expired. If unfinished, it won't match.
+            // Check if we reached end of Repayment Term
+            const monthsSimulated = s.monthlyLabels.length;
+            const repaymentMonths = (inputs.fundRepaymentTerm * 12);
+            if (monthsSimulated >= repaymentMonths) {
+                errors.push(`Identity Fail (Investor): Repaid ${totalPrincipalRepaid.toFixed(2)} != Borrowed ${expectedPrincipal.toFixed(2)}`);
+            }
+        }
+
+        // 3. Health Value Consistency
+        // Report Logic: Economic Value (Health) = ?? 
+        // User check: "Does Economic Value (Health) equal DALYs Averted * dalyValue?"
+        // Code Logic: Value includes TIME SAVINGS. 
+        // We warn if DALY component is missing.
+        const dalyValCheck = k.value.dalys * inputs.dalyValue;
+        if (k.value.economicValue < dalyValCheck) {
+            errors.push(`Identity Fail (Value): Total Econ Value ($${k.value.economicValue}) < DALY Value ($${dalyValCheck}). DALYs must be additive.`);
+        }
+
+        // 4. Run Length
+        const expectedLen = (inputs.duration * 12) + 12; // Active + Winding Down
+        if (s.monthlyLabels.length !== expectedLen) {
+            errors.push(`Run Length Fail: Expected ${expectedLen} months, got ${s.monthlyLabels.length}`);
+        }
 
         if (errors.length > 0) {
-            console.warn("Ledger Verification Failed:", errors);
+            console.error("❌ MODEL INTEGRITY CHECK FAILED:", errors);
+            // Alert for user (Optional, maybe too intrusive?)
+            // alert("Model Integrity Check Failed! See Console."); 
         } else {
-            console.log("Ledger Verified: Cashflow Consistent.");
+            console.log("✅ Model Integrity Verified: Cash, Principal, and Value identities hold.");
         }
     }
 };
@@ -3747,7 +3781,7 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
         let results = ModelModule.calculate(inputs);
         UI.lastResults = results;
         // Verify Invariants (Ledger Integrity)
-        ModelModule.verifyLedger(results);
+        ModelModule.verifyLedger(results, inputs);
 
         // Phase 66: Auto-Solvency (User Request: "Fund must be solvent... use interest rates... adjust grant")
         if (isAutoAdjust && inputs.investLoan > 0) {
