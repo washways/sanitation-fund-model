@@ -776,7 +776,7 @@ const ModelModule = {
             },
             // Value Metrics
             value: {
-                economicValue: totalSocialValue + finalFundBal, // Total Value Generated
+                economicValue: totalSocialValue + cashEnd, // Total Value Generated
                 subsidyPerLatrine,
                 economicCostPerLatrine,
                 depletionYear
