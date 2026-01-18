@@ -683,6 +683,7 @@ const ModelModule = {
         const totalExpenditure = totalLoansDisbursed + totalGrantsVal + totalOps + totalDefaults + totalFundInterest;
         const costPerLatrine = totalToilets > 0 ? (totalExpenditure / totalToilets) : 0;
         const effectiveCostPerLatrine = totalToilets > 0 ? (inputs.investGrant / totalToilets) : 0;
+        const subsidyPerLatrine = totalToilets > 0 ? (totalGrantsVal / totalToilets) : 0;
 
         // 6. Impact Value (Phase 30)
         // Reconstruct Value Logic from Arrays or inputs
@@ -849,9 +850,9 @@ const ModelModule = {
     },
 
     // --- Invariant Checks (Verification) ---
-    verifyLedger(results, inputs) {
-        const s = results.series;
-        const k = results.kpis;
+    verifyLedger(series, inputs, kpis) {
+        const s = series;
+        const k = kpis;
         const errors = [];
 
         // 1. Cashflow Identity
@@ -3193,7 +3194,7 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
         let results = ModelModule.calculate(inputs);
         UI.lastResults = results;
         // Verify Invariants (Ledger Integrity)
-        ModelModule.verifyLedger(results, inputs);
+        ModelModule.verifyLedger(results.series, inputs, results.kpis);
 
         // Phase 66: Auto-Solvency (User Request: "Fund must be solvent... use interest rates... adjust grant")
         if (isAutoAdjust && inputs.investLoan > 0) {
