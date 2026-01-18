@@ -557,7 +557,7 @@ const ModelModule = {
             dataMonthlyFundPrincipal,
             dataMonthlyFundInt,
             dataMonthlyOps,
-            dataMonthlyFees,
+            dataMonthlyFees, // Variable Ops
             dataLoansHh,
             dataLoansMe,
             dataGrants,
@@ -573,7 +573,7 @@ const ModelModule = {
             dataMonthlyPortfolioHh,
             dataMonthlyPortfolioMe,
             dataMonthlyMes,
-            dataCarbon, // Added to fix TypeError
+            dataCarbon,
 
             // Startup
             startupCost: startLoanVolume,
@@ -927,8 +927,8 @@ const UI = {
 
         return {
             country: document.getElementById('countryInput').value || 'Unknown',
-            grantFund: getRaw('wiz-invest-grant-sidebar'),
-            loanFund: getRaw('wiz-invest-loan-sidebar'),
+            investGrant: getRaw('wiz-invest-grant-sidebar'),
+            investLoan: getRaw('wiz-invest-loan-sidebar'),
             popReqToilets: getRaw('popReqToilets'),
             popGrowthRate: getPct('popGrowthRate'),
             avgHHSize: getRaw('avgHHSize', 5),
@@ -2252,7 +2252,7 @@ const UI = {
             "MoLatrineLoan", "MoLatrineGrant", "MoTotal",
             "NewLoanValHH", "NewLoanValME",
             "RevIntHH", "RevIntME",
-            "FundPrincipalCfl", "OpsExp", "BadDebtExp", "FundIntExp",
+            "FundPrincipalCfl", "FixedOps", "VariableOps", "Defaults", "FundIntExp",
             "NetCashFlow", "CashBalance"
         ];
 
@@ -2287,7 +2287,8 @@ const UI = {
                 (s.dataMonthlyRevenueMe[i] || 0).toFixed(2),
                 (s.dataMonthlyFundPrincipal[i] || 0).toFixed(2),
                 (s.dataMonthlyOps[i] || 0).toFixed(2),
-                (s.dataMonthlyBadDebt[i] || 0).toFixed(2),
+                (s.dataMonthlyFees[i] || 0).toFixed(2),
+                ((s.dataMonthlyDefaultsHh[i] || 0) + (s.dataMonthlyDefaultsMe[i] || 0)).toFixed(2),
                 (s.dataMonthlyFundInt[i] || 0).toFixed(2),
                 (s.dataMonthlyNet[i] || 0).toFixed(2),
                 (s.dataMonthlyCashBalance[i] || 0).toFixed(2)
@@ -2308,6 +2309,8 @@ const UI = {
         if (!results || !results.series) return;
         const inputs = UI.getInputs(); // Fix: Retrieve inputs for calculations
         const s = results.series;
+        console.log("Debug renderDataTable Series Keys:", Object.keys(s));
+        if (!s.dataMonthlyFees) console.error("Missing dataMonthlyFees!");
         const tbody = document.getElementById('monthlyDataBody');
         const thead = document.querySelector('#monthlyDataTable thead'); // Fixed Selector
         if (!tbody) return;
@@ -2366,9 +2369,8 @@ const UI = {
                     <th title="${tooltipMap.PrinRepME}">PrinRepaid(ME)</th>
                     <th title="${tooltipMap.DefME}">Defaults(ME)</th>
                     
-                    <th title="${tooltipMap.MgmtFees}">MgmtFees</th>
-                    <th title="${tooltipMap.MandE}">M&E Costs</th>
-                    <th title="${tooltipMap.FixOps}">FixedOps</th>
+                    <th title="${tooltipMap.MgmtFees}">Variable Ops</th>
+                    <th title="${tooltipMap.FixOps}">Fixed Ops</th>
                     
                     <th title="${tooltipMap.InvPrin}">InvRepay(Prin)</th>
                     <th title="${tooltipMap.InvInt}">InvInt(Int)</th>
@@ -2415,7 +2417,7 @@ const UI = {
                 <td>$0</td><td>$0</td><td>$0</td>
                 
                 <!--Ops -->
-                <td>$0</td><td>$0</td><td>$0</td>
+                <td>$0</td><td>$0</td>
                 
                 <!--Fund -->
                 <td>$0</td><td>$0</td><td>$0</td>
@@ -2466,9 +2468,8 @@ const UI = {
                 <td>${fmtMoney(s.dataMonthlyDefaultsMe[i])}</td>
                 
                 <!--Ops -->
-                <td>${fmtMoney(s.dataMonthlyMgmtFees[i])}</td>
-                <td>${fmtMoney(s.dataMonthlyMandECosts[i])}</td>
-                <td>${fmtMoney(s.dataMonthlyFixedOps[i])}</td>
+                <td>${fmtMoney(s.dataMonthlyFees[i])}</td>
+                <td>${fmtMoney(s.dataMonthlyOps[i])}</td>
                 
                 <!--Fund -->
                 <td>${fmtMoney(s.dataMonthlyFundPrincipal[i])}</td>
