@@ -486,6 +486,8 @@ const ModelModule = {
             dataMonthlyCarbonRevenue.push(inflows.carbon);
             dataMonthlyNewLoansHhVal.push(outflows.loansHh);
             dataMonthlyNewLoansMeVal.push(outflows.loansMe);
+            dataMonthlyRevenueHh.push(inflows.hhInt);
+            dataMonthlyRevenueMe.push(inflows.meInt);
             dataMonthlyRepaymentHh.push(inflows.hhPrin);
             dataMonthlyRepaymentMe.push(inflows.mePrin);
             dataMonthlyDefaultsHh.push(outflows.defaultsHh);
@@ -745,13 +747,32 @@ const ModelModule = {
         const initialInv = inputs.investGrant + inputs.investLoan;
         const sroi = initialInv > 0 ? ((totalSocialValue + cashEnd) / initialInv) : 0;
 
+
+        const goal = inputs.popReqToilets || 1;
+        const minCash = Math.min(...s.dataMonthlyCashBalance);
+
+        let dominantConstraint = "Demand Met (Success)";
+        if (monthsInsolvent > 0) dominantConstraint = "Capital Depleted (Insolvent)";
+        else if (goal > people && minCash > 0) dominantConstraint = "Supply Chain (ME Capacity)";
+        else if (goal > people) dominantConstraint = "Capital Limited";
+
         return {
             reach: {
                 toilets: totalToilets,
                 people: people,
+                mes: mes,
                 jobs: mes * 3,
                 loanToilets: loanToilets,
-                grantToilets: grantToilets
+                grantToilets: grantToilets,
+                sdg6Gap: (people / goal),
+                dominantConstraint: dominantConstraint
+            },
+            impact: {
+                dalys: totalPersonYears * (inputs.dalyPerPerson || 0), // Lifetime DALYs?
+                carbon: totalCarbon,
+                valDalys: totalValDalys,
+                valCarbon: totalValCarbon,
+                valHours: totalValHours
             },
             portfolio: {
                 disbursed: totalLoansDisbursed,
@@ -764,12 +785,16 @@ const ModelModule = {
                 capitalPreservedPct: capitalPreservedPct,
                 investorRepaid: totalRepaidPrincipal,
                 investorRepaidPct: inputs.investLoan > 0 ? (totalRepaidPrincipal / inputs.investLoan) : 0,
+                grantsDisbursed: totalGrantsVal,
+                leverage: inputs.investGrant > 0 ? (totalLoansDisbursed / inputs.investGrant) : 0,
                 // Fund Health = (Ending Balance + Repaid Principal) / Initial Loan
                 fundHealth: inputs.investLoan > 0 ? ((cashEnd + totalRepaidPrincipal) / inputs.investLoan) : 0
             },
             sustainability: {
                 oss: ossRatio,
                 fss: fssRatio,
+                selfSufficiency: fssRatio, // Map FSS to Self-Sufficiency for UI
+                opsRunway: (inputs.annualFixedOpsCost > 0) ? (cashEnd / inputs.annualFixedOpsCost) : 99, // Simple Runway
                 depletionYear: depletionYear,
                 monthsInsolvent: monthsInsolvent,
                 costPerLatrine: costPerLatrine,
@@ -780,7 +805,8 @@ const ModelModule = {
                 economicValue: totalSocialValue + cashEnd, // Total Value Generated
                 subsidyPerLatrine,
                 economicCostPerLatrine,
-                depletionYear
+                depletionYear,
+                sroi: sroi
             }
         };
     },
@@ -992,87 +1018,84 @@ const UI = {
     },
 
     updateKPIs(results) {
-        console.log("DEBUG UI RESULTS:", results);
+        if (!results) return;
+
+        const inputs = UI.getInputs();
+        const k = results.kpis;
+        if (!k) return;
+
+        // Helpers
+        const setText = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = val;
+        };
+        const fmtMoney = (n) => '$' + (n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+        const fmtVal = (num) => (num || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+        const fmtValMoney = (count, val) => {
+            if (val !== undefined) return `${fmtVal(count)} (${fmtMoney(val)})`;
+            return fmtVal(count);
+        };
+        const fmtPct = (val) => ((val || 0) * 100).toFixed(1) + '%';
+        const fmtNum = (val) => (val || 0).toLocaleString(undefined, { maximumFractionDigits: 1 });
+
         try {
-            const fmtMoney = (n) => '$' + (n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
-            const fmtNum = (n) => (n || 0).toLocaleString('en-US', { maximumFractionDigits: 1 });
-            const fmtVal = (n) => (n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
-            const fmtPct = (n) => ((n || 0) * 100).toFixed(1) + '%';
-
-            const inputs = UI.getInputs();
-
-            // Financials
-            const initialFund = inputs.investGrant + inputs.investLoan;
-            const finalBalance = results.fundBalance;
-
-            const setText = (id, val) => {
-                const el = document.getElementById(id);
-                if (el) el.innerText = val;
-            };
-
             // --- Reach Card ---
-            // Fix: Check if dataToilets exists and has length
-            const finalToilets = (results.series && results.series.dataToilets && results.series.dataToilets.length > 0)
-                ? results.series.dataToilets[results.series.dataToilets.length - 1]
-                : 0;
+            setText('sum-toilets', fmtVal(k.reach.toilets));
+            setText('sum-toilets-loan-count', fmtVal(k.reach.loanToilets));
+            setText('sum-toilets-loan-val', fmtMoney(k.portfolio.disbursed));
 
-            setText('sum-toilets', fmtVal(finalToilets));
-            // Fix: Show Count AND Value (if Value exists)
-            const fmtValMoney = (count, val) => {
-                if (val !== undefined) return `${fmtVal(count)} (${fmtMoney(val)})`;
-                return fmtVal(count);
-            };
+            setText('sum-toilets-grant-count', fmtVal(k.reach.grantToilets));
+            setText('sum-toilets-grant-val', fmtMoney(k.financials.grantsDisbursed));
 
-            setText('sum-toilets-loan', fmtValMoney(results.impact.toiletsLoan, results.summary.loanToiletsVal));
-            setText('sum-toilets-grant', fmtValMoney(results.impact.toiletsGrant, results.summary.grantToiletsVal));
+            setText('sum-households', fmtVal(k.reach.toilets));
+            setText('sum-people', fmtVal(k.reach.people));
+            setText('sum-mes', fmtVal(k.reach.mes));
 
-            setText('sum-households', fmtVal(results.impact.households));
-            setText('sum-people', fmtVal(results.impact.peopleReached));
-            setText('sum-mes', fmtVal(results.impact.mes));
             // New Phase 22: SDG6
-            if (results.impact.sdg6Gap !== undefined) {
-                setText('sum-sdg6', fmtPct(results.impact.sdg6Gap / 100));
+            if (k.reach.sdg6Gap !== undefined) {
+                setText('sum-sdg6', fmtPct(k.reach.sdg6Gap));
             }
+            setText('sum-constraint', k.reach.dominantConstraint || '--');
 
-            setText('sum-constraint', results.impact.dominantConstraint || '--');
 
             // --- Impact Card ---
-            if (results.coBenefits) {
-                setText('sum-dalys', fmtVal(results.coBenefits.dalys));
-                setText('sum-val-dalys', fmtMoney(results.coBenefits.valDalys));
-                setText('sum-carbon', fmtNum(results.coBenefits.carbon));
-                setText('sum-val-carbon', fmtMoney(results.coBenefits.valCarbon));
-                setText('sum-jobs', fmtVal(results.coBenefits.jobs));
-                setText('sum-val-jobs', fmtMoney(results.coBenefits.jobValuation));
+            if (k.impact) {
+                setText('sum-dalys', fmtVal(k.impact.dalys));
+                setText('sum-val-dalys', fmtMoney(k.impact.valDalys));
+                setText('sum-carbon', fmtNum(k.impact.carbon));
+                setText('sum-val-carbon', fmtMoney(k.impact.valCarbon));
+                setText('sum-jobs', fmtVal(k.reach.jobs)); // Jobs is in Reach now
+                setText('sum-val-jobs', fmtMoney(k.impact.valHours)); // Time savings value
             }
 
             // --- Sustainability Scorecard ---
 
-            // Phase 44: Liquidity Metrics & Export Stats
+            // Liquidity / Export Stats Population
             const sData = results.series.dataMonthlyCashBalance || [];
             const minCash = sData.length ? Math.min(...sData) : 0;
-            const insolvencyMonths = sData.filter(b => b < 0).length;
+            const insolvencyMonths = k.sustainability.monthsInsolvent;
             const isInsolvent = minCash < 0;
 
-            // Store Summary Stats for Export
+            // Store Summary Stats for Export (Already standardized in computeKPIs, but useful for Reference)
             UI.lastSummaryStats = {
-                totalLatrines: finalToilets,
-                loanToilets: results.impact.toiletsLoan,
-                grantToilets: results.impact.toiletsGrant,
-                households: finalToilets,
-                people: results.impact.peopleReached,
-                mes: results.impact.mes,
-                dalys: results.coBenefits ? results.coBenefits.dalys.toFixed(0) : 0,
-                economicValue: results.coBenefits ? results.coBenefits.valDalys.toFixed(0) : 0,
-                carbon: results.coBenefits ? results.coBenefits.carbon.toFixed(1) : 0,
-                jobs: results.coBenefits ? results.coBenefits.jobs.toFixed(0) : 0,
-                ossRatio: results.sustainability.ossRatio || 0, // Fix: Use Cumulative
+                totalLatrines: k.reach.toilets,
+                loanToilets: k.reach.loanToilets,
+                grantToilets: k.reach.grantToilets,
+                households: k.reach.toilets, // Assuming households = toilets for now
+                people: k.reach.people,
+                mes: k.reach.mes,
+                dalys: k.impact ? k.impact.dalys.toFixed(0) : 0,
+                economicValue: k.impact ? k.impact.valDalys.toFixed(0) : 0,
+                carbon: k.impact ? k.impact.carbon.toFixed(1) : 0,
+                jobs: k.reach ? k.reach.jobs.toFixed(0) : 0,
+                ossRatio: k.sustainability.oss,
                 minCash: minCash,
                 insolvencyMonths: insolvencyMonths,
-                fundBalance: finalBalance
+                fundBalance: k.financials.cashEnd
             };
 
-            const oss = (results.sustainability.ossRatio || 0) * 100; // Fix: Use Cumulative
+            // OSS Display
+            const oss = (k.sustainability.oss || 0) * 100;
             const ossEl = document.getElementById('sus-oss-ratio');
             if (ossEl) {
                 if (isInsolvent) {
@@ -1085,49 +1108,48 @@ const UI = {
                     ossEl.title = "";
                 }
             }
-            setText('sus-depletion', results.impact.depletionYear || "N/A"); // From impact object
 
+            setText('sus-depletion', k.sustainability.depletionYear || "Sustainable");
+
+            // Breakeven / Max Grant (Placeholders for now)
             const beRate = (results.breakEvenRate || 0) * 100;
             setText('sus-breakeven-rate', beRate > 0 ? beRate.toFixed(1) + '%' : 'N/A');
 
             const maxGrant = (results.maxGrantPct || 0);
             setText('sus-max-grant', maxGrant > 0 ? maxGrant.toFixed(1) + '%' : '0%');
 
-            // Phase 44: Liquidity UI
+            // --- Liquidity ---
             setText('sum-min-cash', fmtMoney(minCash));
             const mcEl = document.getElementById('sum-min-cash');
             if (mcEl) mcEl.style.color = minCash < 0 ? '#ef4444' : 'inherit';
             setText('sum-insolvency', insolvencyMonths + " Mo");
 
-
-
-
             // --- Fund Balance (Capital Card) ---
-            setText('sum-balance', fmtMoney(finalBalance));
+            setText('sum-balance', fmtMoney(k.financials.cashEnd));
+            setText('sum-capital-repaid', fmtMoney(k.financials.investorRepaid || 0));
 
-            // New Phase 22: Capital Repaid
-            if (results.impact.fundRepaid !== undefined) {
-                setText('sum-capital-repaid', fmtMoney(results.impact.fundRepaid));
-            }
+            // Additional Liquidity / Sustainability Context
+            setText('sum-repaid', fmtMoney(k.financials.investorRepaid || 0));
+            setText('sum-repaid-pct', fmtPct(k.financials.investorRepaidPct || 0));
+            setText('sum-preserved', fmtPct(k.financials.capitalPreservedPct || 0));
 
-            const initFundSafe = initialFund || 1;
-            const healthPct = (finalBalance / initFundSafe) * 100;
-            if (inputs.fundRepaymentTerm > 0) {
-                setText('sum-health', fmtPct(results.impact.fundHealth || 0));
-            } else {
-                setText('sum-health', fmtPct(healthPct / 100) + ' (Grant Only)');
-            }
+            setText('sum-health', fmtPct(k.financials.fundHealth || 0));
 
-            const suffRatio = (results.impact.selfSufficiency || 0) * 100;
-            setText('sum-sufficiency', fmtNum(suffRatio) + '%');
+            const suffRatio = (k.sustainability.selfSufficiency || 0); // Already Ratio
+            setText('sum-sufficiency', fmtPct(suffRatio));
 
-            const runway = results.impact.opsRunway || 0;
+            const runway = k.sustainability.opsRunway || 0;
             const runwayText = runway > 20 ? "Sustainable (>20y)" : fmtNum(runway) + " Years";
             setText('sum-ops-coverage', runwayText);
 
+            // Unit Economics
+            setText('sum-cost-per-latrine', fmtMoney(k.sustainability.costPerLatrine || 0));
+            setText('sum-economic-cost', fmtMoney(k.value.economicCostPerLatrine || 0));
+            setText('sum-effective-cost', fmtMoney(k.sustainability.effectiveCostPerLatrine || 0));
+
             // Legacy/Other
-            setText('sum-leverage', fmtNum(results.impact.leverage || 0) + 'x');
-            setText('sum-sroi', fmtNum(results.roiExtended || 0) + 'x');
+            setText('sum-leverage', fmtNum(k.financials.leverage || 0) + 'x');
+            setText('sum-sroi', fmtNum(k.value.sroi || 0) + 'x');
 
         } catch (e) {
             console.error("ERROR IN UPDATEKPIS:", e);
@@ -1267,36 +1289,50 @@ const UI = {
         });
         const annNet = aggregateAnnual(series.dataMonthlyNet);
 
+        // Calculate Annual Principal Repayments (Inflow)
+        const annPrinRepayHh = aggregateAnnual(series.dataMonthlyRepaymentHh);
+        const annPrinRepayMe = aggregateAnnual(series.dataMonthlyRepaymentMe);
+        const annPrinRepayTotal = annPrinRepayHh.map((v, i) => v + annPrinRepayMe[i]);
+
+        const allDatasets = [
+            {
+                type: 'line',
+                label: 'Net Cash Flow',
+                data: annNet,
+                borderColor: '#1e293b',
+                borderWidth: 2,
+                tension: 0.1,
+                pointRadius: 4,
+                order: 0
+            },
+            // Inflows
+            { label: 'Rev(HH)', data: annRevHh, backgroundColor: '#10b981', stack: 'Stack 0', order: 1 },
+            { label: 'Rev(ME)', data: annRevMe, backgroundColor: '#059669', stack: 'Stack 0', order: 1 },
+            { label: 'Repaid(Bor)', data: annPrinRepayTotal, backgroundColor: '#f97316', stack: 'Stack 0', order: 1 },
+            { label: 'Carbon', data: annCarbon, backgroundColor: '#3b82f6', stack: 'Stack 0', order: 1 },
+
+            // Outflows
+            { label: 'Loans(HH)', data: annLoansHh, backgroundColor: '#3b82f6', stack: 'Stack 0', order: 1 },
+            { label: 'Loans(ME)', data: annLoansMe, backgroundColor: '#1e40af', stack: 'Stack 0', order: 1 },
+            { label: 'Grants', data: annGrants, backgroundColor: '#8b5cf6', stack: 'Stack 0', order: 1 },
+            { label: 'FixedOps', data: annFixOps, backgroundColor: '#b91c1c', stack: 'Stack 0', order: 1 },
+            { label: 'VarOps', data: annVarOps, backgroundColor: '#fca5a5', stack: 'Stack 0', order: 1 },
+            { label: 'Debt(Int)', data: annFundInt, backgroundColor: '#f59e0b', stack: 'Stack 0', order: 1 },
+            { label: 'Debt(Prin)', data: annFundPrin, backgroundColor: '#64748b', stack: 'Stack 0', order: 1 },
+            { label: 'Defaults', data: annDefaults, backgroundColor: '#7f1d1d', stack: 'Stack 0', order: 1 }
+        ];
+
+        // Filter out empty datasets (Sum of absolute values > 1)
+        const activeDatasets = allDatasets.filter(ds => {
+            const sum = ds.data.reduce((a, b) => a + Math.abs(b), 0);
+            return sum > 1; // Tolerance for rounding
+        });
+
         chartInstances.cost = new Chart(ctxCost, {
             type: 'bar',
             data: {
                 labels: series.labels,
-                datasets: [
-                    {
-                        type: 'line',
-                        label: 'Net Cash Flow',
-                        data: annNet,
-                        borderColor: '#1e293b',
-                        borderWidth: 2,
-                        tension: 0.1,
-                        pointRadius: 4,
-                        order: 0
-                    },
-                    // Inflows
-                    { label: 'Rev(HH)', data: annRevHh, backgroundColor: '#10b981', stack: 'Stack 0', order: 1 },
-                    { label: 'Rev(ME)', data: annRevMe, backgroundColor: '#059669', stack: 'Stack 0', order: 1 },
-                    { label: 'Carbon', data: annCarbon, backgroundColor: '#3b82f6', stack: 'Stack 0', order: 1 },
-
-                    // Outflows
-                    { label: 'Loans(HH)', data: annLoansHh, backgroundColor: '#3b82f6', stack: 'Stack 0', order: 1 },
-                    { label: 'Loans(ME)', data: annLoansMe, backgroundColor: '#1e40af', stack: 'Stack 0', order: 1 },
-                    { label: 'Grants', data: annGrants, backgroundColor: '#8b5cf6', stack: 'Stack 0', order: 1 },
-                    { label: 'FixedOps', data: annFixOps, backgroundColor: '#b91c1c', stack: 'Stack 0', order: 1 },
-                    { label: 'VarOps', data: annVarOps, backgroundColor: '#fca5a5', stack: 'Stack 0', order: 1 },
-                    { label: 'Debt(Int)', data: annFundInt, backgroundColor: '#f59e0b', stack: 'Stack 0', order: 1 },
-                    { label: 'Debt(Prin)', data: annFundPrin, backgroundColor: '#64748b', stack: 'Stack 0', order: 1 },
-                    { label: 'Defaults', data: annDefaults, backgroundColor: '#7f1d1d', stack: 'Stack 0', order: 1 }
-                ]
+                datasets: activeDatasets
             },
             options: {
                 responsive: true,
@@ -1890,9 +1926,44 @@ const UI = {
             // Use lastResults directly to avoid stale state.
             // ROBUST DATA SOURCE
             // Use lastResults directly to avoid stale state.
-            const stats = UI.lastResults.kpis;
-            // impact and res are no longer needed/available as separate objects
-            // properties are all on kpis now.
+            const k = UI.lastResults.kpis;
+            // Flatten KPIS for report compatibility
+            const stats = {
+                totalLatrines: k.reach.toilets,
+                loanToilets: k.reach.loanToilets,
+                loanToiletsVal: k.portfolio.disbursed,
+                grantToilets: k.reach.grantToilets,
+                grantToiletsVal: k.financials.grantsDisbursed,
+                households: k.reach.toilets,
+                people: k.reach.people,
+                mes: k.reach.mes,
+
+                dalys: k.impact ? k.impact.dalys.toFixed(0) : "0",
+                economicValue: k.impact ? k.impact.valDalys.toFixed(0) : "0",
+                carbon: k.impact ? k.impact.carbon.toFixed(0) : "0",
+                jobs: k.reach.jobs,
+
+                ossRatio: k.sustainability.oss,
+                fssRatio: k.sustainability.fss,
+                depletionYear: k.sustainability.depletionYear,
+                breakEvenRate: 0,
+                maxGrantPct: 0,
+
+                capitalPreserved: k.financials.capitalPreservedPct,
+                minCash: Math.min(...UI.lastResults.series.dataMonthlyCashBalance),
+                insolvencyMonths: k.sustainability.monthsInsolvent,
+
+                fundBalance: k.financials.cashEnd,
+                principalRepaid: k.financials.investorRepaid,
+                portfolio: k.portfolio,
+                financials: k.financials,
+
+                costPerLatrine: k.sustainability.costPerLatrine,
+                effectiveCostPerLatrine: k.sustainability.effectiveCostPerLatrine,
+                economicCostPerLatrine: k.value.economicCostPerLatrine,
+                leverageRatio: k.financials.leverage,
+                sroi: k.value.sroi
+            };
 
             // --- 1. Parameters (Vertical List) ---
             const lines = [`Parameter,Value`];
@@ -1911,7 +1982,7 @@ const UI = {
                 "Unit Cost", "Inflation Factor", "Active MEs",
                 "New Loans (HH)", "Rev Int (HH)", "Principal Repaid (HH)", "Defaults (HH)",
                 "New Loans (ME)", "Rev Int (ME)", "Principal Repaid (ME)", "Defaults (ME)",
-                "Mgmt Fees (Var)", "M&E Costs (Var)", "Fixed Ops",
+                "Variable Ops", "Fixed Ops",
                 "Investor Repayment (Principal)", "Investor Interest (Int)", "Carbon Rev",
                 "Net Cash Flow", "Cash Balance"
             ];
@@ -1930,7 +2001,7 @@ const UI = {
                 "0.00", "1.000", startupMEs, // UnitCost, Inflation, MEs
                 "0.00", "0.00", "0.00", "0.00", // HH Loan
                 startupCost.toFixed(2), "0.00", "0.00", "0.00", // ME Loan
-                "0.00", "0.00", "0.00", // Ops
+                "0.00", "0.00", // Ops
                 "0.00", "0.00", "0.00", // Fund
                 (-startupCost).toFixed(2), // NetCash
                 (initialCash - startupCost).toFixed(2) // CashBalance
@@ -1958,9 +2029,8 @@ const UI = {
                     (s.dataMonthlyRevenueMe[i] || 0).toFixed(2),
                     (s.dataMonthlyRepaymentMe[i] || 0).toFixed(2),
                     (s.dataMonthlyDefaultsMe[i] || 0).toFixed(2),
-                    (s.dataMonthlyMgmtFees[i] || 0).toFixed(2),
-                    (s.dataMonthlyMandECosts[i] || 0).toFixed(2),
-                    (s.dataMonthlyFixedOps[i] || 0).toFixed(2),
+                    (s.dataMonthlyFees[i] || 0).toFixed(2),
+                    (s.dataMonthlyOps[i] || 0).toFixed(2),
                     (s.dataMonthlyFundPrincipal[i] || 0).toFixed(2),
                     (s.dataMonthlyFundInt[i] || 0).toFixed(2),
                     (s.dataMonthlyCarbonRevenue[i] || 0).toFixed(2),
@@ -2309,8 +2379,6 @@ const UI = {
         if (!results || !results.series) return;
         const inputs = UI.getInputs(); // Fix: Retrieve inputs for calculations
         const s = results.series;
-        console.log("Debug renderDataTable Series Keys:", Object.keys(s));
-        if (!s.dataMonthlyFees) console.error("Missing dataMonthlyFees!");
         const tbody = document.getElementById('monthlyDataBody');
         const thead = document.querySelector('#monthlyDataTable thead'); // Fixed Selector
         if (!tbody) return;
@@ -3280,12 +3348,9 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
         }
 
         // Update UI
-        if (typeof UI.updateProgrammeSummary === 'function') {
-            // Fix: Pass KPIs (Single Source of Truth)
-            UI.updateProgrammeSummary(results.kpis);
+        if (UI.updateKPIs) {
+            UI.updateKPIs(results);
         }
-
-        // Removed UI.updateKPIs(results) to prevent duplication errors (uses obsolete logic).
 
         UI.renderCharts(results.series);
         if (UI.renderDataTable) {
