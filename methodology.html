@@ -167,7 +167,8 @@
 
         <h3>Priority 1: Senior Debt Service (The Schedule)</h3>
         <p>The model prioritizes the Investor. Principal and Interest due for the month are calculated and paid
-            <strong>before any other expense</strong>.</p>
+            <strong>before any other expense</strong>.
+        </p>
         <div class="formula-box">
             <strong>Inflow Priorities:</strong> 1. Investor Repayment &rarr; 2. Ops &rarr; 3. Growth
         </div>
@@ -283,7 +284,7 @@
         <h3>💰 Economic Value of Health</h3>
         <p>We monetize the DALYs to calculate an SROI.</p>
         <div class="formula-box">
-            <strong>HealthValue ($)</strong> = DALYs * GDP_Per_Capita * 1.0 (Conservative Multiplier)
+            <strong>HealthValue ($)</strong> = DALYs * Value_Per_DALY (User Input Option)
         </div>
 
         <h3>🌿 Carbon Mitigation</h3>
@@ -503,7 +504,7 @@
                     </tr>
                     <tr>
                         <td><strong>Economic Value</strong></td>
-                        <td>Monetized value of DALYs (<code>DALYs * GDP/Capita</code>).</td>
+                        <td>Monetized value of DALYs (<code>DALYs * $/DALY</code>).</td>
                     </tr>
                     <tr>
                         <td><strong>Carbon Mitigated</strong></td>

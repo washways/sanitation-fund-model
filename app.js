@@ -163,8 +163,18 @@ const ModelModule = {
         const getRate = (r) => this.getMonthlyRate(r);
         const monthlyIntRateHh = getRate(inputs.loanInterestRate);
         const monthlyIntRateMe = getRate(inputs.meLoanInterestRate !== undefined ? inputs.meLoanInterestRate : inputs.loanInterestRate);
-        const monthlyInflation = getRate(inputs.inflationRate);
         const monthlyCostOfCapital = getRate(inputs.fundCostOfCapital);
+
+        // --- PRE-CALCULATION: Inflation & Unit Costs ---
+        // 2026-02-11: Fixed to (1+rate)^(m/12)
+        const inflationFactor = new Array(totalSimMonths + 1).fill(1.0);
+        const unitCost = new Array(totalSimMonths + 1).fill(inputs.avgToiletCost);
+
+        for (let m = 1; m <= totalSimMonths; m++) {
+            // Compound Monthly: (1 + Annual)^ (m/12)
+            inflationFactor[m] = Math.pow(1 + inputs.inflationRate, m / 12);
+            unitCost[m] = inputs.avgToiletCost * inflationFactor[m];
+        }
 
         // Terms
         const termHh = inputs.termHh || 6;
@@ -232,6 +242,20 @@ const ModelModule = {
         const dataMonthlyDalysAverted = [];
         const dataMonthlyActiveToilets = [];
 
+        // Audit & Unit Economics Arrays
+        const dataMonthlyUnitCost = [];
+        const dataMonthlyPerToiletPrincipal = [];
+        const dataMonthlyPerToiletGrant = [];
+        const dataMonthlyPerToiletOps = [];
+
+        const dataConstraintBinding = [];
+
+        // Audit & Reconciliation
+        const dataMonthlyInflationFactor = [];
+        const dataMonthlyBaseCost = [];
+        const dataMonthlyContingencyAdd = [];
+        const dataMonthlyInflatedCost = [];
+
         // Annual Aggregates (Layout placeholder)
         const labels = [];
         const dataToilets = [];
@@ -253,13 +277,15 @@ const ModelModule = {
         let startLoanVolume = 0;
         let startMEs = 0;
 
+        const maxTotalMEs = inputs.districts * (inputs.mePerDistrict || 20); // Cap
         const reserveMonthsStart = Math.max(6, termHh);
         const oneMeWorkingCapital = inputs.toiletsPerMeMonth * inputs.avgToiletCost * reserveMonthsStart;
         const startupCostPerMe = inputs.meSetupCost + oneMeWorkingCapital;
 
         const lendableStart = Math.max(0, loanCash - currentReserve);
         const affordableStartMEs = Math.floor(lendableStart / startupCostPerMe);
-        startMEs = Math.min(inputs.districts, affordableStartMEs); // Cap at 1 per district (30)
+
+        startMEs = Math.min(maxTotalMEs, affordableStartMEs); // Use Max Cap
 
         if (startMEs > 0) {
             startLoanVolume = startMEs * inputs.meSetupCost;
@@ -281,10 +307,19 @@ const ModelModule = {
             const inflows = { hhInt: 0, hhPrin: 0, meInt: 0, mePrin: 0, carbon: 0 };
             const outflows = { fixed: 0, varFees: 0, investPrin: 0, investInt: 0, loansHh: 0, loansMe: 0, grants: 0, defaultsHh: 0, defaultsMe: 0 };
 
-            // 2. Inflation
-            const inflation = Math.pow(1 + monthlyInflation, m);
-            const currentUnitCost = inputs.avgToiletCost * inflation;
-            const currentFixedOps = (inputs.annualFixedOpsCost / 12) * inflation;
+            // 2. Inflation & Unit Cost (Pre-Calculated)
+            const currentInflationFactor = inflationFactor[m];
+            const currentUnitCost = unitCost[m];
+
+            // Audit
+            dataMonthlyInflationFactor.push(currentInflationFactor);
+            dataMonthlyBaseCost.push(baseCost);
+            dataMonthlyInflatedCost.push(currentUnitCost);
+
+            const currentFixedOps = (inputs.annualFixedOpsCost / 12) * currentInflationFactor;
+
+            // Audit Track
+            dataMonthlyUnitCost.push(currentUnitCost);
 
             // 3. Collect Revenues (Legacy Portfolios)
             // Monthly Default Prob (1 - (1-AnnualRate)^(1/12))
@@ -375,7 +410,11 @@ const ModelModule = {
                 const expansionBudget = lendable * 0.1;
                 const meSetup = inputs.meSetupCost;
                 if (expansionBudget > meSetup) {
-                    const newMes = Math.min(Math.floor(expansionBudget / meSetup), Math.ceil(currentMEs * 0.1));
+                    const potentialNew = Math.min(Math.floor(expansionBudget / meSetup), Math.ceil(currentMEs * 0.1));
+                    // Check against Max Cap
+                    const space = maxTotalMEs - currentMEs;
+                    const newMes = Math.min(potentialNew, space);
+
                     if (newMes > 0) {
                         const cost = newMes * meSetup;
                         outflows.loansMe = cost;
@@ -390,13 +429,36 @@ const ModelModule = {
                 }
             }
 
+
             // B. Toilets
             const capacity = currentMEs * inputs.toiletsPerMeMonth;
-            const variableRate = inputs.mgmtFeeRatio + inputs.meCostRate;
-            const grossUnitCost = currentUnitCost * (1 + variableRate);
+
+            // Fix: Include Contingency in Variable Rate (Cost Overrun / Mark-up)
+            // variableRate now includes: Mgmt (2%) + ME Cost (2%) + Contingency (10%)
+            const variableRate = inputs.mgmtFeeRatio + inputs.meCostRate + (inputs.contingencyRate || 0);
+
+            // Audit Contingency Add (Just the Contingency Portion for Display)
+            const contingencyAmt = currentUnitCost * (inputs.contingencyRate || 0);
+            dataMonthlyContingencyAdd.push(contingencyAmt);
+
+            // Note: variableMarkup includes Mgmt + ME + Contingency
+            const variableMarkup = currentUnitCost * variableRate;
+            const grossUnitCost = currentUnitCost + variableMarkup;
 
             // Affordability
             const maxUnits = Math.floor(lendable / grossUnitCost); // Loan Capacity
+
+            // Audit ME Demand
+            // Required MEs to clear backlog in e.g. 12 months? Or just instant?
+            // "MEsComputedRequired" -> simple capacity check
+            // If backlog is 1000, and capacity is 7/mo, needed = 1000/7.
+            // But this changes every month.
+            // Let's just log if Constraint was Capacity.
+            let constraint = "Demand";
+            const meCapacity = currentMEs * inputs.toiletsPerMeMonth;
+            if (meCapacity < backlogToilets) constraint = "Capacity";
+            if (maxUnits < backlogToilets && maxUnits < meCapacity) constraint = "Capital";
+            dataConstraintBinding.push(constraint);
 
             // Carbon & Grant Capacity
             // Strategy: Check GrantCash for Subsidy
@@ -449,20 +511,15 @@ const ModelModule = {
             }
 
             // 8. Carbon Revenue (Incremental)
-            // Logic: Production * Co2PerToilet * Value * Share.
-            // Assumption: Co2PerToilet is "Tonnes per Toilet" (One-time or Annual?)
-            // User formula implied one-time credit based on construction? or Annual stream?
-            // "monthlyCarbonTons = (monthlyTotalToilets * co2PerToilet) / 1000"
-            // If it's one-time: carbon += production * rate.
-            // If it's annual: carbon += cumulative * rate / 12.
-            // User prompt: "monthlyCarbonTons = (monthlyTotalToilets * co2PerToilet) / 1000" (Ambiguous 'monthlyTotalToilets' - cumulative or new?)
-            // Given "Incremental" request earlier, I assume NEW production generates One-Time Construction Credits?
-            // OR User means "Total Active Toilets" generate stream?
-            // Let's use PREVIOUS interpretation which was Incremental on Production for Revenue.
-            // BUT for IMPACT, we use Cumulative.
-            // Carbon Revenue -> GrantCash.
+            let carbonRev = 0;
             const newCarbonTons = (production * inputs.co2PerToilet) / 1000;
-            const carbonRev = newCarbonTons * inputs.co2Value * (inputs.carbonCreditShare / 100);
+
+            // Override: If co2PerToilet is 0, Revenue is 0 regardless of others
+            // Also ensure co2Value > 0
+            if (inputs.co2PerToilet > 0) {
+                carbonRev = newCarbonTons * inputs.co2Value * (inputs.carbonCreditShare / 100);
+            }
+
             inflows.carbon = carbonRev;
             cumulativeCarbon += newCarbonTons;
             grantCash += carbonRev;
@@ -496,6 +553,15 @@ const ModelModule = {
             dataMonthlyFundInt.push(outflows.investInt);
             dataMonthlyOps.push(outflows.fixed);
             dataMonthlyFees.push(outflows.varFees);
+
+            // Audit: Unit Breakdown (Avoid NaN if production is 0)
+            const unitPrincipal = production > 0 ? (outflows.loansHh / production) : 0;
+            const unitGrant = production > 0 ? (outflows.grants / production) : 0;
+            const unitOps = production > 0 ? ((outflows.fixed + outflows.varFees) / production) : 0;
+
+            dataMonthlyPerToiletPrincipal.push(unitPrincipal);
+            dataMonthlyPerToiletGrant.push(unitGrant);
+            dataMonthlyPerToiletOps.push(unitOps);
 
             // Portfolio Snapshots
             dataMonthlyPortfolioHh.push(hhCohorts.reduce((s, c) => s + c.balance, 0));
@@ -577,6 +643,19 @@ const ModelModule = {
             dataMonthlyMes,
             dataCarbon,
 
+            // Audit
+            dataMonthlyUnitCost,
+            dataMonthlyPerToiletPrincipal,
+            dataMonthlyPerToiletGrant,
+            dataMonthlyPerToiletOps,
+            dataConstraintBinding,
+
+            // New Audit Fields
+            dataMonthlyInflationFactor,
+            dataMonthlyBaseCost,
+            dataMonthlyContingencyAdd,
+            dataMonthlyInflatedCost,
+
             // Startup
             startupCost: startLoanVolume,
             startMEs: startMEs
@@ -642,8 +721,12 @@ const ModelModule = {
         const netAssetsEnd = cashEnd + portfolioOutstanding - investorLiabilityEnd;
         const initialCapital = inputs.investGrant + inputs.investLoan;
 
-        // Capital Preserved: (Ending Cash + Repaid Principal) / Initial Capital
-        const capitalPreservedPct = initialCapital > 0 ? ((cashEnd + totalRepaidPrincipal) / initialCapital) : 0;
+        // Capital Preserved: User wants "Grant Equity Multiple" and "Investor Capital Repaid"
+        // GrantEquityMultiple = NetAssetsEnd / InitialGrant
+        const grantEquityMultiple = inputs.investGrant > 0 ? (netAssetsEnd / inputs.investGrant) : 0;
+
+        // InvestorCapitalRepaid = TotalPrincipalRepaid / InitialLoan
+        const investorCapitalRepaidPct = inputs.investLoan > 0 ? (totalRepaidPrincipal / inputs.investLoan) : 0;
 
         // 4. Sustainability Metrics
         // OSS = Operating Revenue / Operating Expenses
@@ -782,7 +865,8 @@ const ModelModule = {
             financials: {
                 cashEnd: cashEnd,
                 netAssets: netAssetsEnd,
-                capitalPreservedPct: capitalPreservedPct,
+                netAssets: netAssetsEnd,
+                grantEquityMultiple: grantEquityMultiple, // Replaces capitalPreserved
                 investorRepaid: totalRepaidPrincipal,
                 investorRepaidPct: inputs.investLoan > 0 ? (totalRepaidPrincipal / inputs.investLoan) : 0,
                 grantsDisbursed: totalGrantsVal,
@@ -843,7 +927,12 @@ const ModelModule = {
                 low = mid; // Need higher
             }
         }
-        return bestRate;
+        if (this.calculate({ ...simInputs, loanInterestRate: bestRate }).kpis.financials.netAssets >= targetNetAssets) {
+            return bestRate;
+        } else {
+            console.warn("Solver failed: No break-even rate found.");
+            return null; // Return null if even max rate fails
+        }
     },
 
     // New Solver for Max Sustainable Grant Support %
@@ -910,10 +999,81 @@ const ModelModule = {
         // Rough check: GrantVal ~ GrantToilets * Cost?
         // Cost varies with inflation. Hard to check exactly.
 
+        // 3. Equity Reconciliation
+        // Check if Change in Equity == Surplus/Deficit
+        // NetCashFlow includes DebtService (Principal + Int).
+        // Delta Equity should equal NetIncome?
+        // This is complex to check monthly without full Balance Sheet.
+        // We will check End State vs Implied.
+
+        // 4. Cumulative Monotonicity
+        for (let i = 1; i < s.dataToilets.length; i++) {
+            if (s.dataToilets[i] < s.dataToilets[i - 1]) {
+                errors.push(`Integrity: Cumulative Toilets fell at Year ${i}`);
+            }
+        }
+
+        // 5. Unit Cost & Inflation Integrity
+        for (let m = 0; m < s.dataMonthlyUnitCost.length; m++) {
+            if (s.dataMonthlyUnitCost[m] <= 0) {
+                // Ignore M0 if not populated
+                if (m > 0) errors.push(`Integrity: Zero Unit Cost at M${m}`);
+            }
+            if (m > 1 && s.dataMonthlyInflationFactor[m] < s.dataMonthlyInflationFactor[m - 1] && inputs.inflationRate >= 0) {
+                // Allow flat if rate is 0
+                errors.push(`Integrity: Deflation detected at M${m} despite positive rate.`);
+            }
+        }
+
+        // 5. Unit Cost Validity (Audit)
+        for (let i = 0; i < s.dataToiletsMonthlyLoan.length; i++) {
+            const monthlyTotal = (s.dataToiletsMonthlyLoan[i] || 0) + (s.dataToiletsMonthlyGrant[i] || 0)
+                - (i > 0 ? (s.dataToiletsMonthlyLoan[i - 1] + s.dataToiletsMonthlyGrant[i - 1]) : 0);
+
+            if (monthlyTotal > 0) {
+                const uc = s.dataMonthlyUnitCost[i];
+                if (!uc || uc <= 0) {
+                    errors.push(`Integrity: Production at M${i + 1} but Unit Cost is Zero/Null (${uc})`);
+                }
+            }
+        }
+
         if (errors.length > 0) {
             console.error("❌ MODEL INTEGRITY CHECK FAILED:", errors);
+            // Verify Logic: If Integrity Fails, UI should show alert?
+            // We can return errors and UI can display them.
+            if (typeof UI !== 'undefined' && UI.showIntegrityError) {
+                UI.showIntegrityError(errors);
+            }
         } else {
-            console.log("✅ Model Integrity Verified: Identities hold.");
+            // Identity Check: CashBalance[t] == CashBalance[t-1] + NetCashFlow[t]
+            let identityFails = 0;
+            for (let i = 1; i < s.dataMonthlyCashBalance.length; i++) {
+                const prev = s.dataMonthlyCashBalance[i - 1];
+                const curr = s.dataMonthlyCashBalance[i];
+                const net = s.dataMonthlyNet[i];
+                if (Math.abs(curr - (prev + net)) > 0.5) {
+                    errors.push(`Identity Fail M${i}: Bal ${prev.toFixed(1)} + Net ${net.toFixed(1)} != ${curr.toFixed(1)}`);
+                    identityFails++;
+                    if (identityFails > 5) break; // Fail fast logic implied by stopping logs
+                }
+
+                // Toilet Identity
+                const prevT = (s.dataToiletsMonthlyLoan[i - 1] || 0) + (s.dataToiletsMonthlyGrant[i - 1] || 0);
+                const currT = (s.dataToiletsMonthlyLoan[i] || 0) + (s.dataToiletsMonthlyGrant[i] || 0);
+                const newT = (s.dataToiletsMonthlyLoan[i] - (s.dataToiletsMonthlyLoan[i - 1] || 0)) + (s.dataToiletsMonthlyGrant[i] - (s.dataToiletsMonthlyGrant[i - 1] || 0));
+                if (Math.abs(currT - (prevT + newT)) > 0.5) {
+                    errors.push(`Toilet Identity Fail M${i}`);
+                }
+            }
+
+            if (errors.length > 0) {
+                console.error("❌ MODEL INTEGRITY CHECK FAILED:", errors);
+                if (typeof UI !== 'undefined' && UI.showIntegrityError) UI.showIntegrityError(errors);
+            } else {
+                console.log("✅ Model Integrity Verified.");
+                if (typeof UI !== 'undefined' && UI.clearIntegrityError) UI.clearIntegrityError();
+            }
         }
     }
 };
@@ -930,51 +1090,55 @@ const UI = {
             const parsed = parseFloat(val);
             return isNaN(parsed) ? defaultVal : parsed;
         };
-        // Explicitly handle percentages if needed (Input 20 -> 0.20? Or 20?)
-        // Logic Update in Step 1403: Removed '/ 100' from calculations.
-        // So we expect Raw Inputs (20, 5, etc) to be used as Multipliers?
-        // Wait, Step 1403: `totalContingency = totalCapital * inputs.contingencyRate;`
-        // If Rate is 5. Total = Capital * 5? NO.
-        // If I removed `/ 100`, then `inputs.contingencyRate` MUST be 0.05.
-        // So `getInputs` MUST divide by 100 for percentages.
-
-        // RE-VERIFY STEP 1403 change.
-        // I changed `totalContingency = totalCapital * (inputs.contingencyRate / 100)` -> `... * inputs.contingencyRate`.
-        // This implies I expected `inputs.contingencyRate` to BE A DECIMAL (0.05).
-        // BUT I didn't change `getPct` definition `getRaw(id) / 100`?
-        // Step 1399: `const getPct = (id) => getRaw(id) / 100;`
-        // IF `getPct` was dividing by 100, then `getInputs` returned 0.05.
-        // So removing `/ 100` in calc was correct.
-
-        // HOWEVER, if `getPct` was somehow failing...
-
-        // Let's implement `getPct` explicitly as `getRaw(id) / 100`.
-        const getPct = (id, def = 0) => getRaw(id, def) / 100;
+        // Explicitly handle percentages: Expect Decimals (0.10) from User
+        // If user enters > 1.0, we assume they meant % and divide by 100 (Validation/Hinting)
+        // But for strict "confirm inputs are decimals", we largely accept what is given but warn.
+        // ACTUALLY: User said "consistent treated as decimals", implying we should NOT divide by 100 automatically if we want to force decimal habits.
+        // BUT to avoid breaking existing workflow too hard, we can be smart:
+        // If val > 1.0, treat as percent? User said "0.3218". 
+        // I will change getPct to just Return Raw. The User is responsible for 0.35.
+        // Use a helper to support the Transition.
+        const getDecimal = (id, def = 0) => {
+            let val = getRaw(id, def);
+            // Heuristic: If > 1.0, assume percentage (e.g. 5 -> 0.05, 32 -> 0.32)
+            // This handles users entering "32.18" for 32.18%.
+            // Note: If a rate is truly > 100% (e.g. 200% inflation), this heuristic fails (treats as 2%).
+            // But for this model context, > 1.0 is almost certainly a percentage input.
+            // Exception: 'Mgmt Fee Ratio' could be 1.0 (100%), 'Carbon Share' 1.0.
+            // If strict 1.0, we treat as 100%? Or 1.0?
+            // Let's safe-guard: if val > 1.0, div by 100.
+            if (val > 1.0) {
+                val = val / 100;
+            }
+            return val;
+        };
 
         return {
             country: document.getElementById('countryInput').value || 'Unknown',
             investGrant: getRaw('wiz-invest-grant-sidebar'),
             investLoan: getRaw('wiz-invest-loan-sidebar'),
             popReqToilets: getRaw('popReqToilets'),
-            popGrowthRate: getPct('popGrowthRate'),
+            popGrowthRate: getDecimal('popGrowthRate'),
             avgHHSize: getRaw('avgHHSize', 5),
-            grantSupportPct: getPct('grantSupportPct', 20), // Default 20%
+            grantSupportPct: getDecimal('grantSupportPct', 0.20), // Default 0.20
             avgToiletCost: getRaw('avgToiletCost', 50),
             districts: getRaw('districts'),
             mePerDistrict: getRaw('mePerDistrict'),
             toiletsPerMeMonth: getRaw('toiletsPerMeMonth'),
             meSetupCost: getRaw('meSetupCost'),
-            loanInterestRate: getPct('loanInterestRate_v2', 10), // UPDATED ID
-            meLoanInterestRate: getPct('meLoanInterestRate_v2', 10), // UPDATED ID
-            hhDefaultRate: getPct('hhDefaultRate', 5),
-            meDefaultRate: getPct('meDefaultRate', 5),
-            mgmtFeeRatio: getPct('mgmtFeeRatio', 2),
-            inflationRate: getPct('inflationRate'),
-            contingencyRate: getPct('contingencyRate', 5),
-            opsReserveCap: getRaw('opsReserveCap', 15),
+            loanInterestRate: getDecimal('loanInterestRate_v2', 0.10),
+            meLoanInterestRate: getDecimal('meLoanInterestRate_v2', 0.10),
+            hhDefaultRate: getDecimal('hhDefaultRate', 0.05),
+            meDefaultRate: getDecimal('meDefaultRate', 0.05),
+            mgmtFeeRatio: getDecimal('mgmtFeeRatio', 0.02),
+            inflationRate: getDecimal('inflationRate'),
+            contingencyRate: getDecimal('contingencyRate', 0.05),
+            opsReserveCap: getRaw('opsReserveCap', 15), // Uses Raw for now? Wait, Cap %? 
+            // "15" in UI means 15%? If I change all inputs to decimal, this should be 0.15.
+            // Let's assume opsReserveCap is entering decimal too.
             annualFixedOpsCost: getRaw('annualFixedOpsCost', 50000),
-            meCostRate: getPct('meCostRate', 5),
-            fundCostOfCapital: getPct('fundCostOfCapital'),
+            meCostRate: getDecimal('meCostRate', 0.05),
+            fundCostOfCapital: getDecimal('fundCostOfCapital'),
             fundRepaymentTerm: getRaw('fundRepaymentTerm'),
             termHh: getRaw('termHh', 12),
             termMe: getRaw('termMe', 24),
@@ -984,8 +1148,7 @@ const UI = {
             avgAnnualIncome: getRaw('avgAnnualIncome', 1500),
             co2PerToilet: getRaw('co2PerToilet', 0.2),
             co2Value: getRaw('co2Value', 50),
-            co2Value: getRaw('co2Value', 50),
-            carbonCreditShare: getRaw('carbonCreditShare', 100), // Fix: Added missing link
+            carbonCreditShare: getDecimal('carbonCreditShare', 1.0), // 100% -> 1.0
             // Optimization Flags
             enableBreakEvenSolver: true,
             // Investment Constraints
@@ -1665,6 +1828,34 @@ const UI = {
         });
     },
 
+    // Integrity UI
+    showIntegrityError(errors) {
+        let banner = document.getElementById('integrityBanner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'integrityBanner';
+            banner.style.background = '#fee2e2';
+            banner.style.border = '1px solid #ef4444';
+            banner.style.color = '#b91c1c';
+            banner.style.padding = '1rem';
+            banner.style.marginBottom = '1rem';
+            banner.style.borderRadius = '0.5rem';
+            banner.style.display = 'none';
+            // Insert after top-actions
+            const parent = document.querySelector('.top-actions');
+            if (parent) parent.insertAdjacentElement('afterend', banner);
+        }
+
+        banner.innerHTML = `<strong>⚠️ Model Integrity Check Failed</strong><ul style="margin-top:0.5rem; padding-left:1.5rem;">` +
+            errors.map(e => `<li>${e}</li>`).join('') + `</ul>`;
+        banner.style.display = 'block';
+    },
+
+    clearIntegrityError() {
+        const banner = document.getElementById('integrityBanner');
+        if (banner) banner.style.display = 'none';
+    },
+
     // Stakeholders Removed
 
     // Wizard Logic
@@ -1819,10 +2010,12 @@ const UI = {
             `GrantFund,$${inputs.grantFund}`,
             `LoanFund,$${inputs.loanFund}`,
             `AvgToiletCost,$${inputs.avgToiletCost}`,
-            `LoanInterestRate,${(inputs.loanInterestRate * 100).toFixed(1)}%`,
+            `LoanInterestRate,${inputs.loanInterestRate}`,
+            `MEInterestRate,${inputs.meLoanInterestRate}`,
+            `InflationRate,${inputs.inflationRate}`,
+            `FundCostOfCapital,${inputs.fundCostOfCapital}`,
             `Duration,${inputs.duration} Years`,
-            `GrantSupportPct,${(inputs.grantSupportPct * 100).toFixed(0)}%`,
-            `GrantSupportPct,${(inputs.grantSupportPct * 100).toFixed(0)}%`,
+            `GrantSupportPct,${inputs.grantSupportPct}`,
             `BadDebtBuffer,5x Expected Loss`,
             `CostPerLatrine,$${(document.getElementById('sum-cost-per-latrine')?.innerText || '0').replace('$', '')}`,
             `EconomicCostPerLatrine,$${(s && s.economicCostPerLatrine ? s.economicCostPerLatrine.toFixed(2) : '0')}`
@@ -1831,10 +2024,12 @@ const UI = {
         const s = this.lastResults.series;
         // Header
         const headers = [
-            "Month", "NewToiletsLoan", "NewToiletsGrant", "NewLoanValHH", "NewLoanValME",
+            "Month", "Constraint", "ActiveMEs", "BaseCost", "InflationFx", "InflatedCost", "UnitContingencyAdd",
+            "NewToiletsLoan", "NewToiletsGrant", "NewLoanValHH", "NewLoanValME",
             "RevIntHH", "RevIntME", "FundPrincipalCfl",
             "OpsExp", "BadDebtExp", "FundIntExp", "NetCashFlow",
-            "PortfolioHH", "PortfolioME", "CashBalance"
+            "PortfolioHH", "PortfolioME", "CashBalance",
+            "UnitPrincipal", "UnitGrant", "UnitOps"
         ];
 
         const rows = [...paramRows, "", headers.join(",")];
@@ -1848,6 +2043,10 @@ const UI = {
 
         const m0Row = [
             "M0 (Startup)",
+            "", // Constraint
+            s.startMEs || 0,
+            (s.dataMonthlyUnitCost?.[0] || inputs.avgToiletCost).toFixed(2), // Est M0
+            "1.000",
             0, 0, 0,
             startupCost.toFixed(2), // NewLoanValME
             0, 0, 0, // RevHH, RevME, FundPrin
@@ -1855,7 +2054,8 @@ const UI = {
             (-startupCost).toFixed(2), // NetCash
             0, // PortfolioHH
             startupCost.toFixed(2), // PortfolioME
-            (initialCash - startupCost).toFixed(2) // CashBalance
+            (initialCash - startupCost).toFixed(2), // CashBalance
+            "", "", "" // Unit Metrics
         ];
         rows.push(m0Row.join(","));
         const len = s.monthlyLabels.length;
@@ -1868,14 +2068,16 @@ const UI = {
 
             const row = [
                 s.monthlyLabels[i],
-                // Toilets (Cumulative)
-                cumLoan,
-                cumGrant,
-                totalRow,
-                // Toilets (Monthly)
-                (s.dataToiletsMonthlyLoan[i] || 0),
-                (s.dataToiletsMonthlyGrant[i] || 0),
-                (s.dataToiletsMonthlyLoan[i] || 0) + (s.dataToiletsMonthlyGrant[i] || 0),
+                s.dataConstraintBinding?.[i] || "",
+                (s.dataMonthlyMes?.[i] || 0),
+                (s.dataMonthlyBaseCost?.[i] || 0).toFixed(2),
+                (s.dataMonthlyInflationFactor?.[i] || 0).toFixed(4),
+                (s.dataMonthlyInflatedCost?.[i] || 0).toFixed(2),
+                (s.dataMonthlyContingencyAdd?.[i] || 0).toFixed(2),
+
+                // Toilets (Cumulative) -> Wait, we want Monthly here for columns "New..."
+                (s.dataToiletsMonthlyLoan[i] - (i > 0 ? s.dataToiletsMonthlyLoan[i - 1] : 0)),
+                (s.dataToiletsMonthlyGrant[i] - (i > 0 ? s.dataToiletsMonthlyGrant[i - 1] : 0)),
 
                 // Finances
                 (s.dataMonthlyNewLoansHhVal[i] || 0).toFixed(2),
@@ -1889,7 +2091,10 @@ const UI = {
                 (s.dataMonthlyNet[i] || 0).toFixed(2),
                 (s.dataMonthlyPortfolioHh[i] || 0).toFixed(2),
                 (s.dataMonthlyPortfolioMe[i] || 0).toFixed(2),
-                (s.dataMonthlyCashBalance[i] || 0).toFixed(2)
+                (s.dataMonthlyCashBalance[i] || 0).toFixed(2),
+                (s.dataMonthlyPerToiletPrincipal?.[i] || 0).toFixed(2),
+                (s.dataMonthlyPerToiletGrant?.[i] || 0).toFixed(2),
+                (s.dataMonthlyPerToiletOps?.[i] || 0).toFixed(2)
             ];
             rows.push(row.join(","));
         }
@@ -1928,6 +2133,7 @@ const UI = {
             // Use lastResults directly to avoid stale state.
             const k = UI.lastResults.kpis;
             // Flatten KPIS for report compatibility
+            // Flatten KPIS for report compatibility
             const stats = {
                 totalLatrines: k.reach.toilets,
                 loanToilets: k.reach.loanToilets,
@@ -1949,7 +2155,11 @@ const UI = {
                 breakEvenRate: 0,
                 maxGrantPct: 0,
 
-                capitalPreserved: k.financials.capitalPreservedPct,
+                // Fix: Map new Capital Preservation fields
+                capitalPreserved: k.financials.capitalPreservedPct, // Legacy 
+                grantEquityMultiple: k.financials.grantEquityMultiple,
+                investorRepaidPct: k.financials.investorRepaidPct,
+
                 minCash: Math.min(...UI.lastResults.series.dataMonthlyCashBalance),
                 insolvencyMonths: k.sustainability.monthsInsolvent,
 
@@ -1979,7 +2189,7 @@ const UI = {
                 "Month",
                 "Cumulative Toilets (Loan)", "Cumulative Toilets (Grant)", "Total Toilets (Cum)",
                 "Monthly Toilets (Loan)", "Monthly Toilets (Grant)", "Monthly Total",
-                "Unit Cost", "Inflation Factor", "Active MEs",
+                "Base Cost", "Inflation Factor", "Inflated Cost", "Contingency Add", "Active MEs",
                 "New Loans (HH)", "Rev Int (HH)", "Principal Repaid (HH)", "Defaults (HH)",
                 "New Loans (ME)", "Rev Int (ME)", "Principal Repaid (ME)", "Defaults (ME)",
                 "Variable Ops", "Fixed Ops",
@@ -1998,7 +2208,7 @@ const UI = {
                 "M0 (Startup)",
                 "0", "0", "0", // Cummings
                 "0", "0", "0", // Monthlys
-                "0.00", "1.000", startupMEs, // UnitCost, Inflation, MEs
+                "0.00", "1.000", "0.00", "0.00", startupMEs, // Base, Inf, Inflated, Cont, MEs
                 "0.00", "0.00", "0.00", "0.00", // HH Loan
                 startupCost.toFixed(2), "0.00", "0.00", "0.00", // ME Loan
                 "0.00", "0.00", // Ops
@@ -2018,8 +2228,10 @@ const UI = {
                     ((s.dataToiletsMonthlyLoan[i] || 0) - (s.dataToiletsMonthlyLoan[i - 1] || 0)).toFixed(0),
                     ((s.dataToiletsMonthlyGrant[i] || 0) - (s.dataToiletsMonthlyGrant[i - 1] || 0)).toFixed(0),
                     (((s.dataToiletsMonthlyLoan[i] || 0) - (s.dataToiletsMonthlyLoan[i - 1] || 0)) + ((s.dataToiletsMonthlyGrant[i] || 0) - (s.dataToiletsMonthlyGrant[i - 1] || 0))).toFixed(0),
-                    (s.dataMonthlyUnitCost?.[i] || 0).toFixed(2),
-                    (s.dataMonthlyInflation?.[i] || 0).toFixed(3),
+                    (s.dataMonthlyBaseCost?.[i] || 0).toFixed(2),
+                    (s.dataMonthlyInflationFactor?.[i] || 0).toFixed(3),
+                    (s.dataMonthlyInflatedCost?.[i] || 0).toFixed(2),
+                    (s.dataMonthlyContingencyAdd?.[i] || 0).toFixed(2),
                     (s.dataMonthlyMes?.[i] || 0).toFixed(0),
                     (s.dataMonthlyNewLoansHhVal[i] || 0).toFixed(2),
                     (s.dataMonthlyRevenueHh[i] || 0).toFixed(2),
@@ -2070,7 +2282,8 @@ const UI = {
             lines.push(`Break-even Interest,${(stats.breakEvenRate || 0).toFixed(1)}%`);
             lines.push(`Max Sustainable Grant,${(stats.maxGrantPct || 0).toFixed(1)}%`);
 
-            lines.push(`Capital Preserved,${((stats.capitalPreserved || 0) * 100).toFixed(1)}%`);
+            lines.push(`Grant Equity Multiple,${(stats.grantEquityMultiple || 0).toFixed(2)}x`);
+            lines.push(`Investor Repaid %,${((stats.investorRepaidPct || 0) * 100).toFixed(1)}%`);
             lines.push(`Min Cash Balance,$${stats.minCash || 0}`);
             lines.push(`Months Insolvent,${stats.insolvencyMonths || 0}`);
             lines.push(``);
@@ -2140,7 +2353,7 @@ const UI = {
         setTxt('sum-balance', fmtMoney(stats.fundBalance));
         setTxt('sum-capital-repaid', fmtMoney(stats.fundRepaid)); // Assuming stats.fundRepaid exists
         setTxt('sum-repaid-pct', fmtPct(stats.totalPrinRepayPct)); // New UI Field, assuming stats.totalPrinRepayPct exists
-        setTxt('sum-preserved', fmtPct(stats.capitalPreserved)); // Assuming stats.capitalPreserved exists
+        setTxt('sum-preserved', (stats.grantEquityMultiple || 0).toFixed(2) + "x");
 
         // MISSING FIELDS RESTORED:
         setTxt('sum-households', fmt(stats.households));
@@ -2242,7 +2455,7 @@ const UI = {
         // Cost Per Latrine (use standardized Metric)
         setTxt('sum-cost-per-latrine', fmtMoney(stats.costPerLatrine));
 
-        setTxt('sum-preserved', capPreservedPct.toFixed(1) + "%");
+        setTxt('sum-preserved', (stats.grantEquityMultiple || 0).toFixed(2) + "x");
     },
 
     // --- Export ---

@@ -18,7 +18,10 @@ Cash is allocated based on a rigid priority stack, ensuring the fund cannot "acc
 3.  **Reserves**: 
     - **Debt Lookahead**: 3 months of future principal payments.
     - **Ops Buffer**: 3 months of fixed operational costs.
-4.  **New Lending**: Loans and Grants are **only issued** if `Cash Balance > Reserves`.
+3.  **Model Integrity & Audit Suite**:
+    *   **Automated Checks**: The model self-validates after every run, checking for Cash Continuity (`Cash[t] = Cash[t-1] + Net[t]`), Unit Cost Validity, and Cumulative Monotonicity.
+    *   **Visible Warnings**: An error banner appears immediately if internal logic fails.
+    *   **Audit Export**: CSV exports now include detailed per-unit breakdowns, constraint tracking, and explicit parameter headers.
 
 ### 3. Lifecycle Phases
 *   **Grace Period Sprint**: During the Investor Grace Period, the fund builds capacity (MEs) while Debt Service is paused.

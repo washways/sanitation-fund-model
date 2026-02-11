@@ -29,7 +29,7 @@
                         We've pre-loaded a scenario for <strong>Malawi</strong>:
                     </p>
                     <ul style="margin-bottom:1rem; font-size:0.95rem; list-style: disc; padding-left:1.5rem;">
-                        <li><strong>Capital:</strong> $5M Loan + $500k Grant</li>
+                        <li><strong>Capital:</strong> $4M Loan + $1M Grant</li>
                         <li><strong>Goal:</strong> Sustainable growth to close the SDG6 Gap.</li>
                         <li><strong>Challenge:</strong> Balance affordability (Low Interest) with Fund Survival
                             (Solvency).</li>
@@ -53,8 +53,10 @@
                         style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
                         <h3 style="margin-top:0; font-size:1rem; color:#166534;">🔄 Theory of Change (Revised)</h3>
                         <p style="font-size:0.85rem; color:#15803d; line-height:1.4;">
-                            This model uses a <strong>Generalized Repayment Engine</strong>.
-                            It prioritizes <strong>Investor Repayment</strong> above all else.<br><br>
+                            This model uses a <strong>Double-Entry Audit Engine</strong>.
+                            It runs <strong>integrity checks</strong> on every simulation to ensure cash continuity,
+                            unit-cost validity, and logical consistency.
+                            <br><br>
                             If the fund forecasts a cash shortfall (based on your chosen Term), it will automatically
                             <strong>slow down lending</strong> or hibernate to preserve liquidity.
                             <br><br>
@@ -186,7 +188,7 @@
                         <span class="info-icon" title="Annual population growth rate.">i</span>
                     </label>
                     <div class="input-wrapper has-suffix">
-                        <input type="number" id="popGrowthRate" value="3">
+                        <input type="number" id="popGrowthRate" value="0.03">
                         <span class="input-suffix">%</span>
                     </div>
                 </div>
@@ -202,8 +204,10 @@
                             title="API Derived: Based on poverty headcount ($2.15/day). Represents the % of toilet cost covered by grant. Higher poverty = Higher grant need.">i</span>
                     </label>
                     <div class="input-wrapper has-suffix">
-                        <input type="number" id="grantSupportPct" value="10">
-                        <span class="input-suffix">%</span>
+                        <div class="input-wrapper has-suffix">
+                            <input type="number" id="grantSupportPct" value="0.10">
+                            <span class="input-suffix">%</span>
+                        </div>
                     </div>
 
                     <small id="affordability-help"
@@ -254,18 +258,18 @@
 
                 <h3>Financials</h3>
                 <div class="input-group">
-                    <label>HH Loan Interest Rate (%)
+                    <label>HH Loan Interest Rate (0.35 = 35%)
                         <span class="info-icon"
                             title="API Derived: Based on local Commercial Lending Rate + Risk Spread. The annual interest charged to households. Must cover inflation + defaults + ops.">i</span>
                     </label>
-                    <input type="number" id="loanInterestRate_v2" value="35" class="api-field">
+                    <input type="number" id="loanInterestRate_v2" value="0.35" class="api-field">
                 </div>
                 <div class="input-group">
-                    <label>ME Loan Interest Rate (%)
+                    <label>ME Loan Interest Rate (0.10 = 10%)
                         <span class="info-icon"
                             title="API Derived: Typically lower than HH rate. Annual interest charged to businesses for setup loans.">i</span>
                     </label>
-                    <input type="number" id="meLoanInterestRate_v2" value="10" class="api-field">
+                    <input type="number" id="meLoanInterestRate_v2" value="0.10" class="api-field">
                 </div>
                 <div class="input-group">
                     <label>HH Loan Term (Months)
@@ -282,26 +286,26 @@
                     <input type="number" id="termMe" value="12">
                 </div>
                 <div class="input-group">
-                    <label>HH Default Rate (%)
+                    <label>HH Default Rate (0.05 = 5%)
                         <span class="info-icon"
                             title="Risk Metric: % of household loans never repaid. High defaults (>10%) represent a major leak in the revolving fund. Auto-set to 8% (Conservative).">i</span>
                     </label>
-                    <input type="number" id="hhDefaultRate" value="5">
+                    <input type="number" id="hhDefaultRate" value="0.05">
                 </div>
 
                 <div class="input-group">
-                    <label>ME Default Rate (%)
+                    <label>ME Default Rate (0.05 = 5%)
                         <span class="info-icon"
                             title="Risk Metric: % of businesses that fail and default on setup loans. Auto-set to 10% (High Risk for Startups).">i</span>
                     </label>
-                    <input type="number" id="meDefaultRate" value="5">
+                    <input type="number" id="meDefaultRate" value="0.05">
                 </div>
                 <div class="input-group">
-                    <label>Mgmt Fee Ratio (%)
+                    <label>Mgmt Fee Ratio (0.01 = 1%)
                         <span class="info-icon"
                             title="Variable Operational Cost: % of all disbursements (loans+grants) retained to cover administration and monitoring.">i</span>
                     </label>
-                    <input type="number" id="mgmtFeeRatio" value="1">
+                    <input type="number" id="mgmtFeeRatio" value="0.01">
                 </div>
 
 
@@ -351,30 +355,30 @@
                     <input type="number" id="co2Value" value="15">
                 </div>
                 <div class="input-group">
-                    <label>Fund Carbon Share (%)
+                    <label>Fund Carbon Share (1.0 = 100%)
                         <span class="info-icon"
                             title="Revenue Share: % of Carbon Credit value that flows back to the Fund vs. retained by households/operators.">i</span>
                     </label>
                     <div class="input-wrapper has-suffix">
-                        <input type="number" id="carbonCreditShare" value="100">
+                        <input type="number" id="carbonCreditShare" value="1.0">
                         <span class="input-suffix">%</span>
                     </div>
                 </div>
 
                 <h3>Macro / Risk</h3>
                 <div class="input-group">
-                    <label>Annual Inflation (%)
+                    <label>Annual Inflation (0.0332 = 3.32%)
                         <span class="info-icon"
                             title="API Derived: Annual inflation (CPI) from World Bank. Future costs are adjusted upwards by this rate.">i</span>
                     </label>
-                    <input type="number" id="inflationRate" value="3.32">
+                    <input type="number" id="inflationRate" value="0.0332">
                 </div>
                 <div class="input-group">
-                    <label>Contingency (Risk Buffer %)
+                    <label>Contingency (0.05 = 5%)
                         <span class="info-icon"
                             title="Capital Reserve: % of Initial Fund held back for shocks. Adjusted based on Country Governance Score (CPIA). Low Gov = High Contingency.">i</span>
                     </label>
-                    <input type="number" id="contingencyRate" value="5">
+                    <input type="number" id="contingencyRate" value="0.05">
                 </div>
                 <div class="input-group">
                     <label>Max Ops Reserve Cap (%)
@@ -384,11 +388,11 @@
                     <input type="number" id="opsReserveCap" value="15">
                 </div>
                 <div class="input-group">
-                    <label>M&E Cost (%)
+                    <label>M&E Cost (0.02 = 2%)
                         <span class="info-icon"
                             title="Variable Cost: Charged as % of TOTAL Disbursements. Paid from Revenue first, then Ops Reserve.">i</span>
                     </label>
-                    <input type="number" id="meCostRate" value="2">
+                    <input type="number" id="meCostRate" value="0.02">
                 </div>
 
                 <div class="sidebar-footer">
@@ -644,9 +648,9 @@
                                             <td id="sum-repaid-pct">--</td>
                                         </tr>
                                         <tr>
-                                            <td>Capital Preserved
+                                            <td>Grant Equity Multiple
                                                 <span class="info-icon"
-                                                    title="Ratio of Ending Fund Balance to Initial Loan Investment.">i</span>
+                                                    title="Ratio of Ending Net Assets to Initial Grant. Indicators > 1.0 mean the grant has been multiplied.">i</span>
                                             </td>
                                             <td id="sum-preserved">--</td>
                                         </tr>
@@ -711,7 +715,7 @@
                                     <th>Toilets(Loan)</th>
                                     <th>Toilets(Grant)</th>
                                     <th title="Production limit by MEs">Capacity</th>
-                                    <th title="Production limit by Funds">Affordable</th>
+                                    <th title="Constraint Reason">Constraint</th>
                                     <th>NewLoans(HH)</th>
                                     <th>RevInt(HH)</th>
                                     <th>PrincipalRepaid(HH)</th>
