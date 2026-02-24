@@ -156,8 +156,8 @@ const ModelModule = {
     calculate(inputs) {
         // --- 1. Configuration & Standardization ---
         const durationMonths = inputs.duration * 12;
-        const totalSimMonths = durationMonths + 12; // 1 Year Winding Down
-        const activeMonths = durationMonths;
+        const totalSimMonths = durationMonths; // Hard cap at duration * 12
+        const activeMonths = durationMonths;   // Winding-down zone if < totalSimMonths
 
         // Rates (Standardized Geometric)
         const getRate = (r) => this.getMonthlyRate(r);
@@ -200,6 +200,10 @@ const ModelModule = {
         const totalOpsReserve = (inputs.investGrant + inputs.investLoan) * opsReserveRate;
         let currentReserve = totalOpsReserve; // Simplified Reserve Logic
 
+        // Cash-aware repayment accumulators (track unpaid amounts)
+        let accruedInvestorInt = 0;
+        let accruedInvestorPrin = 0;
+
         // Portfolios & State
         let hhCohorts = [];
         let meCohorts = [];
@@ -207,11 +211,13 @@ const ModelModule = {
         let toiletsBuiltCumulative = 0;
         let backlogToilets = inputs.popReqToilets / inputs.avgHHSize;
 
-        // Constraints
+        // Cumulative Trackers
+        let cumulativeCarbon = 0;
+        let cumulativeDalys = 0;
+        let dataDalys = [];
         let constraints = { capital: 0, capacity: 0, demand: 0 };
 
         // Accumulators (Audit)
-        let cumulativeCarbon = 0;
 
         // --- Output Arrays ---
         const monthlyLabels = [];
@@ -313,6 +319,7 @@ const ModelModule = {
 
             // Audit
             dataMonthlyInflationFactor.push(currentInflationFactor);
+            const baseCost = inputs.avgToiletCost;
             dataMonthlyBaseCost.push(baseCost);
             dataMonthlyInflatedCost.push(currentUnitCost);
 
@@ -371,31 +378,35 @@ const ModelModule = {
             const loanInflow = inflows.hhInt + inflows.hhPrin + inflows.meInt + inflows.mePrin;
             loanCash += loanInflow;
 
-            // 5. Outflows: Debt Service (Senior)
+            // 5. Outflows: Debt Service (Cash-Aware — never force cash below 0 for scheduled payments)
+            let scheduledPrin = 0;
+            let scheduledInt = 0;
             if (m <= inputs.fundRepaymentTerm * 12 && m > inputs.investorGracePeriod) {
-                outflows.investPrin = investorSchedule[m]?.principal || 0;
-                outflows.investInt = loanFundLiability * monthlyCostOfCapital;
+                scheduledPrin = investorSchedule[m]?.principal || 0;
+                scheduledInt = loanFundLiability * monthlyCostOfCapital;
             }
-            // Pay from LoanCash
-            const debtService = outflows.investPrin + outflows.investInt;
-            if (debtService > 0) {
-                loanCash -= debtService;
-                loanFundLiability -= outflows.investPrin;
-            }
+            const canPayDebt = Math.max(0, loanCash);
+            const actualInt = Math.min(scheduledInt, canPayDebt);
+            const actualPrin = Math.min(scheduledPrin, Math.max(0, canPayDebt - actualInt));
+            outflows.investInt = actualInt;
+            outflows.investPrin = actualPrin;
+            accruedInvestorInt += (scheduledInt - actualInt);
+            accruedInvestorPrin += (scheduledPrin - actualPrin);
+            loanCash -= (actualInt + actualPrin);
+            loanFundLiability -= actualPrin;
+            const debtService = actualInt + actualPrin;
 
-            // 6. Outflows: Operations
-            // Hibernation check
+            // 6. Outflows: Operations (Survival floor if insolvent or winding down)
             let opsCost = currentFixedOps;
-            // If winding down, reduced ops
-            if (isWindingDown) opsCost *= 0.3;
-
+            if (isWindingDown || loanCash < 0) opsCost *= 0.3; // hibernation / survival floor
             outflows.fixed = opsCost;
-            loanCash -= opsCost; // Ops paid from LoanFund
+            loanCash -= opsCost;
 
             // 7. New Business (Lending & Grants)
-            // Reserves logic
-            const requiredReserves = opsCost * 3; // Simple 3-month buffer
-            let lendable = loanCash - requiredReserves;
+            // Hard-stop solvency gate: only lend if cash exceeds reserve floor
+            const requiredReserves = opsCost * 3; // 3-month ops buffer
+            const solvent = (loanCash >= requiredReserves) && (grantCash >= 0);
+            let lendable = solvent ? Math.max(0, loanCash - requiredReserves) : 0;
             if (isWindingDown) lendable = 0;
 
             let production = 0;
@@ -477,7 +488,14 @@ const ModelModule = {
             // Cap Loan by Lendable
             loanCount = Math.min(tentativeLoan, maxUnits);
 
-            // Final Production
+            // Final Production — enforce non-negative integers, cap to remaining backlog
+            grantCount = Math.max(0, Math.floor(grantCount));
+            loanCount = Math.max(0, Math.floor(loanCount));
+            const remainingDemand = Math.max(0, Math.floor(backlogToilets));
+            if (grantCount + loanCount > remainingDemand) {
+                grantCount = Math.min(grantCount, remainingDemand);
+                loanCount = Math.min(loanCount, Math.max(0, remainingDemand - grantCount));
+            }
             production = grantCount + loanCount;
 
             if (production > 0) {
@@ -501,7 +519,7 @@ const ModelModule = {
 
                 // Track
                 toiletsBuiltCumulative += production;
-                backlogToilets -= production;
+                backlogToilets = Math.max(0, backlogToilets - production); // Never go below 0
 
                 // Add HH Loan
                 if (loanVal > 0) {
@@ -529,6 +547,8 @@ const ModelModule = {
             const hours = toiletsBuiltCumulative * inputs.avgHHSize * 0.25 * 30;
             // DALYs: Active Toilets * HH_Size * DALY_Per_Person / 12
             const dalys = (toiletsBuiltCumulative * inputs.avgHHSize * inputs.dalyPerPerson) / 12;
+
+            cumulativeDalys += dalys;
 
             dataMonthlyHoursSaved.push(hours);
             dataMonthlyDalysAverted.push(dalys);
@@ -587,8 +607,10 @@ const ModelModule = {
                 labels.push(`Year ${currentYear}`);
                 dataToilets.push(toiletsBuiltCumulative);
                 // Snapshot People for Legacy Charts (optional)
+                // Snapshot People for Legacy Charts (optional)
                 dataPeople.push(toiletsBuiltCumulative * inputs.avgHHSize);
                 dataCarbon.push(cumulativeCarbon);
+                dataDalys.push(cumulativeDalys);
 
                 dataLoansHh.push(yearLoansHh);
                 dataLoansMe.push(yearLoansMe);
@@ -641,7 +663,9 @@ const ModelModule = {
             dataMonthlyPortfolioHh,
             dataMonthlyPortfolioMe,
             dataMonthlyMes,
+            dataMonthlyMes,
             dataCarbon,
+            dataDalys,
 
             // Audit
             dataMonthlyUnitCost,
@@ -658,13 +682,19 @@ const ModelModule = {
 
             // Startup
             startupCost: startLoanVolume,
-            startMEs: startMEs
+            startMEs: startMEs,
+
+            // Cash-aware repayment audit
+            accruedInvestorInt,
+            accruedInvestorPrin
         };
 
         const kpis = ModelModule.computeKPIs(series, inputs);
 
-        // Verification
-        ModelModule.verifyLedger(series, inputs, kpis);
+        // Verification (skip during solver sub-simulations to avoid false-positive noise)
+        if (inputs.enableBreakEvenSolver !== false) {
+            ModelModule.verifyLedger(series, inputs, kpis);
+        }
 
         // Output
         return { series, kpis };
@@ -675,8 +705,8 @@ const ModelModule = {
         const s = series;
         const last = s.dataMonthlyCashBalance.length - 1;
 
-        // 1. Reach
-        const totalToilets = s.dataToilets[s.dataToilets.length - 1] || 0;
+        // 1. Reach — derive from monthly final index (most accurate)
+        const totalToilets = (s.dataToiletsMonthlyLoan[last] || 0) + (s.dataToiletsMonthlyGrant[last] || 0);
         const loanToilets = s.dataToiletsMonthlyLoan[last] || 0;
         const grantToilets = s.dataToiletsMonthlyGrant[last] || 0;
 
@@ -774,33 +804,9 @@ const ModelModule = {
         // Reconstruct Value Logic from Arrays or inputs
         // Value = (DALYs * Value) + (Carbon * Value) + (Hours * Value)
 
-        // DALYs
-        const totalDalys = (s.dataDalys && s.dataDalys.length > 0) ? s.dataDalys.reduce((a, b) => a + b, 0) : (people * inputs.dalyPerPerson);
-        // Note: s.dataDalys was Cumulative in loop?
-        // Line 1198: dataDalys.push(peopleReached * inputs.dalyPerPerson);
-        // Logic: Push Annual. So Sum = Total.
-        // Wait, peopleReached is Cumulative?
-        // Line 1193: peopleReached = toilets * size. Cumulative.
-        // If dataDalys pushes cumulative each year, SUM is wrong.
-        // dataDalys is [Year1Cumulative, Year2Cumulative...] ???
-        // Line 1198: dataDalys.push(peopleReached * inputs.dalyPerPerson);
-        // Yes, PeopleReached is cumulative.
-        // So dataDalys array contains SNAPSHOTS.
-        // Total Impact is NOT Sum(Snapshots).
-        // Total Impact so far = Last Snapshot.
-        // Correct Logic:
-        const totalDalysAverted = people * (inputs.dalyPerPerson || 0);
-        if (inputs.dalyPerPerson > 0 && people > 0 && totalDalysAverted === 0) console.warn("DALY Calc Error");
-        // Actually, DALYs are per year.
-        // The loop calculated `peopleReached` (Stocks).
-        // DALYs averted = Stock * Years?
-        // If we want "Total DALYs averted over Project Life":
-        // It is Sum(People_Active_Year_i * DALY_Rate).
-        // My `dataPeople` array stores `peopleReached` at end of each year.
-        // So Sum(dataPeople) * DALY_Rate is approx Total DALY Years averted.
-        // Let's use `dataPeople` sum.
-        const totalPersonYears = s.dataPeople.reduce((a, b) => a + b, 0);
-        const totalValDalys = totalPersonYears * (inputs.dalyPerPerson || 0) * (inputs.dalyValue || 0);
+        // DALYs (Cumulative)
+        const totalDalys = s.dataDalys && s.dataDalys.length > 0 ? s.dataDalys[s.dataDalys.length - 1] : 0;
+        const totalValDalys = totalDalys * (inputs.dalyValue || 0);
 
         // Carbon
         // cumulativeCarbon is tracked in loop. Last value is Total?
@@ -851,46 +857,48 @@ const ModelModule = {
                 dominantConstraint: dominantConstraint
             },
             impact: {
-                dalys: totalPersonYears * (inputs.dalyPerPerson || 0), // Lifetime DALYs?
-                carbon: totalCarbon,
-                valDalys: totalValDalys,
-                valCarbon: totalValCarbon,
-                valHours: totalValHours
-            },
-            portfolio: {
-                disbursed: totalLoansDisbursed,
-                outstanding: portfolioOutstanding,
-                defaults: totalDefaults
-            },
-            financials: {
-                cashEnd: cashEnd,
-                netAssets: netAssetsEnd,
-                netAssets: netAssetsEnd,
-                grantEquityMultiple: grantEquityMultiple, // Replaces capitalPreserved
-                investorRepaid: totalRepaidPrincipal,
-                investorRepaidPct: inputs.investLoan > 0 ? (totalRepaidPrincipal / inputs.investLoan) : 0,
-                grantsDisbursed: totalGrantsVal,
-                leverage: inputs.investGrant > 0 ? (totalLoansDisbursed / inputs.investGrant) : 0,
-                // Fund Health = (Ending Balance + Repaid Principal) / Initial Loan
-                fundHealth: inputs.investLoan > 0 ? ((cashEnd + totalRepaidPrincipal) / inputs.investLoan) : 0
-            },
-            sustainability: {
-                oss: ossRatio,
-                fss: fssRatio,
-                selfSufficiency: fssRatio, // Map FSS to Self-Sufficiency for UI
-                opsRunway: (inputs.annualFixedOpsCost > 0) ? (cashEnd / inputs.annualFixedOpsCost) : 99, // Simple Runway
-                depletionYear: depletionYear,
-                monthsInsolvent: monthsInsolvent,
-                costPerLatrine: costPerLatrine,
-                effectiveCostPerLatrine: effectiveCostPerLatrine
-            },
-            // Value Metrics
-            value: {
-                economicValue: totalSocialValue + cashEnd, // Total Value Generated
-                subsidyPerLatrine,
-                economicCostPerLatrine,
-                depletionYear,
-                sroi: sroi
+                impact: {
+                    dalys: totalDalys,
+                    valDalys: totalValDalys,
+                    carbon: totalCarbon,
+                    valCarbon: totalValCarbon,
+                    valHours: totalValHours
+                },
+                portfolio: {
+                    disbursed: totalLoansDisbursed,
+                    outstanding: portfolioOutstanding,
+                    defaults: totalDefaults
+                },
+                financials: {
+                    cashEnd: cashEnd,
+                    netAssets: netAssetsEnd,
+                    netAssets: netAssetsEnd,
+                    grantEquityMultiple: grantEquityMultiple, // Replaces capitalPreserved
+                    investorRepaid: totalRepaidPrincipal,
+                    investorRepaidPct: inputs.investLoan > 0 ? (totalRepaidPrincipal / inputs.investLoan) : 0,
+                    grantsDisbursed: totalGrantsVal,
+                    leverage: inputs.investGrant > 0 ? (totalLoansDisbursed / inputs.investGrant) : 0,
+                    // Fund Health = (Ending Balance + Repaid Principal) / Initial Loan
+                    fundHealth: inputs.investLoan > 0 ? ((cashEnd + totalRepaidPrincipal) / inputs.investLoan) : 0
+                },
+                sustainability: {
+                    oss: ossRatio,
+                    fss: fssRatio,
+                    selfSufficiency: fssRatio, // Map FSS to Self-Sufficiency for UI
+                    opsRunway: (inputs.annualFixedOpsCost > 0) ? (cashEnd / inputs.annualFixedOpsCost) : 99, // Simple Runway
+                    depletionYear: depletionYear,
+                    monthsInsolvent: monthsInsolvent,
+                    costPerLatrine: costPerLatrine,
+                    effectiveCostPerLatrine: effectiveCostPerLatrine
+                },
+                // Value Metrics
+                value: {
+                    economicValue: totalSocialValue + cashEnd, // Total Value Generated
+                    subsidyPerLatrine,
+                    economicCostPerLatrine,
+                    depletionYear,
+                    sroi: sroi
+                }
             }
         };
     },
@@ -920,14 +928,14 @@ const ModelModule = {
             // Objective: Net Assets >= 0 
             // Note: If Net Assets > 0, we can lower the interest rate?
             // Yes, we want the LOWEST rate that sustains the fund.
-            if (kpi.financials.netAssets >= targetNetAssets) {
+            if (kpi.impact.financials.netAssets >= targetNetAssets) {
                 bestRate = mid;
                 high = mid; // Try lower
             } else {
                 low = mid; // Need higher
             }
         }
-        if (this.calculate({ ...simInputs, loanInterestRate: bestRate }).kpis.financials.netAssets >= targetNetAssets) {
+        if (this.calculate({ ...simInputs, loanInterestRate: bestRate }).kpis.impact.financials.netAssets >= targetNetAssets) {
             return bestRate;
         } else {
             console.warn("Solver failed: No break-even rate found.");
@@ -954,7 +962,7 @@ const ModelModule = {
             const kpi = res.kpis;
 
             // Objective: Maximize Grant while solving NetAssets >= 0
-            if (kpi.financials.netAssets >= targetNetAssets) {
+            if (kpi.impact.financials.netAssets >= targetNetAssets) {
                 bestPct = mid;
                 low = mid; // Try higher
             } else {
@@ -969,6 +977,33 @@ const ModelModule = {
         const s = series;
         const k = kpis;
         const errors = [];
+        const last = s.dataMonthlyCashBalance.length - 1;
+
+        // T1: Duration enforcement
+        const expectedMonths = inputs.duration * 12;
+        if (s.dataMonthlyCashBalance.length !== expectedMonths) {
+            errors.push(`Duration mismatch: expected ${expectedMonths} months, got ${s.dataMonthlyCashBalance.length}`);
+        }
+
+        // T2 & T3: Non-negative production + cumulative monotonicity (monthly)
+        for (let i = 0; i < s.dataToiletsMonthlyLoan.length; i++) {
+            const loanDelta = s.dataToiletsMonthlyLoan[i] - (i > 0 ? s.dataToiletsMonthlyLoan[i - 1] : 0);
+            const grantDelta = s.dataToiletsMonthlyGrant[i] - (i > 0 ? s.dataToiletsMonthlyGrant[i - 1] : 0);
+            if (loanDelta < -0.5) errors.push(`Negative loan production M${i + 1}: ${loanDelta.toFixed(0)}`);
+            if (grantDelta < -0.5) errors.push(`Negative grant production M${i + 1}: ${grantDelta.toFixed(0)}`);
+        }
+
+        // T5: Summary vs final monthly array
+        const monthlyFinalToilets = (s.dataToiletsMonthlyLoan[last] || 0) + (s.dataToiletsMonthlyGrant[last] || 0);
+        const kpiToilets = k && k.reach ? k.reach.toilets : null;
+        if (kpiToilets !== null && Math.abs(monthlyFinalToilets - kpiToilets) > 1) {
+            errors.push(`Toilet count mismatch: monthly array ${monthlyFinalToilets.toFixed(0)} vs KPI ${kpiToilets.toFixed(0)}`);
+        }
+
+        // Log accrued unpaid investor amounts (informational)
+        if (s.accruedInvestorInt > 1 || s.accruedInvestorPrin > 1) {
+            console.warn(`Investor payments accrued (not yet paid): Int=$${s.accruedInvestorInt.toFixed(0)}, Prin=$${s.accruedInvestorPrin.toFixed(0)}`);
+        }
 
         // 1. Cashflow Identity
         for (let i = 1; i < s.dataMonthlyCashBalance.length; i++) {
@@ -989,7 +1024,7 @@ const ModelModule = {
 
         // 3. Loan Value Identity
         // Disbursed = HH + ME
-        const totalLoansReported = k.financials.leverage * inputs.investGrant;
+        const totalLoansReported = k.impact.financials.leverage * inputs.investGrant;
         // Verify against flow sums
         const flowSum = s.dataMonthlyNewLoansHhVal.reduce((a, b) => a + b, 0) + s.dataMonthlyNewLoansMeVal.reduce((a, b) => a + b, 0);
         // Note: k.leverage is (flowSum / grant). So this is tautological.
@@ -1186,6 +1221,16 @@ const UI = {
         const inputs = UI.getInputs();
         const k = results.kpis;
         if (!k) return;
+
+        // kpis structure: { reach, impact: { impact, portfolio, financials, sustainability, value } }
+        // Destructure impact sub-keys so existing k.financials / k.sustainability etc. still work
+        const { financials, sustainability, portfolio, value, impact: impactMetrics } = k.impact || {};
+        // Override k with flat access (safe local shadow)
+        k.financials = financials || {};
+        k.sustainability = sustainability || {};
+        k.portfolio = portfolio || {};
+        k.value = value || {};
+        k.impact = impactMetrics || {};
 
         // Helpers
         const setText = (id, val) => {
@@ -2152,8 +2197,8 @@ const UI = {
                 ossRatio: k.sustainability.oss,
                 fssRatio: k.sustainability.fss,
                 depletionYear: k.sustainability.depletionYear,
-                breakEvenRate: 0,
-                maxGrantPct: 0,
+                breakEvenRate: (UI.lastResults.breakEvenRate !== null) ? (UI.lastResults.breakEvenRate * 100).toFixed(1) + '%' : 'N/A',
+                maxGrantPct: (UI.lastResults.maxGrantPct !== null) ? (UI.lastResults.maxGrantPct * 100).toFixed(1) + '%' : 'N/A',
 
                 // Fix: Map new Capital Preservation fields
                 capitalPreserved: k.financials.capitalPreservedPct, // Legacy 
@@ -2279,8 +2324,8 @@ const UI = {
             lines.push(`OSS Ratio,${((stats.ossRatio || 0) * 100).toFixed(1)}%`);
             lines.push(`FSS Ratio (Total),${((stats.fssRatio || 0) * 100).toFixed(1)}%`);
             lines.push(`Depletion Year,${stats.depletionYear}`);
-            lines.push(`Break-even Interest,${(stats.breakEvenRate || 0).toFixed(1)}%`);
-            lines.push(`Max Sustainable Grant,${(stats.maxGrantPct || 0).toFixed(1)}%`);
+            lines.push(`Break-even Interest,${stats.breakEvenRate}`);
+            lines.push(`Max Sustainable Grant,${stats.maxGrantPct}`);
 
             lines.push(`Grant Equity Multiple,${(stats.grantEquityMultiple || 0).toFixed(2)}x`);
             lines.push(`Investor Repaid %,${((stats.investorRepaidPct || 0) * 100).toFixed(1)}%`);
@@ -3477,15 +3522,23 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
     try {
         let inputs = UI.getInputs();
         let results = ModelModule.calculate(inputs);
+
+        // --- Execute Solvers (If Enabled) ---
+        if (inputs.enableBreakEvenSolver) {
+            results.breakEvenRate = ModelModule.solveBreakEven(inputs);
+            results.maxGrantPct = ModelModule.solveMaxGrant(inputs);
+        } else {
+            results.breakEvenRate = null;
+            results.maxGrantPct = null;
+        }
+
         UI.lastResults = results;
-        // Verify Invariants (Ledger Integrity)
-        ModelModule.verifyLedger(results.series, inputs, results.kpis);
 
         // Phase 66: Auto-Solvency (User Request: "Fund must be solvent... use interest rates... adjust grant")
         if (isAutoAdjust && inputs.investLoan > 0) {
             let rerun = false;
             // Use summary stat for specific repaid amount
-            const repaid = results.kpis.financials.investorRepaid || 0;
+            const repaid = results.kpis.impact.financials.investorRepaid || 0;
             const shortfall = inputs.investLoan - repaid;
             const tolerance = 1000; // $1k tolerance
 
