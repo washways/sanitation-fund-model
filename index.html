@@ -7,7 +7,21 @@
     <title>Sanitation Revolving Fund Model</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!--
+        Chart.js was loaded unpinned from a CDN with no integrity hash, so the app
+        silently picked up whatever major version resolved that day and rendered blank
+        charts with no error when offline — a realistic condition in the field settings
+        this tool models. Now pinned, hashed, and vendored as a fallback. See F-22.
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+        integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
+        crossorigin="anonymous"></script>
+    <script>
+        // Offline / blocked-CDN fallback to the vendored copy (identical build).
+        if (typeof Chart === 'undefined') {
+            document.write('<script src="vendor/chart.umd.min.js"><\/script>');
+        }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
@@ -165,12 +179,28 @@
                     <input type="number" id="fundRepaymentTerm" value="5">
                 </div>
 
-                <!-- Added Grace Period Input -->
                 <div class="input-group">
-                    <label>Invester Grace Period (Months)
-                        <span class="info-icon" title="Delay repayment start to allow capital deployment.">i</span>
+                    <label>Investor Grace Period (Months)
+                        <span class="info-icon"
+                            title="Delays PRINCIPAL repayment only, to allow capital deployment. Interest still accrues from month 1.">i</span>
                     </label>
                     <input type="number" id="investorGracePeriod" value="6">
+                </div>
+
+                <!--
+                    Fund Cost of Capital. This control did not exist until 2026-08-20;
+                    the model read the value, found no element, and silently fell back to
+                    0, so the fund paid its investors no interest in any run the tool had
+                    ever produced. See docs/ANALYSIS.md F-01.
+                    Auto-filled from the World Bank lending rate (FR.INR.LEND) on country fetch.
+                -->
+                <div class="input-group">
+                    <label>Fund Cost of Capital (%)
+                        <span class="info-icon"
+                            title="Annual interest the fund pays its senior investors on the Initial Loan Capital. Accrues from month 1; unpaid interest capitalises into the outstanding liability.">i</span>
+                    </label>
+                    <input type="number" step="0.01" id="fundCostOfCapital" value="2" step="0.25">
+                    <small id="coc-help" class="help-text"></small>
                 </div>
 
                 <h3>Demand Parameters</h3>
@@ -184,11 +214,11 @@
                     </div>
                 </div>
                 <div class="input-group">
-                    <label>Annual Pop Growth
+                    <label>Annual Pop Growth (%)
                         <span class="info-icon" title="Annual population growth rate.">i</span>
                     </label>
                     <div class="input-wrapper has-suffix">
-                        <input type="number" id="popGrowthRate" value="0.03">
+                        <input type="number" id="popGrowthRate" value="3" step="0.1">
                         <span class="input-suffix">%</span>
                     </div>
                 </div>
@@ -205,7 +235,7 @@
                     </label>
                     <div class="input-wrapper has-suffix">
                         <div class="input-wrapper has-suffix">
-                            <input type="number" id="grantSupportPct" value="0.10">
+                            <input type="number" id="grantSupportPct" value="10" step="1">
                             <span class="input-suffix">%</span>
                         </div>
                     </div>
@@ -258,25 +288,25 @@
 
                 <h3>Financials</h3>
                 <div class="input-group">
-                    <label>HH Loan Interest Rate (0.35 = 35%)
+                    <label>HH Loan Interest Rate (%)
                         <span class="info-icon"
                             title="API Derived: Based on local Commercial Lending Rate + Risk Spread. The annual interest charged to households. Must cover inflation + defaults + ops.">i</span>
                     </label>
-                    <input type="number" id="loanInterestRate_v2" value="0.35" class="api-field">
+                    <input type="number" id="loanInterestRate_v2" value="40" step="0.5" class="api-field">
                 </div>
                 <div class="input-group">
-                    <label>ME Loan Interest Rate (0.10 = 10%)
+                    <label>ME Loan Interest Rate (%)
                         <span class="info-icon"
                             title="API Derived: Typically lower than HH rate. Annual interest charged to businesses for setup loans.">i</span>
                     </label>
-                    <input type="number" id="meLoanInterestRate_v2" value="0.10" class="api-field">
+                    <input type="number" id="meLoanInterestRate_v2" value="10" step="0.5" class="api-field">
                 </div>
                 <div class="input-group">
                     <label>HH Loan Term (Months)
                         <span class="info-icon"
                             title="Repayment period for household loans. Shorter terms = higher monthly payments but faster recycling of capital.">i</span>
                     </label>
-                    <input type="number" id="termHh" value="6">
+                    <input type="number" id="termHh" value="18">
                 </div>
                 <div class="input-group">
                     <label>ME Loan Term (Months)
@@ -286,26 +316,33 @@
                     <input type="number" id="termMe" value="12">
                 </div>
                 <div class="input-group">
-                    <label>HH Default Rate (0.05 = 5%)
+                    <label>HH Annual Write-down Rate (%)
                         <span class="info-icon"
                             title="Risk Metric: % of household loans never repaid. High defaults (>10%) represent a major leak in the revolving fund. Auto-set to 8% (Conservative).">i</span>
                     </label>
-                    <input type="number" id="hhDefaultRate" value="0.05">
+                    <input type="number" id="hhDefaultRate" value="5" step="0.5">
                 </div>
 
                 <div class="input-group">
-                    <label>ME Default Rate (0.05 = 5%)
+                    <label>ME Annual Write-down Rate (%)
                         <span class="info-icon"
                             title="Risk Metric: % of businesses that fail and default on setup loans. Auto-set to 10% (High Risk for Startups).">i</span>
                     </label>
-                    <input type="number" id="meDefaultRate" value="0.05">
+                    <input type="number" id="meDefaultRate" value="5" step="0.5">
                 </div>
                 <div class="input-group">
-                    <label>Mgmt Fee Ratio (0.01 = 1%)
+                    <label>ME Annual Closure Rate (%)
+                        <span class="info-icon"
+                            title="Share of micro-enterprises that cease trading each year. Distinct from the write-down rate: a business can close having repaid its loan, and a loan can be written down by a business that keeps trading. Closure removes production capacity; write-down removes loan value.">i</span>
+                    </label>
+                    <input type="number" id="meExitRate" value="10" step="1">
+                </div>
+                <div class="input-group">
+                    <label>Mgmt Fee Ratio (%)
                         <span class="info-icon"
                             title="Variable Operational Cost: % of all disbursements (loans+grants) retained to cover administration and monitoring.">i</span>
                     </label>
-                    <input type="number" id="mgmtFeeRatio" value="0.01">
+                    <input type="number" id="mgmtFeeRatio" value="1" step="0.25">
                 </div>
 
 
@@ -314,7 +351,7 @@
                         <span class="info-icon"
                             title="Fixed Overhead: Essential costs (PMU salaries, Office, Vehicles) incurred regardless of lending volume. High fixed costs require scale to sustain.">i</span>
                     </label>
-                    <input type="text" id="annualFixedOpsCost" value="145,000" class="formatted-number">
+                    <input type="text" id="annualFixedOpsCost" value="60,000" class="formatted-number">
                 </div>
 
                 <h3>Impact Assumptions</h3>
@@ -332,6 +369,29 @@
                             title="Health Metric: Disability-Adjusted Life Years saved per person/year. Standard assumption 0.005 for improved sanitation.">i</span>
                     </label>
                     <input type="number" id="dalyPerPerson" value="0.005" step="0.001">
+                </div>
+                <div class="input-group">
+                    <label>Toilet Service Life (Years)
+                        <span class="info-icon"
+                            title="How long a toilet stays in service. Carbon crediting stops after this period, matching the finite crediting period of carbon methodologies. Health and time benefits currently continue beyond it - see open question Q13.">i</span>
+                    </label>
+                    <input type="number" id="toiletLifespanYears" value="5" step="1">
+                </div>
+                <!-- Was a hardcoded 0.25 inside two conflicting formulas (F-07). -->
+                <div class="input-group">
+                    <label>Hours Saved / Person / Day
+                        <span class="info-icon"
+                            title="Time each household member no longer spends travelling to or queueing for sanitation. Accrues monthly against toilets in service.">i</span>
+                    </label>
+                    <input type="number" id="hoursPerPersonPerDay" value="0.25" step="0.05">
+                </div>
+                <div class="input-group">
+                    <label>Value of Saved Time (% of wage)
+                        <span class="info-icon"
+                            title="Saved household time is valued below the market wage, because the hour is household time rather than forgone paid work. The hourly rate is derived from Avg Annual Income over a 2,080-hour year, then scaled by this factor. Replaces a hardcoded, uncited $0.50/hour.">i</span>
+                    </label>
+                    <input type="number" id="timeValueFactor" value="30" step="5">
+                    <small id="hour-value-help" class="help-text"></small>
                 </div>
                 <div class="input-group">
                     <label>Value per DALY ($)
@@ -355,30 +415,30 @@
                     <input type="number" id="co2Value" value="15">
                 </div>
                 <div class="input-group">
-                    <label>Fund Carbon Share (1.0 = 100%)
+                    <label>Fund Carbon Share (%)
                         <span class="info-icon"
                             title="Revenue Share: % of Carbon Credit value that flows back to the Fund vs. retained by households/operators.">i</span>
                     </label>
                     <div class="input-wrapper has-suffix">
-                        <input type="number" id="carbonCreditShare" value="1.0">
+                        <input type="number" id="carbonCreditShare" value="100" step="5">
                         <span class="input-suffix">%</span>
                     </div>
                 </div>
 
                 <h3>Macro / Risk</h3>
                 <div class="input-group">
-                    <label>Annual Inflation (0.0332 = 3.32%)
+                    <label>Annual Inflation (%)
                         <span class="info-icon"
                             title="API Derived: Annual inflation (CPI) from World Bank. Future costs are adjusted upwards by this rate.">i</span>
                     </label>
-                    <input type="number" id="inflationRate" value="0.0332">
+                    <input type="number" id="inflationRate" value="3.32" step="0.1">
                 </div>
                 <div class="input-group">
-                    <label>Contingency (0.05 = 5%)
+                    <label>Cost Contingency (% mark-up)
                         <span class="info-icon"
                             title="Capital Reserve: % of Initial Fund held back for shocks. Adjusted based on Country Governance Score (CPIA). Low Gov = High Contingency.">i</span>
                     </label>
-                    <input type="number" id="contingencyRate" value="0.05">
+                    <input type="number" id="contingencyRate" value="5" step="0.5">
                 </div>
                 <div class="input-group">
                     <label>Max Ops Reserve Cap (%)
@@ -388,11 +448,11 @@
                     <input type="number" id="opsReserveCap" value="15">
                 </div>
                 <div class="input-group">
-                    <label>M&E Cost (0.02 = 2%)
+                    <label>M&E Cost (%)
                         <span class="info-icon"
                             title="Variable Cost: Charged as % of TOTAL Disbursements. Paid from Revenue first, then Ops Reserve.">i</span>
                     </label>
-                    <input type="number" id="meCostRate" value="0.02">
+                    <input type="number" id="meCostRate" value="2" step="0.25">
                 </div>
 
                 <div class="sidebar-footer">

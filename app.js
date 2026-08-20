@@ -124,15 +124,26 @@ const ModelModule = {
         return Math.pow(1 + annualRate, 1 / 12) - 1;
     },
 
-    // Helper: Investor Repayment Schedule
-    calculateInvestorSchedule(principal, annualCostOfCapital, termYears, graceMonths) {
+    // Helper: Annuity payment (MODEL_SPEC R-3.2)
+    // The r === 0 branch is not optional: (P*0)/(1 - 1) is 0/0 = NaN, and NaN then
+    // silently corrupts every downstream figure while passing every invariant check,
+    // because NaN comparisons are always false. See finding F-03.
+    annuityPayment(principal, monthlyRate, termMonths) {
+        if (!(termMonths > 0)) return 0;
+        if (!monthlyRate) return principal / termMonths;
+        return (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -termMonths));
+    },
+
+    // Helper: Investor Repayment Schedule (MODEL_SPEC R-4.1)
+    // Principal only. Interest is computed in the loop against the live liability,
+    // which may have grown through capitalised arrears (R-4.5). Returning an
+    // interest figure here as well would be a second, divergent source of truth.
+    calculateInvestorSchedule(principal, termYears, graceMonths) {
         const schedule = [];
-        const monthlyRate = this.getMonthlyRate(annualCostOfCapital);
         const totalMonths = termYears * 12;
         const effectiveMonths = Math.max(1, totalMonths - graceMonths);
 
-        // Scenario: Flat Principal + Interest on Outstanding
-        // (Amortization style can be changed here easily)
+        // Flat principal amortisation over the post-grace months.
         const principalPmt = principal / effectiveMonths;
 
         let balance = principal;
@@ -145,10 +156,9 @@ const ModelModule = {
             // Ensure we don't overpay due to rounding
             if (p > balance) p = balance;
 
-            const int = balance * monthlyRate;
             balance -= p;
 
-            schedule[m] = { principal: p, interest: int, balance: balance };
+            schedule[m] = { principal: p, balance: balance };
         }
         return schedule;
     },
@@ -187,22 +197,32 @@ const ModelModule = {
         // Liability
         let loanFundLiability = inputs.investLoan;
 
-        // Investor Schedule (Pre-calc)
+        // Investor Schedule (Pre-calc) — principal only, see R-4.1
         const investorSchedule = this.calculateInvestorSchedule(
             inputs.investLoan,
-            inputs.fundCostOfCapital,
             inputs.fundRepaymentTerm,
             inputs.investorGracePeriod || 0
         );
 
         // Reserves
-        const opsReserveRate = (inputs.opsReserveCap !== undefined ? inputs.opsReserveCap : 15) / 100;
+        // Already a decimal - converted once at the input boundary (R-2.3).
+        const opsReserveRate = inputs.opsReserveCap !== undefined ? inputs.opsReserveCap : 0.15;
         const totalOpsReserve = (inputs.investGrant + inputs.investLoan) * opsReserveRate;
         let currentReserve = totalOpsReserve; // Simplified Reserve Logic
 
-        // Cash-aware repayment accumulators (track unpaid amounts)
+        // Arrears (R-4.5). Unpaid interest capitalises into the liability; unpaid
+        // principal stays in it by construction. These accumulators are the audit
+        // trail of what was missed, not a place where money goes to disappear.
         let accruedInvestorInt = 0;
         let accruedInvestorPrin = 0;
+        let capitalisedInterest = 0;
+
+        // Wind-up (R-9). Once the portfolio is empty, production has stopped and the
+        // solvency gate is shut, the fund is finished. Without this the loop keeps
+        // billing the collections floor forever against zero income, so "ending cash"
+        // becomes a function of the horizon rather than of performance (F-31).
+        let windUpMonth = null;
+        let prevPortfolio = Infinity, prevProduction = -1, prevLendable = Infinity;
 
         // Portfolios & State
         let hhCohorts = [];
@@ -210,6 +230,27 @@ const ModelModule = {
         let currentMEs = 0;
         let toiletsBuiltCumulative = 0;
         let backlogToilets = inputs.popReqToilets / inputs.avgHHSize;
+
+        // Toilet service life (R-8.5). Toilets are retired `toiletLifespanYears` after
+        // construction and stop earning carbon credits from that point. We keep the
+        // production history so retirement can be applied to the right vintages rather
+        // than to an undifferentiated stock.
+        const lifespanMonths = Math.max(1, Math.round((inputs.toiletLifespanYears || 5) * 12));
+        const monthlyProduction = [];
+        let retiredToiletsCumulative = 0;
+
+        // Micro-enterprise attrition (R-6.3). Business closure and loan write-down are
+        // DIFFERENT events — a business can close having repaid, and a loan can be
+        // written down by a business that trades on — so they get separate parameters.
+        // Modelling only the write-down left capacity untouched by enterprise failure
+        // (F-20). Exit reduces capacity; it does not touch the loan cohorts, which
+        // meDefaultRate already handles. Combining them would double-count.
+        const monthlyMeExitRate = this.getMonthlyRate(inputs.meExitRate || 0) > 0
+            ? 1 - Math.pow(1 - (inputs.meExitRate || 0), 1 / 12)
+            : 0;
+        // Demand grows with population (R-7.1). Without this the model shows the fund
+        // closing a gap that is in fact widening (F-09).
+        const monthlyPopGrowth = this.getMonthlyRate(inputs.popGrowthRate || 0);
 
         // Cumulative Trackers
         let cumulativeCarbon = 0;
@@ -247,6 +288,7 @@ const ModelModule = {
         const dataMonthlyHoursSaved = [];
         const dataMonthlyDalysAverted = [];
         const dataMonthlyActiveToilets = [];
+        const dataMonthlyCreditingToilets = [];
 
         // Audit & Unit Economics Arrays
         const dataMonthlyUnitCost = [];
@@ -299,7 +341,7 @@ const ModelModule = {
             currentMEs += startMEs;
 
             // Add to Cohort
-            const pmt = (startLoanVolume * monthlyIntRateMe) / (1 - Math.pow(1 + monthlyIntRateMe, -termMe));
+            const pmt = this.annuityPayment(startLoanVolume, monthlyIntRateMe, termMe);
             meCohorts.push({ balance: startLoanVolume, monthlyPayment: pmt, termRemaining: termMe });
         }
 
@@ -308,6 +350,29 @@ const ModelModule = {
             monthlyLabels.push(`M${m}`);
             const isWindingDown = m > activeMonths;
             const currentYear = Math.ceil(m / 12);
+
+            // Retire toilets that have reached the end of their service life (R-8.5).
+            // monthlyProduction[i] is what was built in month i+1.
+            const retiringIndex = m - lifespanMonths - 1;
+            if (retiringIndex >= 0 && monthlyProduction[retiringIndex] !== undefined) {
+                retiredToiletsCumulative += monthlyProduction[retiringIndex];
+            }
+
+            // Micro-enterprises close (R-6.3). Continuous, so a fractional count is
+            // carried; it is floored only where a count is displayed.
+            if (monthlyMeExitRate > 0 && currentMEs > 0) {
+                currentMEs = Math.max(0, currentMEs * (1 - monthlyMeExitRate));
+            }
+
+            // Wind-up test (R-9.1), evaluated at the START of the month against the
+            // state carried from the previous one. Nothing left to collect, nothing
+            // built, and no capital free to redeploy: the fund is finished. Testing it
+            // here rather than at month end means the wind-up month itself is not
+            // billed for operations.
+            if (windUpMonth === null && m > 1
+                && prevPortfolio < 1 && prevProduction === 0 && prevLendable <= 0) {
+                windUpMonth = m;
+            }
 
             // 1. Ledger Buckets
             const inflows = { hhInt: 0, hhPrin: 0, meInt: 0, mePrin: 0, carbon: 0 };
@@ -378,27 +443,55 @@ const ModelModule = {
             const loanInflow = inflows.hhInt + inflows.hhPrin + inflows.meInt + inflows.mePrin;
             loanCash += loanInflow;
 
-            // 5. Outflows: Debt Service (Cash-Aware — never force cash below 0 for scheduled payments)
+            // 5. Outflows: Debt Service (R-4.3, R-4.4, R-4.5)
+            //
+            // Interest accrues from month 1 on the outstanding liability. A grace
+            // period defers PRINCIPAL only — deferring interest as well silently
+            // forgave it (F-06). Principal is still scheduled only after grace and
+            // only within the repayment term.
             let scheduledPrin = 0;
             let scheduledInt = 0;
-            if (m <= inputs.fundRepaymentTerm * 12 && m > inputs.investorGracePeriod) {
-                scheduledPrin = investorSchedule[m]?.principal || 0;
+            // A wound-up fund is finished: the ledger is frozen (R-9.2), so no further
+            // interest accrues or capitalises. Without this the liability compounds for
+            // as long as the simulation happens to run, and net assets — unlike cash —
+            // would still depend on the requested horizon, which is the whole defect
+            // R-9 exists to remove (F-31).
+            if (windUpMonth === null && loanFundLiability > 0) {
                 scheduledInt = loanFundLiability * monthlyCostOfCapital;
+                if (m <= inputs.fundRepaymentTerm * 12 && m > inputs.investorGracePeriod) {
+                    scheduledPrin = investorSchedule[m]?.principal || 0;
+                }
+                // Catch up any principal the fund could not pay earlier, once it can.
+                scheduledPrin += accruedInvestorPrin;
+                if (scheduledPrin > loanFundLiability) scheduledPrin = loanFundLiability;
             }
+
+            // Cash-aware: never pay out money the fund does not hold. Interest ranks
+            // ahead of principal.
             const canPayDebt = Math.max(0, loanCash);
             const actualInt = Math.min(scheduledInt, canPayDebt);
             const actualPrin = Math.min(scheduledPrin, Math.max(0, canPayDebt - actualInt));
             outflows.investInt = actualInt;
             outflows.investPrin = actualPrin;
-            accruedInvestorInt += (scheduledInt - actualInt);
-            accruedInvestorPrin += (scheduledPrin - actualPrin);
+
+            // Unpaid interest CAPITALISES into the liability rather than evaporating.
+            const missedInt = scheduledInt - actualInt;
+            accruedInvestorPrin = Math.max(0, scheduledPrin - actualPrin);
+            accruedInvestorInt += missedInt;
+            capitalisedInterest += missedInt;
+
             loanCash -= (actualInt + actualPrin);
             loanFundLiability -= actualPrin;
+            loanFundLiability += missedInt;
             const debtService = actualInt + actualPrin;
 
             // 6. Outflows: Operations (Survival floor if insolvent or winding down)
-            let opsCost = currentFixedOps;
-            if (isWindingDown || loanCash < 0) opsCost *= 0.3; // hibernation / survival floor
+            // Suppressed entirely once the fund is wound up (R-9.2) — a dead fund with
+            // no portfolio and no production does not employ a collections team.
+            let opsCost = windUpMonth !== null ? 0 : currentFixedOps;
+            if (windUpMonth === null && (isWindingDown || loanCash < 0)) {
+                opsCost *= 0.3; // hibernation / collections floor
+            }
             outflows.fixed = opsCost;
             loanCash -= opsCost;
 
@@ -434,7 +527,7 @@ const ModelModule = {
                         currentMEs += newMes;
 
                         // Schedule
-                        const pmt = (cost * monthlyIntRateMe) / (1 - Math.pow(1 + monthlyIntRateMe, -termMe));
+                        const pmt = ModelModule.annuityPayment(cost, monthlyIntRateMe, termMe);
                         meCohorts.push({ balance: cost, monthlyPayment: pmt, termRemaining: termMe });
                     }
                 }
@@ -523,19 +616,31 @@ const ModelModule = {
 
                 // Add HH Loan
                 if (loanVal > 0) {
-                    const pmt = (loanVal * monthlyIntRateHh) / (1 - Math.pow(1 + monthlyIntRateHh, -termHh));
+                    const pmt = ModelModule.annuityPayment(loanVal, monthlyIntRateHh, termHh);
                     hhCohorts.push({ balance: loanVal, monthlyPayment: pmt, termRemaining: termHh });
                 }
             }
 
-            // 8. Carbon Revenue (Incremental)
-            let carbonRev = 0;
-            const newCarbonTons = (production * inputs.co2PerToilet) / 1000;
+            monthlyProduction.push(production);
 
-            // Override: If co2PerToilet is 0, Revenue is 0 regardless of others
-            // Also ensure co2Value > 0
+            // 8. Carbon Revenue (R-8.1)
+            //
+            // Accrues ANNUALLY against toilets still within their crediting life,
+            // matching the input's label of "Tonnes/Yr". Previously the input was
+            // divided by 1000 as if it were kilograms (F-33), the fund's share was
+            // divided by 100 a second time having already been normalised (F-02), and
+            // the credit was granted once at construction rather than each year the
+            // toilet operates.
+            //
+            // Crediting stops after `toiletLifespanYears` (R-8.5). Carbon methodologies
+            // issue credits over a finite crediting period, not in perpetuity, and a
+            // toilet past its service life is not abating anything.
+            const creditingToilets = toiletsBuiltCumulative - retiredToiletsCumulative;
+            let carbonRev = 0;
+            const newCarbonTons = (creditingToilets * inputs.co2PerToilet) / 12;
+
             if (inputs.co2PerToilet > 0) {
-                carbonRev = newCarbonTons * inputs.co2Value * (inputs.carbonCreditShare / 100);
+                carbonRev = newCarbonTons * inputs.co2Value * inputs.carbonCreditShare;
             }
 
             inflows.carbon = carbonRev;
@@ -543,9 +648,15 @@ const ModelModule = {
             grantCash += carbonRev;
 
             // 9. Impact (Area Under Curve)
-            // Hours: Active Toilets * HH_Size * 0.25hr * 30 days
-            const hours = toiletsBuiltCumulative * inputs.avgHHSize * 0.25 * 30;
-            // DALYs: Active Toilets * HH_Size * DALY_Per_Person / 12
+            //
+            // NOTE: health and time benefits accrue against ALL toilets ever built, not
+            // against `creditingToilets`. A toilet past its service life therefore stops
+            // earning carbon but keeps averting DALYs, which is internally inconsistent.
+            // Applying the lifespan here would move headline impact substantially, so it
+            // is left as an explicit open question (Q13) rather than decided in passing.
+            const hoursPerPersonPerDay = inputs.hoursPerPersonPerDay !== undefined
+                ? inputs.hoursPerPersonPerDay : 0.25;
+            const hours = toiletsBuiltCumulative * inputs.avgHHSize * hoursPerPersonPerDay * 30;
             const dalys = (toiletsBuiltCumulative * inputs.avgHHSize * inputs.dalyPerPerson) / 12;
 
             cumulativeDalys += dalys;
@@ -553,6 +664,7 @@ const ModelModule = {
             dataMonthlyHoursSaved.push(hours);
             dataMonthlyDalysAverted.push(dalys);
             dataMonthlyActiveToilets.push(toiletsBuiltCumulative);
+            dataMonthlyCreditingToilets.push(creditingToilets);
 
             // 10. Data Push
             const netFlow = (loanInflow + carbonRev) - (outflows.fixed + outflows.varFees + outflows.investPrin + outflows.investInt + outflows.loansHh + outflows.loansMe + outflows.grants);
@@ -584,9 +696,19 @@ const ModelModule = {
             dataMonthlyPerToiletOps.push(unitOps);
 
             // Portfolio Snapshots
-            dataMonthlyPortfolioHh.push(hhCohorts.reduce((s, c) => s + c.balance, 0));
-            dataMonthlyPortfolioMe.push(meCohorts.reduce((s, c) => s + c.balance, 0));
+            const portfolioHhNow = hhCohorts.reduce((s, c) => s + c.balance, 0);
+            const portfolioMeNow = meCohorts.reduce((s, c) => s + c.balance, 0);
+            dataMonthlyPortfolioHh.push(portfolioHhNow);
+            dataMonthlyPortfolioMe.push(portfolioMeNow);
             dataMonthlyMes.push(currentMEs);
+
+            // Demand grows with population (R-7.1), net of what was just built.
+            backlogToilets *= (1 + monthlyPopGrowth);
+
+            // Carry this month's state forward for next month's wind-up test.
+            prevPortfolio = portfolioHhNow + portfolioMeNow;
+            prevProduction = production;
+            prevLendable = lendable;
 
             // Cumulative Toilet Tracks
             const prevGrant = dataToiletsMonthlyGrant.length ? dataToiletsMonthlyGrant[dataToiletsMonthlyGrant.length - 1] : 0;
@@ -606,7 +728,6 @@ const ModelModule = {
             if (m % 12 === 0) {
                 labels.push(`Year ${currentYear}`);
                 dataToilets.push(toiletsBuiltCumulative);
-                // Snapshot People for Legacy Charts (optional)
                 // Snapshot People for Legacy Charts (optional)
                 dataPeople.push(toiletsBuiltCumulative * inputs.avgHHSize);
                 dataCarbon.push(cumulativeCarbon);
@@ -659,10 +780,10 @@ const ModelModule = {
             dataMonthlyHoursSaved,
             dataMonthlyDalysAverted,
             dataMonthlyActiveToilets,
+            dataMonthlyCreditingToilets,
             dataPeople,
             dataMonthlyPortfolioHh,
             dataMonthlyPortfolioMe,
-            dataMonthlyMes,
             dataMonthlyMes,
             dataCarbon,
             dataDalys,
@@ -686,18 +807,34 @@ const ModelModule = {
 
             // Cash-aware repayment audit
             accruedInvestorInt,
-            accruedInvestorPrin
+            accruedInvestorPrin,
+            capitalisedInterest,
+            investorLiabilityEnd: loanFundLiability,
+            windUpMonth
         };
 
         const kpis = ModelModule.computeKPIs(series, inputs);
 
-        // Verification (skip during solver sub-simulations to avoid false-positive noise)
-        if (inputs.enableBreakEvenSolver !== false) {
-            ModelModule.verifyLedger(series, inputs, kpis);
+        // Two independent verdicts (R-10). They answer different questions and must
+        // never be collapsed into one "model OK" indicator:
+        //   integrity — is the arithmetic self-consistent?  (a defect in the model)
+        //   viability — does the fund actually work?        (a finding about the scenario)
+        // Previously only the first was computed, and it was reported in language that
+        // implied the second: the shipped defaults print "Model Integrity Verified" for
+        // a run that goes insolvent and defaults on $750k of senior debt (F-29).
+        //
+        // `verify` is its own flag. It used to be gated on enableBreakEvenSolver, so
+        // turning off the solver silently turned off every guard in the model (F-11).
+        let integrity = { ok: true, violations: [] };
+        let viability = { ok: true, issues: [] };
+        if (inputs.verify !== false) {
+            integrity = ModelModule.checkIntegrity(series, inputs, kpis);
+            viability = ModelModule.checkViability(series, inputs, kpis);
+            ModelModule.reportVerification(integrity, viability);
         }
 
         // Output
-        return { series, kpis };
+        return { series, kpis, integrity, viability };
     },
 
     // --- Phase 67: Centralized KPI Logic (Single Source of Truth) ---
@@ -713,7 +850,10 @@ const ModelModule = {
         const households = totalToilets; // 1 per HH
         const people = households * inputs.avgHHSize;
         // Fix: Use dataMonthlyMes for accurate count
-        const mes = s.dataMonthlyMes && s.dataMonthlyMes.length > 0 ? s.dataMonthlyMes[s.dataMonthlyMes.length - 1] : 0;
+        // ME count is carried continuously so attrition can be fractional (R-6.3);
+        // floor it here, where it becomes a count a human reads.
+        const mes = s.dataMonthlyMes && s.dataMonthlyMes.length > 0
+            ? Math.floor(s.dataMonthlyMes[s.dataMonthlyMes.length - 1]) : 0;
 
         // 2. Portfolio & Financials (Aggregates)
         const totalLoansDisbursedHH = s.dataMonthlyNewLoansHhVal.reduce((a, b) => a + b, 0);
@@ -746,7 +886,12 @@ const ModelModule = {
         // Investor Liability
         // We track liability decrement in the loop, but for robustness, we reconstruct it:
         const totalRepaidPrincipal = s.dataMonthlyFundPrincipal.reduce((a, b) => a + b, 0);
-        const investorLiabilityEnd = Math.max(0, inputs.investLoan - totalRepaidPrincipal);
+        // Use the liability the loop actually tracked (R-4.5). Reconstructing it as
+        // investLoan - repaid ignores interest that capitalised when the fund could not
+        // pay, and therefore overstates net assets by the whole of the arrears (F-06).
+        const investorLiabilityEnd = s.investorLiabilityEnd !== undefined
+            ? Math.max(0, s.investorLiabilityEnd)
+            : Math.max(0, inputs.investLoan - totalRepaidPrincipal);
 
         const netAssetsEnd = cashEnd + portfolioOutstanding - investorLiabilityEnd;
         const initialCapital = inputs.investGrant + inputs.investLoan;
@@ -787,10 +932,12 @@ const ModelModule = {
             }
         }
 
-        let depletionYear = "Sustainable";
-        if (firstInsolvencyIndex !== -1) {
-            depletionYear = (firstInsolvencyIndex / 12).toFixed(1);
-        }
+        // R-11 / F-28: keep the model's output numeric. A string union ("Sustainable"
+        // vs "3.4") forces every consumer to special-case a sentinel, and cannot be
+        // charted or compared. Formatting belongs at the render boundary.
+        const depletionMonth = firstInsolvencyIndex === -1 ? null : firstInsolvencyIndex + 1;
+        const isSustainable = depletionMonth === null;
+        const depletionYear = isSustainable ? "Sustainable" : ((depletionMonth - 1) / 12).toFixed(1);
 
         // 5. Unit Economics
         // Cost / Latrine = Total Expenditure / Total Toilets
@@ -813,28 +960,57 @@ const ModelModule = {
         const totalCarbon = s.dataCarbon.length > 0 ? s.dataCarbon[s.dataCarbon.length - 1] : 0;
         const totalValCarbon = totalCarbon * (inputs.co2Value || 0);
 
-        // Hours Saved
-        // toiletsBuiltCumulative * 0.25 * 365 per year.
-        // Sum(dataToilets) * ...
-        const totalToiletYears = s.dataToilets.reduce((a, b) => a + b, 0);
-        const totalHoursSaved = totalToiletYears * 0.25 * 365;
-        const totalValHours = totalHoursSaved * 0.5; // $0.50/hr? Assumption from line 1232: (totalHoursSaved * 0.5)
+        // Hours Saved (R-8.2) — sum the monthly array the loop already builds. The old
+        // annual-snapshot formula omitted avgHHSize entirely and disagreed with the loop
+        // by a factor of ~4.4 (F-07).
+        const totalHoursSaved = s.dataMonthlyHoursSaved
+            ? s.dataMonthlyHoursSaved.reduce((a, b) => a + b, 0) : 0;
+        // Value of an hour of time saved (R-8.6, resolves Q2).
+        //
+        // Derived from the country's own income, not from a global constant. The old
+        // code used a hardcoded $0.50 whose provenance nobody could reconstruct — the
+        // source comment literally asked where it came from. It is very close to
+        // Malawi's GNI per capita divided by a 2,080-hour working year ($1,020 / 2,080
+        // = $0.49), so it was almost certainly a Malawi figure valued at the FULL wage
+        // rate, hardcoded into a tool that models forty-odd countries.
+        //
+        // Two changes:
+        //   1. Scale with `avgAnnualIncome`, which the model already collects from the
+        //      World Bank GNI-per-capita indicator and previously never used (F-25).
+        //   2. Apply a valuation factor. Standard practice in WASH and transport
+        //      cost-benefit analysis is to value non-market time BELOW the market wage,
+        //      because the hour saved is household time rather than forgone paid work.
+        //      A factor of around 0.3 is the common convention; it is an input, so a
+        //      programme with its own evidence can override it.
+        //
+        // NOTE FOR REVIEWERS: 0.3 is the conventional default, not a figure verified
+        // against a specific current source. Confirm it against the WHO/World Bank
+        // sanitation cost-benefit guidance your programme reports against before
+        // publishing an SROI derived from it.
+        const WORKING_HOURS_PER_YEAR = 2080; // 40h x 52 weeks
+        const timeValueFactor = inputs.timeValueFactor !== undefined ? inputs.timeValueFactor : 0.30;
+        const hourValueUsd = ((inputs.avgAnnualIncome || 0) / WORKING_HOURS_PER_YEAR) * timeValueFactor;
+        const totalValHours = totalHoursSaved * hourValueUsd;
 
-        const economicValue = totalValDalys + totalValCarbon + totalValHours; // Wait, Line 1232 used `(totalHoursSaved * 0.5) + (cumulativeCarbon * inputs.co2Value)`. Did it include DALYs?
-        // Line 1232: const totalSocialValue = (totalHoursSaved * 0.5) + (cumulativeCarbon * inputs.co2Value);
-        // It seemingly ignored DALY value in SROI calc previously?
-        // Line 1515: valDalys duplicate for safety.
-        // Let's stick to the previous SROI definition for consistency or Improve?
-        // User wants "Consistency".
-        // I will match the apparent previous SROI logic: Hours + Carbon.
-        // But DALYs are huge. If I exclude them, SROI is low.
-        // Check Line 1232: `const totalSocialValue = (totalHoursSaved * 0.5) + (cumulativeCarbon * inputs.co2Value);`
-        // Okay, I will use that.
-
-        const totalSocialValue = (totalHoursSaved * 0.5) + (totalCarbon * (inputs.co2Value || 0));
+        // SROI is SOCIAL value only (R-8.4, decided 2026-08-20 — see ADR-0011).
+        //
+        // Two prior defects, both deliberate-looking and both wrong:
+        //   - DALY value was computed, displayed prominently, and then silently
+        //     EXCLUDED from the ratio, so the screen contradicted itself.
+        //   - Ending cash was ADDED to the numerator, so a fund that hoarded capital
+        //     and built nothing scored well on a *social* return measure.
+        //
+        // Financial performance is reported separately, as netAssets and
+        // capitalPreservation below. Do not merge the two again.
+        const totalSocialValue =
+            totalValDalys
+            + totalValHours
+            + (totalCarbon * (inputs.co2Value || 0));
 
         const initialInv = inputs.investGrant + inputs.investLoan;
-        const sroi = initialInv > 0 ? ((totalSocialValue + cashEnd) / initialInv) : 0;
+        const sroi = initialInv > 0 ? (totalSocialValue / initialInv) : 0;
+        // The financial counterpart, reported alongside rather than folded in.
+        const capitalPreservation = initialInv > 0 ? (netAssetsEnd / initialInv) : 0;
 
 
         const goal = inputs.popReqToilets || 1;
@@ -862,7 +1038,8 @@ const ModelModule = {
                     valDalys: totalValDalys,
                     carbon: totalCarbon,
                     valCarbon: totalValCarbon,
-                    valHours: totalValHours
+                    valHours: totalValHours,
+                    hourValueUsd: hourValueUsd
                 },
                 portfolio: {
                     disbursed: totalLoansDisbursed,
@@ -871,7 +1048,6 @@ const ModelModule = {
                 },
                 financials: {
                     cashEnd: cashEnd,
-                    netAssets: netAssetsEnd,
                     netAssets: netAssetsEnd,
                     grantEquityMultiple: grantEquityMultiple, // Replaces capitalPreserved
                     investorRepaid: totalRepaidPrincipal,
@@ -885,15 +1061,25 @@ const ModelModule = {
                     oss: ossRatio,
                     fss: fssRatio,
                     selfSufficiency: fssRatio, // Map FSS to Self-Sufficiency for UI
-                    opsRunway: (inputs.annualFixedOpsCost > 0) ? (cashEnd / inputs.annualFixedOpsCost) : 99, // Simple Runway
-                    depletionYear: depletionYear,
+                    // null means "not applicable", not "99 years" (F-28).
+                    opsRunway: (inputs.annualFixedOpsCost > 0) ? (cashEnd / inputs.annualFixedOpsCost) : null,
+                    depletionMonth: depletionMonth,
+                    isSustainable: isSustainable,
+                    depletionYear: depletionYear, // display string; prefer depletionMonth
+                    windUpMonth: s.windUpMonth !== undefined ? s.windUpMonth : null,
+                    arrearsInterest: s.accruedInvestorInt || 0,
+                    arrearsPrincipal: s.accruedInvestorPrin || 0,
+                    capitalisedInterest: s.capitalisedInterest || 0,
+                    investorLiabilityEnd: investorLiabilityEnd,
                     monthsInsolvent: monthsInsolvent,
                     costPerLatrine: costPerLatrine,
                     effectiveCostPerLatrine: effectiveCostPerLatrine
                 },
                 // Value Metrics
                 value: {
-                    economicValue: totalSocialValue + cashEnd, // Total Value Generated
+                    socialValue: totalSocialValue,          // DALYs + time + carbon
+                    capitalPreservation: capitalPreservation, // netAssets / capital invested
+                    economicValue: totalSocialValue,        // social only — see ADR-0011
                     subsidyPerLatrine,
                     economicCostPerLatrine,
                     depletionYear,
@@ -914,8 +1100,10 @@ const ModelModule = {
 
         // Use structuredClone for deep copy (Safe)
         const simInputs = structuredClone(inputs);
-        // Disable Solvers in sub-sims to avoid recursion
+        // Sub-simulations: no recursion into the solvers, and no verification noise.
+        // These are now separate flags — overloading one to mean both is finding F-11.
         simInputs.enableBreakEvenSolver = false;
+        simInputs.verify = false;
 
         for (let i = 0; i < iterations; i++) {
             const mid = (low + high) / 2;
@@ -953,6 +1141,7 @@ const ModelModule = {
 
         const simInputs = structuredClone(inputs);
         simInputs.enableBreakEvenSolver = false;
+        simInputs.verify = false;
 
         for (let i = 0; i < iterations; i++) {
             const mid = (low + high) / 2;
@@ -972,144 +1161,277 @@ const ModelModule = {
         return bestPct;
     },
 
-    // --- Invariant Checks (Verification) ---
-    verifyLedger(series, inputs, kpis) {
+    // --- Verification (MODEL_SPEC R-10, §12) ---
+    //
+    // Two independent verdicts. `checkIntegrity` asks whether the arithmetic is
+    // self-consistent — a violation is a DEFECT IN THE MODEL. `checkViability` asks
+    // whether the fund works — a failure is a FINDING ABOUT THE SCENARIO, and is a
+    // perfectly legitimate result to report. Collapsing them is finding F-29.
+
+    /** INV-1 .. INV-14. A violation here means the model is broken. */
+    checkIntegrity(series, inputs, kpis) {
         const s = series;
         const k = kpis;
-        const errors = [];
+        const v = [];
+        const TOL = 1.0;
         const last = s.dataMonthlyCashBalance.length - 1;
 
-        // T1: Duration enforcement
+        // INV-8 — MUST BE FIRST. NaN defeats every other check in this function,
+        // because NaN comparisons are always false: Math.abs(NaN - NaN) > 1 is false,
+        // so a corrupted ledger sails through the cash identity below (F-03).
+        for (const [key, arr] of Object.entries(s)) {
+            if (!Array.isArray(arr)) continue;
+            const bad = arr.reduce((n, x) => n + (typeof x === 'number' && !Number.isFinite(x) ? 1 : 0), 0);
+            if (bad > 0) {
+                v.push(`INV-8: ${key} contains ${bad} non-finite value(s) (NaN/Infinity)`);
+            }
+        }
+        if (v.length > 0) {
+            // Everything downstream is meaningless once NaN is loose. Stop here rather
+            // than emitting a hundred derived complaints.
+            return { ok: false, violations: v };
+        }
+
+        // INV-3: duration enforcement
         const expectedMonths = inputs.duration * 12;
         if (s.dataMonthlyCashBalance.length !== expectedMonths) {
-            errors.push(`Duration mismatch: expected ${expectedMonths} months, got ${s.dataMonthlyCashBalance.length}`);
+            v.push(`INV-3: expected ${expectedMonths} months, got ${s.dataMonthlyCashBalance.length}`);
         }
 
-        // T2 & T3: Non-negative production + cumulative monotonicity (monthly)
-        for (let i = 0; i < s.dataToiletsMonthlyLoan.length; i++) {
-            const loanDelta = s.dataToiletsMonthlyLoan[i] - (i > 0 ? s.dataToiletsMonthlyLoan[i - 1] : 0);
-            const grantDelta = s.dataToiletsMonthlyGrant[i] - (i > 0 ? s.dataToiletsMonthlyGrant[i - 1] : 0);
-            if (loanDelta < -0.5) errors.push(`Negative loan production M${i + 1}: ${loanDelta.toFixed(0)}`);
-            if (grantDelta < -0.5) errors.push(`Negative grant production M${i + 1}: ${grantDelta.toFixed(0)}`);
+        // INV-2: opening balance reconciles to initial capital. The identity loop below
+        // starts at i=1, so without this the month-0 startup block is never checked (F-12).
+        const opening = inputs.investGrant + inputs.investLoan - (s.startupCost || 0);
+        const openingDrift = s.dataMonthlyCashBalance[0] - (opening + s.dataMonthlyNet[0]);
+        if (Math.abs(openingDrift) > TOL) {
+            v.push(`INV-2: opening $${opening.toFixed(0)} + net[0] $${s.dataMonthlyNet[0].toFixed(0)} ` +
+                `!= cash[0] $${s.dataMonthlyCashBalance[0].toFixed(0)} (drift $${openingDrift.toFixed(2)})`);
         }
 
-        // T5: Summary vs final monthly array
-        const monthlyFinalToilets = (s.dataToiletsMonthlyLoan[last] || 0) + (s.dataToiletsMonthlyGrant[last] || 0);
-        const kpiToilets = k && k.reach ? k.reach.toilets : null;
-        if (kpiToilets !== null && Math.abs(monthlyFinalToilets - kpiToilets) > 1) {
-            errors.push(`Toilet count mismatch: monthly array ${monthlyFinalToilets.toFixed(0)} vs KPI ${kpiToilets.toFixed(0)}`);
-        }
-
-        // Log accrued unpaid investor amounts (informational)
-        if (s.accruedInvestorInt > 1 || s.accruedInvestorPrin > 1) {
-            console.warn(`Investor payments accrued (not yet paid): Int=$${s.accruedInvestorInt.toFixed(0)}, Prin=$${s.accruedInvestorPrin.toFixed(0)}`);
-        }
-
-        // 1. Cashflow Identity
+        // INV-1: cash continuity
+        let identityFails = 0;
         for (let i = 1; i < s.dataMonthlyCashBalance.length; i++) {
-            const prev = s.dataMonthlyCashBalance[i - 1];
-            const curr = s.dataMonthlyCashBalance[i];
-            const net = s.dataMonthlyNet[i];
-            if (Math.abs(curr - (prev + net)) > 1.00) {
-                errors.push(`Identity Fail (Cash): M${i} Prev ${prev.toFixed(2)} + Net ${net.toFixed(2)} != Curr ${curr.toFixed(2)}`);
+            const drift = s.dataMonthlyCashBalance[i] - (s.dataMonthlyCashBalance[i - 1] + s.dataMonthlyNet[i]);
+            if (Math.abs(drift) > TOL) {
+                identityFails++;
+                if (identityFails <= 5) v.push(`INV-1: cash identity fails at M${i + 1} (drift $${drift.toFixed(2)})`);
+            }
+        }
+        if (identityFails > 5) v.push(`INV-1: ...and ${identityFails - 5} further month(s)`);
+
+        // INV-4: cumulative production never decreases
+        for (let i = 1; i < s.dataToiletsMonthlyLoan.length; i++) {
+            if (s.dataToiletsMonthlyLoan[i] < s.dataToiletsMonthlyLoan[i - 1] - 0.5) {
+                v.push(`INV-4: cumulative loan toilets fell at M${i + 1}`); break;
+            }
+        }
+        for (let i = 1; i < s.dataToiletsMonthlyGrant.length; i++) {
+            if (s.dataToiletsMonthlyGrant[i] < s.dataToiletsMonthlyGrant[i - 1] - 0.5) {
+                v.push(`INV-4: cumulative grant toilets fell at M${i + 1}`); break;
             }
         }
 
-        // 2. Negative Cash (Solvency Warning)
-        const minCash = Math.min(...s.dataMonthlyCashBalance);
-        if (minCash < -100) {
-            console.warn("WARNING: Cash Balance went negative!", minCash);
-            // errors.push("Cash Balance Negative"); // Optional strictness
+        // INV-5: headline reach matches the monthly series
+        const monthlyFinal = (s.dataToiletsMonthlyLoan[last] || 0) + (s.dataToiletsMonthlyGrant[last] || 0);
+        if (k && k.reach && Math.abs(monthlyFinal - k.reach.toilets) > 1) {
+            v.push(`INV-5: monthly total ${monthlyFinal.toFixed(0)} vs KPI ${k.reach.toilets.toFixed(0)}`);
         }
 
-        // 3. Loan Value Identity
-        // Disbursed = HH + ME
-        const totalLoansReported = k.impact.financials.leverage * inputs.investGrant;
-        // Verify against flow sums
-        const flowSum = s.dataMonthlyNewLoansHhVal.reduce((a, b) => a + b, 0) + s.dataMonthlyNewLoansMeVal.reduce((a, b) => a + b, 0);
-        // Note: k.leverage is (flowSum / grant). So this is tautological.
-        // Check Grants
-        const grantSum = s.dataMonthlyGrantDisbursed.reduce((a, b) => a + b, 0);
-        // Compare with Toilet Counts?
-        // Rough check: GrantVal ~ GrantToilets * Cost?
-        // Cost varies with inflation. Hard to check exactly.
-
-        // 3. Equity Reconciliation
-        // Check if Change in Equity == Surplus/Deficit
-        // NetCashFlow includes DebtService (Principal + Int).
-        // Delta Equity should equal NetIncome?
-        // This is complex to check monthly without full Balance Sheet.
-        // We will check End State vs Implied.
-
-        // 4. Cumulative Monotonicity
-        for (let i = 1; i < s.dataToilets.length; i++) {
-            if (s.dataToilets[i] < s.dataToilets[i - 1]) {
-                errors.push(`Integrity: Cumulative Toilets fell at Year ${i}`);
-            }
-        }
-
-        // 5. Unit Cost & Inflation Integrity
-        for (let m = 0; m < s.dataMonthlyUnitCost.length; m++) {
-            if (s.dataMonthlyUnitCost[m] <= 0) {
-                // Ignore M0 if not populated
-                if (m > 0) errors.push(`Integrity: Zero Unit Cost at M${m}`);
-            }
-            if (m > 1 && s.dataMonthlyInflationFactor[m] < s.dataMonthlyInflationFactor[m - 1] && inputs.inflationRate >= 0) {
-                // Allow flat if rate is 0
-                errors.push(`Integrity: Deflation detected at M${m} despite positive rate.`);
-            }
-        }
-
-        // 5. Unit Cost Validity (Audit)
+        // INV-6: unit cost positive wherever there was production
         for (let i = 0; i < s.dataToiletsMonthlyLoan.length; i++) {
-            const monthlyTotal = (s.dataToiletsMonthlyLoan[i] || 0) + (s.dataToiletsMonthlyGrant[i] || 0)
-                - (i > 0 ? (s.dataToiletsMonthlyLoan[i - 1] + s.dataToiletsMonthlyGrant[i - 1]) : 0);
+            const built = (s.dataToiletsMonthlyLoan[i] + s.dataToiletsMonthlyGrant[i])
+                - (i > 0 ? s.dataToiletsMonthlyLoan[i - 1] + s.dataToiletsMonthlyGrant[i - 1] : 0);
+            if (built > 0 && !(s.dataMonthlyUnitCost[i] > 0)) {
+                v.push(`INV-6: production at M${i + 1} with unit cost ${s.dataMonthlyUnitCost[i]}`); break;
+            }
+        }
 
-            if (monthlyTotal > 0) {
-                const uc = s.dataMonthlyUnitCost[i];
-                if (!uc || uc <= 0) {
-                    errors.push(`Integrity: Production at M${i + 1} but Unit Cost is Zero/Null (${uc})`);
+        // INV-7: no deflation when the inflation rate is non-negative
+        if (inputs.inflationRate >= 0) {
+            for (let i = 1; i < s.dataMonthlyInflationFactor.length; i++) {
+                if (s.dataMonthlyInflationFactor[i] < s.dataMonthlyInflationFactor[i - 1] - 1e-12) {
+                    v.push(`INV-7: inflation factor fell at M${i + 1}`); break;
                 }
             }
         }
 
-        if (errors.length > 0) {
-            console.error("❌ MODEL INTEGRITY CHECK FAILED:", errors);
-            // Verify Logic: If Integrity Fails, UI should show alert?
-            // We can return errors and UI can display them.
-            if (typeof UI !== 'undefined' && UI.showIntegrityError) {
-                UI.showIntegrityError(errors);
-            }
-        } else {
-            // Identity Check: CashBalance[t] == CashBalance[t-1] + NetCashFlow[t]
-            let identityFails = 0;
-            for (let i = 1; i < s.dataMonthlyCashBalance.length; i++) {
-                const prev = s.dataMonthlyCashBalance[i - 1];
-                const curr = s.dataMonthlyCashBalance[i];
-                const net = s.dataMonthlyNet[i];
-                if (Math.abs(curr - (prev + net)) > 0.5) {
-                    errors.push(`Identity Fail M${i}: Bal ${prev.toFixed(1)} + Net ${net.toFixed(1)} != ${curr.toFixed(1)}`);
-                    identityFails++;
-                    if (identityFails > 5) break; // Fail fast logic implied by stopping logs
-                }
+        // INV-9: the fund cannot repay more principal than it borrowed
+        const repaid = s.dataMonthlyFundPrincipal.reduce((a, b) => a + b, 0);
+        if (repaid > inputs.investLoan + TOL) {
+            v.push(`INV-9: repaid $${repaid.toFixed(0)} exceeds loan $${inputs.investLoan.toFixed(0)}`);
+        }
 
-                // Toilet Identity
-                const prevT = (s.dataToiletsMonthlyLoan[i - 1] || 0) + (s.dataToiletsMonthlyGrant[i - 1] || 0);
-                const currT = (s.dataToiletsMonthlyLoan[i] || 0) + (s.dataToiletsMonthlyGrant[i] || 0);
-                const newT = (s.dataToiletsMonthlyLoan[i] - (s.dataToiletsMonthlyLoan[i - 1] || 0)) + (s.dataToiletsMonthlyGrant[i] - (s.dataToiletsMonthlyGrant[i - 1] || 0));
-                if (Math.abs(currT - (prevT + newT)) > 0.5) {
-                    errors.push(`Toilet Identity Fail M${i}`);
-                }
-            }
+        // INV-10: the grant ledger may not go overdrawn
+        const variableRate = (inputs.mgmtFeeRatio || 0) + (inputs.meCostRate || 0) + (inputs.contingencyRate || 0);
+        const grantSpent = s.dataMonthlyGrantDisbursed.reduce((a, b) => a + b, 0) * (1 + variableRate);
+        const grantAvailable = inputs.investGrant + s.dataMonthlyCarbonRevenue.reduce((a, b) => a + b, 0);
+        if (grantSpent > grantAvailable + TOL) {
+            v.push(`INV-10: grant ledger overdrawn — spent $${grantSpent.toFixed(0)} of $${grantAvailable.toFixed(0)}`);
+        }
 
-            if (errors.length > 0) {
-                console.error("❌ MODEL INTEGRITY CHECK FAILED:", errors);
-                if (typeof UI !== 'undefined' && UI.showIntegrityError) UI.showIntegrityError(errors);
-            } else {
-                console.log("✅ Model Integrity Verified.");
-                if (typeof UI !== 'undefined' && UI.clearIntegrityError) UI.clearIntegrityError();
+        // INV-11: write-offs are not cash. Rebuild net from its components; if a
+        // write-off had leaked into the cash flow, this would not reconcile.
+        for (let i = 0; i < s.dataMonthlyNet.length; i++) {
+            const inflow = s.dataMonthlyRevenueHh[i] + s.dataMonthlyRevenueMe[i]
+                + s.dataMonthlyRepaymentHh[i] + s.dataMonthlyRepaymentMe[i] + s.dataMonthlyCarbonRevenue[i];
+            const outflow = s.dataMonthlyOps[i] + s.dataMonthlyFees[i] + s.dataMonthlyFundPrincipal[i]
+                + s.dataMonthlyFundInt[i] + s.dataMonthlyNewLoansHhVal[i] + s.dataMonthlyNewLoansMeVal[i]
+                + s.dataMonthlyGrantDisbursed[i];
+            if (Math.abs(s.dataMonthlyNet[i] - (inflow - outflow)) > TOL) {
+                v.push(`INV-11: net flow at M${i + 1} does not equal inflows - outflows`); break;
             }
         }
+
+        // INV-13: a wound-up fund does not bill operating costs
+        if (s.windUpMonth) {
+            for (let i = s.windUpMonth; i < s.dataMonthlyOps.length; i++) {
+                if (s.dataMonthlyOps[i] > TOL) {
+                    v.push(`INV-13: ops billed at M${i + 1}, after wind-up at M${s.windUpMonth}`); break;
+                }
+            }
+        }
+
+        return { ok: v.length === 0, violations: v };
+    },
+
+    /**
+     * Does the fund work? (R-10.2)
+     * A failure here is NOT a bug — it is the model correctly telling you the
+     * scenario does not stand up. It must be reported to the user on screen,
+     * which is precisely what did not happen before (F-29).
+     */
+    checkViability(series, inputs, kpis) {
+        const s = series;
+        const issues = [];
+        const TOL = 1000; // $1k
+
+        // V1 — never insolvent
+        const minCash = Math.min(...s.dataMonthlyCashBalance);
+        if (minCash < 0) {
+            const k = kpis && kpis.impact ? kpis.impact.sustainability : null;
+            const when = k && k.depletionMonth ? `from month ${k.depletionMonth}` : '';
+            issues.push({
+                code: 'INSOLVENT',
+                text: `The fund runs out of cash ${when}, reaching -$${Math.abs(minCash).toLocaleString('en-US', { maximumFractionDigits: 0 })} at its worst.`
+            });
+        }
+
+        // V2 — senior debt repaid in full
+        if (inputs.investLoan > 0) {
+            const repaid = s.dataMonthlyFundPrincipal.reduce((a, b) => a + b, 0);
+            const shortfall = inputs.investLoan - repaid;
+            if (shortfall > TOL) {
+                issues.push({
+                    code: 'DEBT_UNREPAID',
+                    text: `Senior debt is not repaid in full: $${shortfall.toLocaleString('en-US', { maximumFractionDigits: 0 })} ` +
+                        `of $${inputs.investLoan.toLocaleString('en-US')} outstanding ` +
+                        `(${((1 - repaid / inputs.investLoan) * 100).toFixed(1)}% default).`
+                });
+            }
+        }
+
+        // V3 — no interest had to be rolled up because the fund could not pay it.
+        // Distinct from V2: V2 is about principal never returned, this is about the
+        // fund borrowing from its own lender to stay afloat. Reporting the raw sum of
+        // all missed payments here would double-count what V2 already covers, since
+        // missed interest capitalises into the liability rather than sitting apart.
+        const capitalised = s.capitalisedInterest || 0;
+        if (capitalised > TOL) {
+            issues.push({
+                code: 'INTEREST_CAPITALISED',
+                text: `$${capitalised.toLocaleString('en-US', { maximumFractionDigits: 0 })} of investor interest could not ` +
+                    `be paid when due and was added to the outstanding balance, increasing what the fund owes.`
+            });
+        }
+
+        // V4 — operations cover themselves
+        const oss = kpis && kpis.impact ? kpis.impact.sustainability.oss : null;
+        if (oss !== null && oss < 1.0) {
+            issues.push({
+                code: 'OSS_BELOW_1',
+                text: `Operating self-sufficiency is ${(oss * 100).toFixed(0)}% — revenue does not cover operating costs, ` +
+                    `so the fund is consuming its capital to run.`
+            });
+        }
+
+        return { ok: issues.length === 0, issues };
+    },
+
+    /**
+     * What would actually close a repayment shortfall? (replaces the auto-adjuster, F-04)
+     *
+     * Every candidate is TESTED by re-running the simulation, rather than asserted from
+     * a rule of thumb. That matters: the old advisor told users to extend the repayment
+     * term, which measurably makes repayment WORSE in this model (F-32). Advice about a
+     * model should be derived from the model.
+     *
+     * Returns the options that work, best first. Applies nothing.
+     */
+    suggestSolvencyFix(inputs, shortfall) {
+        const sim = (over) => {
+            const t = { ...inputs, ...over, enableBreakEvenSolver: false, verify: false };
+            const r = this.calculate(t);
+            const repaid = r.series.dataMonthlyFundPrincipal.reduce((a, b) => a + b, 0);
+            // Measure against the loan in THIS simulation. Raising investLoan and then
+            // dividing by the original would report >100% repayment on a bigger debt.
+            return {
+                repaidPct: t.investLoan > 0 ? repaid / t.investLoan : 1,
+                toilets: r.kpis.reach.toilets,
+                viable: r.viability ? r.viability.ok : false
+            };
+        };
+
+        const base = sim({});
+        const candidates = [
+            { label: 'Raise the household interest rate', field: 'loanInterestRate',
+              values: [0.30, 0.40, 0.50, 0.60, 0.75], fmt: v => `${(v * 100).toFixed(0)}%` },
+            { label: 'Reduce annual fixed operating cost', field: 'annualFixedOpsCost',
+              values: [inputs.annualFixedOpsCost * 0.75, inputs.annualFixedOpsCost * 0.5, inputs.annualFixedOpsCost * 0.25],
+              fmt: v => `$${Math.round(v).toLocaleString('en-US')}` },
+            { label: 'Increase initial loan capital', field: 'investLoan',
+              values: [inputs.investLoan * 1.25, inputs.investLoan * 1.5],
+              fmt: v => `$${Math.round(v).toLocaleString('en-US')}` },
+            { label: 'Shorten the household loan term', field: 'termHh',
+              values: [3, 4], fmt: v => `${v} months` },
+            { label: 'Reduce grant support', field: 'grantSupportPct',
+              values: [inputs.grantSupportPct * 0.5, 0], fmt: v => `${(v * 100).toFixed(0)}%` },
+        ];
+
+        const options = [];
+        for (const c of candidates) {
+            for (const value of c.values) {
+                const r = sim({ [c.field]: value });
+                if (r.repaidPct > base.repaidPct + 0.01) {
+                    options.push({
+                        label: c.label, field: c.field, value, display: c.fmt(value),
+                        repaidPct: r.repaidPct, toilets: r.toilets, fullyRepaid: r.repaidPct >= 0.999,
+                        toiletDelta: r.toilets - base.toilets
+                    });
+                    if (r.repaidPct >= 0.999) break; // smallest sufficient change of this kind
+                }
+            }
+        }
+        options.sort((a, b) => b.repaidPct - a.repaidPct);
+
+        return {
+            shortfall,
+            basePaidPct: base.repaidPct,
+            options: options.slice(0, 4),
+            noneWork: options.length === 0
+        };
+    },
+
+    /** Route both verdicts to the user. The console is not a reporting channel. */
+    reportVerification(integrity, viability) {
+        if (typeof UI === 'undefined') return;
+
+        if (!integrity.ok) {
+            console.error('MODEL INTEGRITY CHECK FAILED:', integrity.violations);
+            if (UI.showIntegrityError) UI.showIntegrityError(integrity.violations);
+        } else if (UI.clearIntegrityError) {
+            UI.clearIntegrityError();
+        }
+
+        if (UI.showViability) UI.showViability(viability);
     }
 };
 
@@ -1125,55 +1447,47 @@ const UI = {
             const parsed = parseFloat(val);
             return isNaN(parsed) ? defaultVal : parsed;
         };
-        // Explicitly handle percentages: Expect Decimals (0.10) from User
-        // If user enters > 1.0, we assume they meant % and divide by 100 (Validation/Hinting)
-        // But for strict "confirm inputs are decimals", we largely accept what is given but warn.
-        // ACTUALLY: User said "consistent treated as decimals", implying we should NOT divide by 100 automatically if we want to force decimal habits.
-        // BUT to avoid breaking existing workflow too hard, we can be smart:
-        // If val > 1.0, treat as percent? User said "0.3218". 
-        // I will change getPct to just Return Raw. The User is responsible for 0.35.
-        // Use a helper to support the Transition.
-        const getDecimal = (id, def = 0) => {
-            let val = getRaw(id, def);
-            // Heuristic: If > 1.0, assume percentage (e.g. 5 -> 0.05, 32 -> 0.32)
-            // This handles users entering "32.18" for 32.18%.
-            // Note: If a rate is truly > 100% (e.g. 200% inflation), this heuristic fails (treats as 2%).
-            // But for this model context, > 1.0 is almost certainly a percentage input.
-            // Exception: 'Mgmt Fee Ratio' could be 1.0 (100%), 'Carbon Share' 1.0.
-            // If strict 1.0, we treat as 100%? Or 1.0?
-            // Let's safe-guard: if val > 1.0, div by 100.
-            if (val > 1.0) {
-                val = val / 100;
-            }
-            return val;
-        };
+        /**
+         * Every rate is entered as a PERCENTAGE and converted to a decimal here,
+         * exactly once (MODEL_SPEC R-2.3). Nothing downstream may guess at units.
+         *
+         * This replaces two heuristics that contradicted each other about the same
+         * DOM node - getInputs divided anything above 1 by 100, updateSmartRates
+         * multiplied anything below 1 by 100 - which made 100% ambiguous and any
+         * rate above 100% unrepresentable: a user modelling 150% inflation, entirely
+         * plausible in the countries this tool targets, silently got 1.5%. See F-17.
+         *
+         * @param id   element id
+         * @param def  default IN PERCENT (e.g. 5 means 5%)
+         */
+        const getPercent = (id, def = 0) => getRaw(id, def) / 100;
 
         return {
             country: document.getElementById('countryInput').value || 'Unknown',
             investGrant: getRaw('wiz-invest-grant-sidebar'),
             investLoan: getRaw('wiz-invest-loan-sidebar'),
             popReqToilets: getRaw('popReqToilets'),
-            popGrowthRate: getDecimal('popGrowthRate'),
+            popGrowthRate: getPercent('popGrowthRate', 0),
             avgHHSize: getRaw('avgHHSize', 5),
-            grantSupportPct: getDecimal('grantSupportPct', 0.20), // Default 0.20
+            grantSupportPct: getPercent('grantSupportPct', 20), // Default 0.20
             avgToiletCost: getRaw('avgToiletCost', 50),
             districts: getRaw('districts'),
             mePerDistrict: getRaw('mePerDistrict'),
             toiletsPerMeMonth: getRaw('toiletsPerMeMonth'),
             meSetupCost: getRaw('meSetupCost'),
-            loanInterestRate: getDecimal('loanInterestRate_v2', 0.10),
-            meLoanInterestRate: getDecimal('meLoanInterestRate_v2', 0.10),
-            hhDefaultRate: getDecimal('hhDefaultRate', 0.05),
-            meDefaultRate: getDecimal('meDefaultRate', 0.05),
-            mgmtFeeRatio: getDecimal('mgmtFeeRatio', 0.02),
-            inflationRate: getDecimal('inflationRate'),
-            contingencyRate: getDecimal('contingencyRate', 0.05),
-            opsReserveCap: getRaw('opsReserveCap', 15), // Uses Raw for now? Wait, Cap %? 
-            // "15" in UI means 15%? If I change all inputs to decimal, this should be 0.15.
-            // Let's assume opsReserveCap is entering decimal too.
+            loanInterestRate: getPercent('loanInterestRate_v2', 10),
+            meLoanInterestRate: getPercent('meLoanInterestRate_v2', 10),
+            hhDefaultRate: getPercent('hhDefaultRate', 5),
+            meDefaultRate: getPercent('meDefaultRate', 5),
+            // Business closure, distinct from loan write-down — see R-6.3.
+            meExitRate: getPercent('meExitRate', 10),
+            mgmtFeeRatio: getPercent('mgmtFeeRatio', 2),
+            inflationRate: getPercent('inflationRate', 0),
+            contingencyRate: getPercent('contingencyRate', 5),
+            opsReserveCap: getPercent('opsReserveCap', 15),
             annualFixedOpsCost: getRaw('annualFixedOpsCost', 50000),
-            meCostRate: getDecimal('meCostRate', 0.05),
-            fundCostOfCapital: getDecimal('fundCostOfCapital'),
+            meCostRate: getPercent('meCostRate', 5),
+            fundCostOfCapital: getPercent('fundCostOfCapital', 2),
             fundRepaymentTerm: getRaw('fundRepaymentTerm'),
             termHh: getRaw('termHh', 12),
             termMe: getRaw('termMe', 24),
@@ -1183,15 +1497,19 @@ const UI = {
             avgAnnualIncome: getRaw('avgAnnualIncome', 1500),
             co2PerToilet: getRaw('co2PerToilet', 0.2),
             co2Value: getRaw('co2Value', 50),
-            carbonCreditShare: getDecimal('carbonCreditShare', 1.0), // 100% -> 1.0
+            carbonCreditShare: getPercent('carbonCreditShare', 100), // 100% -> 1.0
             // Optimization Flags
             enableBreakEvenSolver: true,
-            // Investment Constraints
-            investGrant: getRaw('wiz-invest-grant-sidebar'),
-            investLoan: getRaw('wiz-invest-loan-sidebar'),
+            verify: true,
             investorGracePeriod: getRaw('investorGracePeriod', 6), // New Input
             duration: getRaw('wiz-duration-sidebar', 10),
-            wizTech: document.getElementById('wiz-tech') ? document.getElementById('wiz-tech').value : 'standard'
+            // Hours saved per person per day (R-8.2). Was a hardcoded 0.25 buried in
+            // two conflicting formulas; now a single named assumption.
+            hoursPerPersonPerDay: getRaw('hoursPerPersonPerDay', 0.25),
+            // Share of the market wage at which saved household time is valued (R-8.6).
+            timeValueFactor: getPercent('timeValueFactor', 30),
+            // Service life; carbon crediting stops after this (R-8.5).
+            toiletLifespanYears: getRaw('toiletLifespanYears', 5)
         };
     },
 
@@ -1245,6 +1563,14 @@ const UI = {
         };
         const fmtPct = (val) => ((val || 0) * 100).toFixed(1) + '%';
         const fmtNum = (val) => (val || 0).toLocaleString(undefined, { maximumFractionDigits: 1 });
+
+        // Show what the time-value factor actually resolves to, so the number in the
+        // SROI is visible rather than implied (R-8.6).
+        const hourHelp = document.getElementById('hour-value-help');
+        if (hourHelp && k.impact && k.impact.hourValueUsd !== undefined) {
+            hourHelp.innerText = `= $${k.impact.hourValueUsd.toFixed(3)}/hour, from ` +
+                `$${(inputs.avgAnnualIncome || 0).toLocaleString('en-US')} income over a 2,080-hour year.`;
+        }
 
         try {
             // --- Reach Card ---
@@ -1896,6 +2222,93 @@ const UI = {
         banner.style.display = 'block';
     },
 
+    /**
+     * Render the fund-viability verdict ON SCREEN (R-10.3, finding F-29).
+     *
+     * The model used to report insolvency and investor default via console.warn, where
+     * no user would ever see them, while printing "Model Integrity Verified" — a green
+     * tick on a failing fund. These are two different claims and they get two different
+     * banners: integrity failures are defects in the model, viability failures are
+     * findings about the scenario and are a legitimate result.
+     */
+    showViability(viability) {
+        let banner = document.getElementById('viabilityBanner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'viabilityBanner';
+            banner.style.padding = '0.85rem 1rem';
+            banner.style.marginBottom = '1rem';
+            banner.style.borderRadius = '0.5rem';
+            banner.style.fontSize = '0.85rem';
+            banner.style.lineHeight = '1.5';
+            const parent = document.querySelector('.top-actions') || document.body;
+            if (!parent) return;   // no DOM to render into (headless test harness)
+            parent.insertAdjacentElement(parent === document.body ? 'afterbegin' : 'afterend', banner);
+        }
+
+        if (viability.ok) {
+            banner.style.background = '#dcfce7';
+            banner.style.border = '1px solid #16a34a';
+            banner.style.color = '#166534';
+            banner.innerHTML = '<strong>&#10003; Fund is viable</strong> &mdash; stays solvent, repays senior debt in full, and covers its operating costs.';
+        } else {
+            banner.style.background = '#fef3c7';
+            banner.style.border = '1px solid #d97706';
+            banner.style.color = '#92400e';
+            banner.innerHTML =
+                '<strong>&#9888; This scenario does not stand up</strong>' +
+                '<ul style="margin:0.5rem 0 0; padding-left:1.25rem;">' +
+                viability.issues.map(i => `<li>${i.text}</li>`).join('') +
+                '</ul>' +
+                '<div style="margin-top:0.5rem; opacity:0.85;">This is the model reporting a result, not an error. ' +
+                'Adjust the assumptions, or accept that the fund as specified needs more subsidy.</div>';
+        }
+        banner.style.display = 'block';
+    },
+
+    /** Show what would actually close a repayment shortfall — each option model-tested. */
+    showAdvice(advice) {
+        const existing = document.getElementById('adviceBanner');
+        if (!advice) { if (existing) existing.style.display = 'none'; return; }
+
+        let banner = existing;
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'adviceBanner';
+            banner.style.padding = '0.85rem 1rem';
+            banner.style.marginBottom = '1rem';
+            banner.style.borderRadius = '0.5rem';
+            banner.style.fontSize = '0.85rem';
+            banner.style.background = '#eff6ff';
+            banner.style.border = '1px solid #3b82f6';
+            banner.style.color = '#1e40af';
+            const anchor = document.getElementById('viabilityBanner') || document.querySelector('.top-actions');
+            if (anchor) anchor.insertAdjacentElement('afterend', banner);
+        }
+
+        const money = n => '$' + Math.round(n).toLocaleString('en-US');
+        if (advice.noneWork) {
+            banner.innerHTML = `<strong>Repayment shortfall: ${money(advice.shortfall)}</strong>` +
+                `<div style="margin-top:0.4rem;">No single parameter change tested here closes the gap. ` +
+                `The fund as specified cannot repay this much senior debt; it needs more grant capital, ` +
+                `less debt, or a fundamentally different cost structure.</div>`;
+        } else {
+            banner.innerHTML = `<strong>Repayment shortfall: ${money(advice.shortfall)}</strong> ` +
+                `(${(advice.basePaidPct * 100).toFixed(1)}% repaid). Model-tested changes that improve it:` +
+                '<ul style="margin:0.5rem 0 0; padding-left:1.25rem;">' +
+                advice.options.map(o =>
+                    `<li>${o.label} to <strong>${o.display}</strong> &rarr; ` +
+                    `${(o.repaidPct * 100).toFixed(1)}% repaid` +
+                    (o.fullyRepaid ? ' <em>(repaid in full)</em>' : '') +
+                    `, ${o.toiletDelta >= 0 ? '+' : ''}${Math.round(o.toiletDelta).toLocaleString('en-US')} toilets</li>`
+                ).join('') +
+                '</ul>' +
+                '<div style="margin-top:0.5rem; opacity:0.85;">Nothing has been changed. Each figure above ' +
+                'comes from re-running the model with that one change.</div>';
+        }
+        banner.style.display = 'block';
+    },
+
     clearIntegrityError() {
         const banner = document.getElementById('integrityBanner');
         if (banner) banner.style.display = 'none';
@@ -1903,52 +2316,11 @@ const UI = {
 
     // Stakeholders Removed
 
-    // Wizard Logic
-    showWizardStep(step) {
-        document.querySelectorAll('.wizard-step').forEach(el => el.style.display = 'none');
-        document.getElementById('step' + step).style.display = 'block';
-    },
-
-    applyWizardSettings() {
-        const risk = document.getElementById('wiz-risk').value;
-        const tech = document.getElementById('wiz-tech').value;
-
-        // Map Risk to Model Parameters
-        // Low: Conservative -> Low Interest, Very Low Defaults, Slower Build
-        // Med: Balanced
-        // High: Aggressive -> High Interest, Higher Defaults, Faster Build to recoup
-
-        const setVal = (id, val) => document.getElementById(id).value = val;
-
-        if (risk === 'low') {
-            setVal('loanInterestRate', 5);
-            setVal('hhDefaultRate', 2);
-            setVal('grantSupportPct', 30);
-        } else if (risk === 'med') {
-            setVal('loanInterestRate', 12);
-            setVal('hhDefaultRate', 8);
-            setVal('grantSupportPct', 15);
-        } else { // High
-            setVal('loanInterestRate', 25);
-            setVal('hhDefaultRate', 15);
-            setVal('grantSupportPct', 5);
-        }
-
-        // Sync Investment & Duration to Sidebar
-        document.getElementById('wiz-invest-grant-sidebar').value = document.getElementById('wiz-invest-grant').value;
-        document.getElementById('wiz-invest-loan-sidebar').value = document.getElementById('wiz-invest-loan').value;
-        document.getElementById('wiz-duration-sidebar').value = document.getElementById('wiz-duration').value;
-
-        // Tech Impact
-        if (tech === 'climate') {
-            setVal('avgToiletCost', 120);
-        } else {
-            setVal('avgToiletCost', 60);
-        }
-
-        // Trigger formatting update
-        if (typeof UI.setupFormatting === 'function') UI.setupFormatting();
-    },
+    // Wizard Logic REMOVED (finding F-15).
+    // applyWizardSettings() and showWizardStep() referenced DOM ids that no longer
+    // exist (wiz-risk, wiz-tech, loanInterestRate) and were called from nowhere.
+    // Either would have thrown on first use. The markup they drove was deleted at
+    // some earlier point; the handlers were not.
 
     setupFormatting() {
         const inputs = document.querySelectorAll('.formatted-number');
@@ -2053,7 +2425,7 @@ const UI = {
             `Country,${inputs.country}`,
             `Districts,${inputs.districts}`,
             `GrantFund,$${inputs.grantFund}`,
-            `LoanFund,$${inputs.loanFund}`,
+            `LoanFund,$${inputs.investLoan}`,
             `AvgToiletCost,$${inputs.avgToiletCost}`,
             `LoanInterestRate,${inputs.loanInterestRate}`,
             `MEInterestRate,${inputs.meLoanInterestRate}`,
@@ -2562,7 +2934,7 @@ const UI = {
             `Country,${inputs.country}`,
             `Districts,${inputs.districts}`,
             `GrantFund,$${inputs.grantFund}`,
-            `LoanFund,$${inputs.loanFund}`,
+            `LoanFund,$${inputs.investLoan}`,
             `AvgToiletCost,$${inputs.avgToiletCost}`,
             `LoanInterestRate,${(inputs.loanInterestRate * 100).toFixed(1)}%`,
             `Duration,${inputs.duration} Years`,
@@ -2845,7 +3217,7 @@ const UI = {
 
             // A. Structural Deficit? (Revenue never covers Ops)
             if (peakRevenue < fixedOps) {
-                warnings.push(`🔴 ** Structural Deficit **\nYour monthly fixed costs($${fmt(fixedOps)}) are higher than your BEST monthly revenue($${fmt(peakRevenue)}).\n👉 ** Fix **: Reducing lending will NOT help.You must reduce 'Annual Fixed Ops Cost' or significantly increase 'Interest Rate'.`);
+                warnings.push(`🔴 ** Structural Deficit **\nYour monthly fixed costs(${fmt(fixedOps)}) are higher than your BEST monthly revenue(${fmt(peakRevenue)}).\n👉 ** Fix **: Reducing lending will NOT help.You must reduce 'Annual Fixed Ops Cost' or significantly increase 'Interest Rate'.`);
             }
             // B. Debt Trap? (Debt Service > Revenue)
             else if (peakDebtService > peakRevenue * 0.95) {
@@ -2859,7 +3231,7 @@ const UI = {
             else if (crashIndex > -1 && crashIndex < 15) {
                 // Check recent ME loans
                 const recentMeLoans = s.dataMonthlyNewLoansMeVal.slice(0, crashIndex).reduce((a, b) => a + b, 0);
-                warnings.push(`🟠 ** Growing Too Fast **\nYou ran out of cash in Month ${crashIndex}. You spent $${fmt(recentMeLoans)} on ME Loans before crashing.\n👉 ** Fix **: The fund cannot sustain this growth rate.Reduce 'Micro-enterprises / Unit'(Current: ${inputs.mePerDistrict}) or 'ME Setup Cost'.`);
+                warnings.push(`🟠 ** Growing Too Fast **\nYou ran out of cash in Month ${crashIndex}. You spent ${fmt(recentMeLoans)} on ME Loans before crashing.\n👉 ** Fix **: The fund cannot sustain this growth rate.Reduce 'Micro-enterprises / Unit'(Current: ${inputs.mePerDistrict}) or 'ME Setup Cost'.`);
             }
             else {
                 warnings.push(`🔴 ** Insolvency **\nThe fund runs out of cash.Try increasing 'Initial Loan Capital' or 'Grant Fund' to cover the gap.`);
@@ -2870,7 +3242,7 @@ const UI = {
             const owed = inputs.investLoan || 0;
 
             if (owed > 0 && (owed - repaid) > 1000) {
-                warnings.push(`🔴 ** Repayment Failure **\nThe fund stayed solvent(cash > 0), BUT failed to repay the investor.\nShortfall: $${fmt(owed - repaid)}.\n👉 ** Fix **: The fund did not generate enough cash to pay back the loan on time. Reduce 'Grant Support %' (subsidy is too high) or Increase 'Fund Repayment Term'.`);
+                warnings.push(`🔴 ** Repayment Failure **\nThe fund stayed solvent(cash > 0), BUT failed to repay the investor.\nShortfall: ${fmt(owed - repaid)}.\n👉 ** Fix **: The fund did not generate enough cash to pay back the loan on time. Reduce 'Grant Support %' (subsidy is too high) or Increase 'Fund Repayment Term'.`);
             } else {
                 suggestions.push(`🟢 ** Solvency **: Excellent.The fund remains liquid and repaid investors.`);
             }
@@ -2881,8 +3253,8 @@ const UI = {
             const minCash = s.dataMonthlyCashBalance.reduce((min, val) => Math.min(min, val), s.dataMonthlyCashBalance[0]);
 
             // If we have > 20% of Initial Loan Capital sitting idle forever?
-            if (minCash > inputs.loanFund * 0.2) {
-                suggestions.push(`🔵 ** High Idle Cash **\nYou have at least $${fmt(minCash)} sitting idle that was never used.\n👉 ** Optimization **: Reduce 'Initial Loan Capital' to save on interest payments, or Increase 'Grant Support %' to reach more people.`);
+            if (minCash > inputs.investLoan * 0.2) {
+                suggestions.push(`🔵 ** High Idle Cash **\nYou have at least ${fmt(minCash)} sitting idle that was never used.\n👉 ** Optimization **: Reduce 'Initial Loan Capital' to save on interest payments, or Increase 'Grant Support %' to reach more people.`);
             }
         }
 
@@ -2917,13 +3289,11 @@ const UI = {
     updateSmartRates: function () {
         console.log("updateSmartRates: STARTING");
 
-        // Helper
+        // Every rate field holds a percentage (R-2.3). No normalisation, no guessing.
         const getVal = (id) => {
             const el = document.getElementById(id);
             if (!el) return 0;
-            let val = parseFloat(el.value) || 0;
-            if (val > 0 && val < 1.0) val = val * 100; // Norm
-            return val;
+            return parseFloat(el.value) || 0;
         };
 
         // Retrieve Benchmarks (stored in dataset)
@@ -2945,26 +3315,25 @@ const UI = {
         // Ensure ME > Inflation to avoid loss
         const meRate = Math.max(hhRate - 5, inflation + 2);
 
-        // Apply
+        // Apply — but only where the user has not taken ownership of the field.
+        //
+        // This used to overwrite both rate fields unconditionally, on page load, on
+        // every country fetch, and on every edit to inflation or the default rates,
+        // then dispatch a synthetic input event that scheduled yet another recalc. The
+        // dataset.manual flag set by trackManualInterest was read nowhere (F-05). A
+        // user could type a rate, watch it change a second later, and have no idea why.
         const apply = (id, val) => {
             const el = document.getElementById(id);
             if (!el) return;
 
-            // Bypass locks. We AUTO-UPDATE unless user recently typed (checked via timestamp?)
-            // Actually, let's just update. User can type back if they really want, 
-            // but for now we prioritize Correctness over User Edits if they are confused.
-            // Or better: Checking dataset.manual is fine, IF we trust it.
-            // The User complained "HH defaulted to 30". 30 is not a calculated value.
-            // Let's force update to prove the math works.
+            if (el.dataset.manual === 'true') {
+                // The user owns this field now. Suggest, do not impose.
+                el.dataset.suggested = val.toFixed(2);
+                return;
+            }
 
             el.value = val.toFixed(2);
-
-            // NUCLEAR STYLE FIX
-            el.style.setProperty('background-color', '#fef3c7', 'important');
-            el.classList.remove('auto-filled'); // Remove conflicting class
-
-            // Dispatch to trigger Model Recalc
-            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.classList.add('auto-filled');
         };
 
         apply('loanInterestRate_v2', hhRate);
@@ -3323,6 +3692,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.lendingRate) {
                 const loanInput = document.getElementById('loanInterestRate_v2'); // UPDATED ID
                 if (loanInput) loanInput.dataset.benchmark = data.lendingRate;
+
+                // Fund Cost of Capital: BENCHMARK ONLY — do not overwrite the field.
+                //
+                // This used to be auto-filled from the commercial lending rate. In
+                // Malawi that is 37%, so the tool opened on a blended-finance vehicle
+                // borrowing at commercial rates, which contradicts the premise of the
+                // instrument and made the demonstration scenario insolvent by month 28.
+                //
+                // The cost of capital is a negotiated term sheet, not a market
+                // observable. Show the commercial rate for context and leave the
+                // concessional default alone. See ADR-0018.
+                const cocHelp = document.getElementById('coc-help');
+                if (cocHelp) {
+                    cocHelp.innerText = `Concessional senior debt. For context, commercial lending in this ` +
+                        `country runs at about ${data.lendingRate.toFixed(1)}% — set this from your actual term sheet.`;
+                }
             }
             if (data.popGrowth) fillParam('popGrowthRate', data.popGrowth.toFixed(2));
             // Fix: Use whole number for Percentage Input (e.g. 50 not 0.50)
@@ -3534,86 +3919,37 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
 
         UI.lastResults = results;
 
-        // Phase 66: Auto-Solvency (User Request: "Fund must be solvent... use interest rates... adjust grant")
+        // --- Solvency advice (was: auto-adjustment) ---
+        //
+        // This block used to REWRITE the user's Grant Support % — up to five times per
+        // click, in 200ms steps, recursing through the DOM — until the investor was
+        // repaid. The scenario on screen was therefore not the scenario entered, and no
+        // record was kept of what had been changed (F-04).
+        //
+        // Two reasons it is now advisory only:
+        //   1. A financial model that edits its own assumptions to reach a desired
+        //      conclusion cannot be audited.
+        //   2. It did not work. Grant Support % is a pacing lever, not a volume lever —
+        //      total subsidy is capped by the grant ledger, so sweeping it from 5% to
+        //      90% moves output by 3.6% (F-30). The shortfall sits in the loan ledger,
+        //      which grant spending barely touches.
+        //
+        // We compute what WOULD close the gap and offer it. We do not apply it.
+        results.advice = null;
         if (isAutoAdjust && inputs.investLoan > 0) {
-            let rerun = false;
-            // Use summary stat for specific repaid amount
             const repaid = results.kpis.impact.financials.investorRepaid || 0;
             const shortfall = inputs.investLoan - repaid;
-            const tolerance = 1000; // $1k tolerance
-
-            if (shortfall > tolerance) {
-                console.log(`[Solver] GAP: $${shortfall.toLocaleString()}. Optimizing...`);
-
-                // Strategy: Extend Term & Reduce Grant Support (Simultaneously)
-                // 1. Extend Term (if < 20 years)
-                const currentTerm = inputs.fundRepaymentTerm || 5;
-                let newTerm = currentTerm;
-
-                if (currentTerm < 20) {
-                    /* DISABLED: User requested fixed 5-year term. Generalized Solver handles solvency via growth constraint.
-                    newTerm = Math.min(20, currentTerm + 5); // Jump 5 years
-                    const termInput = document.getElementById('fundRepaymentTerm');
-                    if (termInput) {
-                        termInput.value = newTerm;
-                        termInput.classList.add('auto-filled');
-                    }
-                    // Sync Duration if needed (Duration >= Term)
-                    if (inputs.duration < newTerm) {
-                        const durInput = document.getElementById('wiz-duration-sidebar');
-                        if (durInput) durInput.value = newTerm;
-                    }
-                    rerun = true;
-                    */
-                }
-
-                // 2. Reduce Grant Support % (Subsidy per Toilet)
-                // If we are insolvent, we are giving away too much free money.
-                const currentGrantPct = (inputs.grantSupportPct || 0.20) * 100; // as percentage (20)
-                if (currentGrantPct > 0) {
-                    // Aggressive Cut: If large shortfall (> $500k), cut by 20% relative (e.g. 40 -> 32). Else 10%.
-                    const cut = shortfall > 500000 ? 0.8 : 0.9;
-                    let newGrantPct = Math.floor(currentGrantPct * cut);
-                    if (newGrantPct < 1) newGrantPct = 0; // Floor at 0%
-
-                    const grantSupportInput = document.getElementById('grantSupportPct');
-                    if (grantSupportInput) {
-                        grantSupportInput.value = newGrantPct;
-                        grantSupportInput.classList.add('auto-filled');
-                        rerun = true;
-                    }
-                }
-
-                if (rerun) {
-                    // Recursive Step (with slight delay or direct?)
-                    // Direct recursion might stack overflow if not careful.
-                    // But we change inputs, so it converges (Term goes up, Grant goes down).
-                    // Use setTimeout to allow UI update? No, blocking is better for calculation.
-                    // But we need to update DOM inputs for getInputs to work in recursion?
-                    // Yes, we updated DOM above. 
-
-                    // Safety Break: Don't Recurse infinitely. 
-                    // Ideally, we return and let the UI trigger? No, auto-solver.
-
-                    // We'll call runCalculation(false) to prevent infinite loop in one stack, 
-                    // BUT we rely on the loop to solve it. 
-                    // Let's use setTimeout to trigger re-run and visual update.
-                    setTimeout(() => runCalculation(true, depth + 1), 200);
-                    return; // Exit this run
-                }
+            if (shortfall > 1000) {
+                results.advice = ModelModule.suggestSolvencyFix(inputs, shortfall);
             }
         }
 
-        // Legacy Persistence
-        if (UI.lastApiData) {
-            UI.calculateAffordability(UI.lastApiData, inputs.avgToiletCost);
-        }
-        // Legacy Persistence
         if (UI.lastApiData) {
             UI.calculateAffordability(UI.lastApiData, inputs.avgToiletCost);
         }
 
         // Update UI
+        if (UI.showAdvice) UI.showAdvice(results.advice);
         if (UI.updateKPIs) {
             UI.updateKPIs(results);
         }

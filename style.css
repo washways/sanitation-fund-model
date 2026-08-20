@@ -964,3 +964,11 @@ body {
         font-size: 0.8rem;
     }
 }
+/* Inline hint under an input (e.g. the cost-of-capital provenance note). */
+.help-text {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.7rem;
+    line-height: 1.35;
+    color: #64748b;
+}
