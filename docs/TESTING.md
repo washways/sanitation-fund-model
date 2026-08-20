@@ -2,7 +2,7 @@
 
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # Node is not on PATH
-npm test              # 43 tests, ~0.9s, zero dependencies
+npm test              # 52 tests, ~0.5s, zero dependencies
 npm run test:watch    # re-run on change
 npm run golden:diff   # what would move, without writing
 npm run verify        # reproduce the audit findings
@@ -22,8 +22,9 @@ This codebase's git history contains eight "Fix TypeError" commits — each a de
 | `invariants.test.js` | An internally inconsistent ledger | *Is the arithmetic self-consistent?* |
 | `golden.test.js` | An unintended change in any output | *Did I move something I did not mean to move?* |
 | `smoke.test.js` | A crash or a write-back in the render path | *Does the whole app actually run?* |
+| `startup.test.js` | A broken scenario behind the country fetch | *Does the thing a user opens actually work?* |
 
-None of the four subsumes the others. F-01 (cost of capital always zero) passed every invariant and every golden test — the model was perfectly self-consistent and perfectly stable at the wrong answer. Only a wiring test finds it. Equally, eight of this project's first fifteen commits were `TypeError` crashes in the render path, where the model was fine and the UI reading it was not; only a smoke test finds those.
+None of the five subsumes the others. F-01 (cost of capital always zero) passed every invariant and every golden test — the model was perfectly self-consistent and perfectly stable at the wrong answer. Only a wiring test finds it. Equally, eight of this project's first fifteen commits were `TypeError` crashes in the render path, where the model was fine and the UI reading it was not; only a smoke test finds those.
 
 ---
 
@@ -144,6 +145,31 @@ If a future change needs the DOM stub to *do* something rather than merely exist
 
 ---
 
+## `startup.test.js` — does the thing a user opens actually work?
+
+The single most valuable test in the suite, added because its absence let a broken build ship while every other suite was green.
+
+The problem it addresses: `tools/baseline-inputs.js` mirrors the `value=""` attributes in `index.html`, and the entire suite is built on it — but the app auto-fetches country data half a second after load and overwrites most of the form. **The tested state exists for about 500 milliseconds.** A set of defaults can be tuned, verified, and committed while the browser opens on something completely different. That is finding F-34, and it was found by a user, not by us.
+
+This suite boots the app with controllable timers, fires `DOMContentLoaded`, drains the deferred work in scheduled order, and lets the real fetch handler run against **recorded** World Bank and administrative-unit responses. It then asserts on the scenario that results:
+
+- observed data reaches the form (inflation, population, income, districts);
+- the fetch does **not** fill negotiated terms or policy choices — a commercial lending rate is not a term sheet, and a poverty headcount is not a policy;
+- the resulting fund is viable;
+- the derived household rate stays inside credible microfinance pricing and exceeds inflation.
+
+### Fixtures are recorded, never live
+
+`tests/fixtures/worldbank-malawi.json` holds real responses, captured once. Tests must not depend on an external API's uptime, and a revised indicator should surface as a deliberate re-record with a visible diff — not as a suite that fails on a Tuesday for reasons nobody can reproduce.
+
+To re-record, fetch the indicators listed in the fixture and write them back in the same shape. **Expect scenario numbers to move**, and treat that move the way you would a golden diff.
+
+### The rule this suite encodes
+
+**Tuning a shipped default without running this test is how F-34 happened.** If you change anything in `index.html`, in `fillParam`, or in the fetch handler, this is the suite that tells you what a user will see.
+
+---
+
 ## The headless harness
 
 `tools/load-model.js` evaluates `app.js` in a Node VM with the smallest DOM stub that lets it finish loading, then exports `ModelModule`.
@@ -161,7 +187,7 @@ Named honestly so nobody assumes coverage that does not exist.
 | Gap | Why it matters | Stage |
 |---|---|---|
 | **The UI layer** | Charts, CSV export and the report builder are still uncovered. `smoke.test.js` proves they do not throw; nothing asserts what they produce. | S2 |
-| **A real browser** | Everything is verified against a DOM stub. Nobody has opened the page since the fixes landed. | now |
+| **A real browser** | Everything is verified against a DOM stub. Charts, CSV export and the advisor panel are covered only as "does not throw". | now |
 | **`ApiModule`** | World Bank fetching, the LDC list, the auto-fill heuristics. Needs a fixture-based test with recorded responses. | S4 |
 | **Charts** | No rendering assertions. F-22 (unpinned CDN) means charts can vanish offline with no error. | S6 |
 | **Accessibility** | Not assessed at all. Assume it fails. | S6 |

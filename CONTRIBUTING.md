@@ -58,6 +58,7 @@ All six. Not five.
 - [ ] `[TARGET]` flipped to `[AS-BUILT]` in `MODEL_SPEC.md` for anything implemented.
 - [ ] Finding marked resolved in `ANALYSIS.md` with the commit hash. **Row not deleted.**
 - [ ] `STATUS.md` updated.
+- [ ] `CHANGELOG.md` updated in the same commit, if behaviour or the user experience changed.
 - [ ] A test exists that would fail if the change were reverted.
 
 ---
@@ -80,7 +81,13 @@ magnitude match. golden.json re-recorded in this commit.
 Refs: docs/adr/0004-cost-of-capital-input.md
 ```
 
-One logical change per commit. `golden.json` is committed **with** the change that moved it, never separately.
+One logical change per commit. `golden.json` is committed **with** the change that moved it, never separately, and so is the `CHANGELOG.md` entry.
+
+### What a commit message owes the reader
+
+The subject line says what changed. The body says **why it was wrong**, in terms someone can verify a year from now. This repository's earlier history is eight commits reading "Fix TypeError: …", which record that something broke without recording what was actually wrong — and several of those defects came back.
+
+Concretely: cite the finding id, state the measured before-and-after, and name the ADR if behaviour moved.
 
 ---
 

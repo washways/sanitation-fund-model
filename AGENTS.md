@@ -86,6 +86,7 @@ A stage task is done when **all** of these hold. Not four of five.
 - [ ] The `[TARGET]` tag in `MODEL_SPEC.md` flipped to `[AS-BUILT]` for anything you implemented.
 - [ ] The finding in `ANALYSIS.md` marked resolved, with the commit hash. **Do not delete the row.**
 - [ ] `STATUS.md` updated: what you did, what you did not, what the next agent should know.
+- [ ] `CHANGELOG.md` updated **in the same commit**, if the change alters what the model produces or what a user sees.
 - [ ] A test exists that would fail if your change were reverted.
 
 That last one is the real gate. A fix with no test is a fix that will be undone by the next refactor.
@@ -100,6 +101,7 @@ That last one is the real gate. A fix with no test is a fix that will be undone 
 | `index.html` | The form and the dashboard. Input `id`s here must match `UI.getInputs()` — a test enforces it. |
 | `methodology.html` | User-facing explainer. Keep in sync with `MODEL_SPEC.md`. |
 | `STATUS.md` | **Read first, write last.** Current stage, what just landed, known gotchas. |
+| `CHANGELOG.md` | User-facing record of every behaviour change. One entry per session, in the same commit. |
 | `docs/ANALYSIS.md` | 33 findings with evidence. Stable IDs — never renumber. |
 | `docs/MODEL_SPEC.md` | The maths. Normative. |
 | `docs/ROADMAP.md` | Stages S0–S6 with gates. |
@@ -125,6 +127,7 @@ Things that have already caused real damage here. Check for each before you assu
 | **The model does not stop when the fund dies** | Ending cash depends on how long you ran the simulation, not on fund performance (F-31). Never compare runs of different `duration` until S3 task 1 lands. |
 | **"Model Integrity Verified" means nothing about viability** | It is printed for a run that goes insolvent and defaults on $750k (F-29). It checks arithmetic, not solvency. |
 | **`grantSupportPct` barely does anything** | It is a pacing lever; total subsidy is capped by the grant ledger (F-30). Do not use it as a tuning knob and do not conclude a change "worked" because it moved. |
+| **The defaults in `index.html` are not what runs** | The app auto-fetches country data 500 ms after load and overwrites most of the form. `tools/baseline-inputs.js` mirrors the *static* defaults; `tests/startup.test.js` covers the state a user actually gets. **Tuning a default without checking the startup test is how F-34 happened** — a scenario verified green in every suite while the browser opened on an insolvent fund. |
 | **Duplicate object keys** | Several exist (F-16). JavaScript silently keeps the last. Run the linter once S0 finishes. |
 
 ---

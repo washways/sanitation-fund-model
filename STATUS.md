@@ -11,10 +11,10 @@
 | **Stages complete** | **S0** (scaffolding), **S1** (silent-wrongness fixes), **S2** (user control) — plus the S3 correctness items that S2 depended on |
 | **Current stage** | **S3 — model correctness**, partially landed. See "What is left". |
 | **Last updated** | 2026-08-20 |
-| **Branch** | `main` — tree is dirty by design, pending your review |
-| **Tests** | ✅ 47 tests — **47 pass, 0 todo, 0 fail** (`npm test`, ~0.4s) |
+| **Branch** | `audit-and-correction` — 5 commits, tree clean. Not pushed. |
+| **Tests** | ✅ 52 tests — **52 pass, 0 todo, 0 fail** (`npm test`, ~0.5s) |
 | **Goldens** | ✅ 22 scenarios, current |
-| **Findings** | 18 of 33 fixed and verified (`node tools/verify-findings.js` → *18 fixed, 0 still present*) |
+| **Findings** | 19 of 34 fixed and verified (`node tools/verify-findings.js` → *18 fixed, 0 still present*) |
 
 ---
 
@@ -37,6 +37,7 @@ An audit of commit `2d81863`, a regression suite, three stages of fixes, and eig
 | | F-11, F-12 | `verify` is its own flag; the opening balance is an enforced invariant. |
 | | F-13, F-15, F-16, F-23 | Dead branch reachable again (the same bug also wrote `$undefined` into two CSV exports); dead wizard code removed; duplicate keys removed; `$$1,234` fixed. |
 | | F-18, F-22 | `server.js` contains requests to its own directory, binds loopback, returns real 404s. Chart.js pinned to 4.4.1 with SRI and vendored for offline use. |
+| 🔴 | **F-34** | **The tested scenario was not the scenario that runs.** The app auto-fetches country data 500 ms after load and overwrites most of the form, so the carefully tuned defaults were a state nobody ever saw — and the fetch was setting the cost of capital to Malawi's 37.1% commercial lending rate, opening the app on an insolvent fund. Found by a user, after the whole suite reported green. [ADR-0018](docs/adr/0018-fetch-does-not-set-negotiated-terms.md) |
 | 🔴 | **F-17** | **Rates are now entered as percentages** — type `40`, not `0.40`. Two contradictory heuristics are gone, so rates above 100% work. [ADR-0012](docs/adr/0012-percentage-entry-convention.md) |
 | 🔴 | **F-08** | SROI is social value only: DALYs included, ending cash removed, financial return reported separately as `capitalPreservation`. The hourly value is derived from local income instead of an uncited `$0.50`. [ADR-0011](docs/adr/0011-sroi-is-social-value-only.md), [ADR-0015](docs/adr/0015-value-of-saved-time.md) |
 | 🔴 | **F-20** | Enterprise closure is now its own parameter, so capacity responds to business failure. Previously a 50% write-down rate left 1,000 enterprises standing. [ADR-0014](docs/adr/0014-me-attrition-is-separate-from-write-down.md) |
@@ -47,6 +48,7 @@ An audit of commit `2d81863`, a regression suite, three stages of fixes, and eig
 ### New in the safety net
 
 - **`tests/smoke.test.js`** — drives the real controller against a DOM stub built from the actual ids and defaults in `index.html`. Eight of this project's first fifteen commits were "Fix TypeError" crashes in the render path; this catches those. It also asserts directly that `runCalculation` does **not** rewrite any input.
+- **`tests/startup.test.js`** — drives the real country-fetch handler against recorded World Bank and administrative-unit responses for Malawi, and asserts the resulting scenario is viable. **This is the only test that answers "does the thing a user opens actually work?"** — and its absence is why F-34 shipped.
 - All three previously-`todo` invariants (INV-8, INV-13, INV-14) now pass.
 
 ---
@@ -73,6 +75,18 @@ Reach fell 34%, which is the honest trade: the old scenario built more toilets *
 
 The parameter set was not hand-picked. A grid over five levers found 308 viable combinations of 675; those were re-scored against six stress cases and ranked. The chosen point survives all six. Details and the stress table are in [ADR-0013](docs/adr/0013-viable-default-scenario.md).
 
+### What the browser actually opens on
+
+`tests/baseline-inputs.js` describes `index.html`; the app then fetches country data and overwrites most of it. The state a user sees, with recorded Malawi data:
+
+| | |
+|---|---|
+| Inflation / HH rate / cost of capital | 28.4% / 48.4% / 2.0% |
+| Districts / ops cost / grant support | 30 / $25,000 / 40% |
+| Toilets | 196,264 (981,320 people) |
+| Min cash / repaid / OSS | +$8,458 / 100% / 2.99 |
+| Verdict | **viable** |
+
 ---
 
 ## What is left
@@ -97,7 +111,7 @@ The parameter set was not hand-picked. A grid over five levers found 308 viable 
 | F-26 | ✅ Labels changed; the realised-loss test is still to be written | S3 |
 | F-27 | Solver bisection still assumes monotonicity it lacks in the capital-tight regime | S4 |
 | F-30 | Relabel Grant Support % and show grant-fund runway beside it | S2 |
-| — | **Browser click-through.** Everything above is verified headlessly. Nobody has opened the page. | now |
+| — | **Browser click-through.** The startup path is now covered by a fixture test, but charts, CSV export and the advisor panel are still only verified as "does not throw". | now |
 
 ---
 
