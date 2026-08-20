@@ -57,7 +57,7 @@ Opening `index.html` directly via `file://` also works, but the browser will blo
 npm test
 ```
 
-44 tests in about 0.4 seconds, zero dependencies (Node's built-in runner, Node ≥ 20). Currently **44 pass, 0 todo, 0 fail**. Four suites: wiring (does each input reach the model), invariants (is the ledger self-consistent, across 16 scenarios), golden (did any output move), and smoke (does the whole app actually run).
+53 tests in about 0.5 seconds, zero dependencies (Node's built-in runner, Node ≥ 20). Currently **53 pass, 0 todo, 0 fail**. Four suites: wiring (does each input reach the model), invariants (is the ledger self-consistent, across 16 scenarios), golden (did any output move), and smoke (does the whole app actually run).
 
 ```bash
 npm run golden:diff   # would any model output change?

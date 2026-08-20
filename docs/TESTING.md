@@ -2,7 +2,7 @@
 
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # Node is not on PATH
-npm test              # 52 tests, ~0.5s, zero dependencies
+npm test              # 53 tests, ~0.5s, zero dependencies
 npm run test:watch    # re-run on change
 npm run golden:diff   # what would move, without writing
 npm run verify        # reproduce the audit findings
@@ -153,6 +153,7 @@ The problem it addresses: `tools/baseline-inputs.js` mirrors the `value=""` attr
 
 This suite boots the app with controllable timers, fires `DOMContentLoaded`, drains the deferred work in scheduled order, and lets the real fetch handler run against **recorded** World Bank and administrative-unit responses. It then asserts on the scenario that results:
 
+- the country selector lists every country, not just the default — it was an `<input list="...">` pre-filled with "Malawi", and browsers filter a datalist against what is already typed, so the dropdown showed one entry;
 - observed data reaches the form (inflation, population, income, districts);
 - the fetch does **not** fill negotiated terms or policy choices — a commercial lending rate is not a term sheet, and a poverty headcount is not a policy;
 - the resulting fund is viable;

@@ -38,6 +38,15 @@ function bootApp() {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
   const ids = new Set([...html.matchAll(/id="([A-Za-z0-9_-]+)"/g)].map(m => m[1]));
+
+  // Element tag names matter: the app branches on tagName to decide how to populate
+  // the country selector, and a stub that reports the wrong tag silently skips code
+  // the browser runs. Parse them out of the markup rather than assuming <input>.
+  const tags = {};
+  for (const m of html.matchAll(/<(input|select|textarea|button|canvas|div|span|small)\s[^>]*id="([A-Za-z0-9_-]+)"/g)) {
+    tags[m[2]] = m[1].toUpperCase();
+  }
+
   const values = {};
   for (const m of html.matchAll(/<input[^>]*id="([A-Za-z0-9_-]+)"[^>]*>/g)) {
     const v = m[0].match(/value="([^"]*)"/);
@@ -46,8 +55,12 @@ function bootApp() {
 
   const store = {};
   const listeners = {};
+  const timers = [];
+  const pending = [];   // promises returned by handlers, which the app itself discards
   const el = (id) => store[id] || (store[id] = {
     id,
+    tagName: tags[id] || 'DIV',
+    children: [],
     // A real <input> coerces whatever you assign to a string. The app assigns numbers
     // in places, so the stub has to do the same or getInputs() sees a type it never
     // sees in a browser.
@@ -60,13 +73,21 @@ function bootApp() {
     dataset: {},
     addEventListener(type, fn) { (listeners[id] = listeners[id] || {})[type] = fn; },
     dispatchEvent() {},
-    appendChild() {}, insertAdjacentElement() {}, remove() {},
-    click() { const h = listeners[id] && listeners[id].click; if (h) return h({ isTrusted: true }); },
+    appendChild(child) { this.children.push(child); },
+    insertAdjacentElement() {}, remove() {},
+    click() {
+      const h = listeners[id] && listeners[id].click;
+      if (!h) return;
+      // The app fires this from a timer and discards the promise, so the harness has
+      // to hold on to it or the drain finishes before the fetch does.
+      const r = h({ isTrusted: true });
+      if (r && typeof r.then === 'function') pending.push(r);
+      return r;
+    },
     querySelectorAll: () => [],
     getContext: () => ({}),
   });
 
-  const timers = [];
   let domReady = null;
 
   const document = {
@@ -110,21 +131,34 @@ function bootApp() {
     clearTimeout() {},
     structuredClone, Intl,
     Event: function Event() {},
-    alert() {},
+    alert: (m) => { console.error('APP ALERT:', String(m)); },
     Chart: function Chart() { return { destroy() {}, update() {} }; },
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(src + '\n;globalThis.__x = { UI, ModelModule, runCalculation };', sandbox, { filename: 'app.js' });
 
+  /**
+   * Reproduce the browser's load sequence: fire DOMContentLoaded, then drain the
+   * deferred work in scheduled order until it stops producing more.
+   *
+   * Draining has to account for handlers the app fires and then forgets — the country
+   * fetch is started from a timer with its promise discarded, so waiting only on the
+   * timer callback returns before any data has arrived. `pending` captures those.
+   */
   async function runStartup() {
     if (domReady) domReady();
-    // Drain deferred work in scheduled order, as the browser would.
-    for (let pass = 0; pass < 5; pass++) {
+    for (let pass = 0; pass < 12; pass++) {
       const batch = timers.splice(0).sort((a, b) => a.ms - b.ms);
-      for (const t of batch) { try { await t.fn(); } catch { /* handler reports its own */ } }
+      for (const t of batch) {
+        try { await t.fn(); } catch { /* the app reports its own failures */ }
+      }
+      while (pending.length) {
+        const inFlight = pending.splice(0);
+        await Promise.allSettled(inFlight);
+      }
       await new Promise(r => setImmediate(r));
-      if (timers.length === 0) break;
+      if (timers.length === 0 && pending.length === 0) break;
     }
   }
 
@@ -139,6 +173,25 @@ describe('startup — the scenario a user actually opens', () => {
     await app.runStartup();
     inputs = app.UI.getInputs();
     result = app.ModelModule.calculate({ ...inputs, enableBreakEvenSolver: false, verify: true });
+  });
+
+  test('the country selector offers every country, not just the default', () => {
+    // This was an <input list="countryList"> with value="Malawi" pre-filled. Browsers
+    // filter a datalist against whatever is already in the field, so the dropdown
+    // showed a single entry and the tool read as a Malawi-only model. A user reported
+    // it as "nothing in the drop down".
+    const select = app.el('countryInput');
+    assert.strictEqual(select.tagName, 'SELECT',
+      'the country control must be a <select>; a datalist hides its own options');
+    assert.ok(select.children.length >= 40,
+      `only ${select.children.length} countries offered — the selector should list them all`);
+
+    const labels = select.children.map(o => o.textContent);
+    assert.ok(labels.some(l => l.startsWith('Malawi')), 'Malawi should be present');
+    assert.ok(labels.some(l => l.startsWith('Bangladesh')), 'the list should reach beyond the default');
+    assert.ok(labels.every(l => /\([A-Z]{3}\)$/.test(l)),
+      'each option should show its ISO code, so the fetch target is unambiguous');
+    assert.strictEqual(select.value, 'Malawi', 'the default selection should still be Malawi');
   });
 
   test('country data reaches the form', () => {

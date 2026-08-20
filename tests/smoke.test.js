@@ -25,6 +25,14 @@ function makeApp() {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
   const ids = new Set([...html.matchAll(/id="([A-Za-z0-9_-]+)"/g)].map(m => m[1]));
+
+  // The app branches on tagName (e.g. to populate the country <select>), so the stub
+  // has to report the real tag or it silently skips code the browser runs.
+  const tags = {};
+  for (const m of html.matchAll(/<(input|select|textarea|button|canvas|div|span|small)\s[^>]*id="([A-Za-z0-9_-]+)"/g)) {
+    tags[m[2]] = m[1].toUpperCase();
+  }
+
   const values = {};
   for (const m of html.matchAll(/<input[^>]*id="([A-Za-z0-9_-]+)"[^>]*>/g)) {
     const v = m[0].match(/value="([^"]*)"/);
@@ -34,12 +42,17 @@ function makeApp() {
   const store = {};
   const el = (id) => store[id] || (store[id] = {
     id,
-    value: values[id] ?? '',
+    tagName: tags[id] || 'DIV',
+    children: [],
+    _v: String(values[id] ?? ''),
+    get value() { return this._v; },
+    set value(x) { this._v = String(x); },
     innerText: '', innerHTML: '',
     style: { setProperty() {}, removeProperty() {} },
     classList: { add() {}, remove() {}, contains: () => false },
     dataset: {},
-    addEventListener() {}, dispatchEvent() {}, appendChild() {},
+    addEventListener() {}, dispatchEvent() {},
+    appendChild(child) { this.children.push(child); },
     insertAdjacentElement() {}, click() {}, remove() {},
     querySelectorAll: () => [],
     getContext: () => ({}),

@@ -11,8 +11,8 @@
 | **Stages complete** | **S0** (scaffolding), **S1** (silent-wrongness fixes), **S2** (user control) — plus the S3 correctness items that S2 depended on |
 | **Current stage** | **S3 — model correctness**, partially landed. See "What is left". |
 | **Last updated** | 2026-08-20 |
-| **Branch** | `audit-and-correction` — 5 commits, tree clean. Not pushed. |
-| **Tests** | ✅ 52 tests — **52 pass, 0 todo, 0 fail** (`npm test`, ~0.5s) |
+| **Branch** | `audit-and-correction` — pushed to `origin`. |
+| **Tests** | ✅ 53 tests — **53 pass, 0 todo, 0 fail** (`npm test`, ~0.5s) |
 | **Goldens** | ✅ 22 scenarios, current |
 | **Findings** | 19 of 34 fixed and verified (`node tools/verify-findings.js` → *18 fixed, 0 still present*) |
 
@@ -37,6 +37,7 @@ An audit of commit `2d81863`, a regression suite, three stages of fixes, and eig
 | | F-11, F-12 | `verify` is its own flag; the opening balance is an enforced invariant. |
 | | F-13, F-15, F-16, F-23 | Dead branch reachable again (the same bug also wrote `$undefined` into two CSV exports); dead wizard code removed; duplicate keys removed; `$$1,234` fixed. |
 | | F-18, F-22 | `server.js` contains requests to its own directory, binds loopback, returns real 404s. Chart.js pinned to 4.4.1 with SRI and vendored for offline use. |
+| | UX | **The country selector showed one entry.** It was an `<input list="...">` pre-filled with "Malawi"; browsers filter a datalist by what is already typed, so the tool read as a single-country model. Now a `<select>` listing all 44 countries with ISO codes. |
 | 🔴 | **F-34** | **The tested scenario was not the scenario that runs.** The app auto-fetches country data 500 ms after load and overwrites most of the form, so the carefully tuned defaults were a state nobody ever saw — and the fetch was setting the cost of capital to Malawi's 37.1% commercial lending rate, opening the app on an insolvent fund. Found by a user, after the whole suite reported green. [ADR-0018](docs/adr/0018-fetch-does-not-set-negotiated-terms.md) |
 | 🔴 | **F-17** | **Rates are now entered as percentages** — type `40`, not `0.40`. Two contradictory heuristics are gone, so rates above 100% work. [ADR-0012](docs/adr/0012-percentage-entry-convention.md) |
 | 🔴 | **F-08** | SROI is social value only: DALYs included, ending cash removed, financial return reported separately as `capitalPreservation`. The hourly value is derived from local income instead of an uncited `$0.50`. [ADR-0011](docs/adr/0011-sroi-is-social-value-only.md), [ADR-0015](docs/adr/0015-value-of-saved-time.md) |

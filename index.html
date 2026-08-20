@@ -100,19 +100,22 @@
         <aside class="sidebar">
             <div class="logo-area">
                 <h2>Rural Sanitation Fund</h2>
+                <!--
+                    This was an <input list="countryList"> with value="Malawi" pre-filled.
+                    Browsers filter a datalist by whatever is already typed, so the dropdown
+                    showed only Malawi and the tool looked like a single-country model. A
+                    plain <select> makes all 44 countries visible on one click.
+                -->
                 <div class="country-selector">
-                    <label>Select LDC Country</label>
-                    <div style="position:relative; margin-bottom:0.5rem;">
-                        <input list="countryList" id="countryInput" class="search-input" placeholder="Type Country..."
-                            value="Malawi"
-                            style="width:100%; padding:0.5rem; border-radius:0.25rem; border:1px solid #cbd5e1;">
-                        <datalist id="countryList">
-                            <!-- Populated by JS -->
-                        </datalist>
-                    </div>
+                    <label for="countryInput">Country</label>
+                    <select id="countryInput" class="search-input"
+                        style="width:100%; padding:0.5rem; border-radius:0.25rem; border:1px solid #cbd5e1; background:#fff; margin-bottom:0.5rem;">
+                        <!-- Populated by JS from LDC_COUNTRIES -->
+                    </select>
 
                     <button id="fetchDataBtn">Load Country Data</button>
-                    <small>Auto-fills Population & Inflation</small>
+                    <small id="country-help">Change the country, then click Load to pull its
+                        population, inflation, income and lending rate.</small>
                 </div>
             </div>
 

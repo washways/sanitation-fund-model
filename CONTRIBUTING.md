@@ -11,7 +11,7 @@ No install. Node is needed only for tests and tooling.
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # not on PATH by default
 node --version      # v25.8.1 — anything >= 20 works
-npm test            # 34 pass, 3 todo, 0 fail
+npm test            # 53 pass, 0 todo, 0 fail
 ```
 
 To run the app: `python -m http.server 8080`, or `npm run serve`.
@@ -59,6 +59,7 @@ All six. Not five.
 - [ ] Finding marked resolved in `ANALYSIS.md` with the commit hash. **Row not deleted.**
 - [ ] `STATUS.md` updated.
 - [ ] `CHANGELOG.md` updated in the same commit, if behaviour or the user experience changed.
+- [ ] If a default, a form control or the fetch changed: `tests/startup.test.js` passes.
 - [ ] A test exists that would fail if the change were reverted.
 
 ---
@@ -141,6 +142,8 @@ For the reviewer:
 - [ ] Was a `KNOWN_MISSING` entry removed in the same commit that fixed it?
 - [ ] Are `MODEL_SPEC.md`, `ANALYSIS.md` and `STATUS.md` updated?
 - [ ] Any new constant? Where is it documented?
+- [ ] Does the change touch a default, a form control or the country fetch? If so, does `tests/startup.test.js` still describe a viable fund?
+- [ ] Was a DOM stub changed? Did it move *toward* browser behaviour or away from it?
 
 ---
 
@@ -153,3 +156,5 @@ For the reviewer:
 - A new numeric constant with no documented source.
 - Fixing a bug during stage S5, whose entire proof of safety is a byte-identical `golden.json`.
 - Deleting a row from the findings register.
+- Weakening a DOM stub so a test passes.
+- Auto-filling a policy parameter or a negotiated term from fetched data.

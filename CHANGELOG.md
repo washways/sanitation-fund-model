@@ -48,9 +48,13 @@ The model was audited end to end, a regression suite was built, and 18 of 33 fin
 - **ME annual closure rate** — business failure, modelled separately from loan write-down because they are different events. ([ADR-0014](docs/adr/0014-me-attrition-is-separate-from-write-down.md))
 - **Value of saved time** as a share of the wage, and **hours saved per person per day**, both previously hardcoded.
 - **Fund cost of capital** control, defaulting to 2% concessional.
-- **Regression suite** — 52 tests, zero dependencies: input wiring, 14 ledger invariants across 16 scenarios, 22 golden scenarios, an end-to-end application smoke test, and a startup test that drives the real country-fetch handler against recorded World Bank data.
+- **Regression suite** — 53 tests, zero dependencies: input wiring, 14 ledger invariants across 16 scenarios, 22 golden scenarios, an end-to-end application smoke test, and a startup test that drives the real country-fetch handler against recorded World Bank data.
 - **Documentation set** — model specification, audit with 34 findings, staged roadmap, parameter dictionary, testing guide, architecture note, 18 decision records, and a working contract for AI agents.
 - `methodology.html` rewritten from scratch.
+
+### Changed (interface)
+
+- **The country selector lists all 44 countries.** It was an `<input list="countryList">` pre-filled with "Malawi"; browsers filter a datalist against whatever is already in the field, so the dropdown showed a single entry and the tool read as a Malawi-only model. It is now a plain `<select>` showing each country with its ISO code, and changing it prompts you to click Load.
 
 ### Removed
 

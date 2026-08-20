@@ -3411,16 +3411,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 1000); // 1s Delay to allow DOM/Data to settle
 
-    // Populate LDC Datalist
-    const dataList = document.getElementById('countryList');
-    if (dataList) {
+    // Populate the country selector.
+    //
+    // This used to fill a <datalist> behind an <input> that was pre-filled with
+    // "Malawi". Browsers filter a datalist against whatever is already in the field,
+    // so the dropdown showed one entry and the tool read as single-country. A <select>
+    // shows all 44 on one click.
+    const countrySelect = document.getElementById('countryInput');
+    if (countrySelect && countrySelect.tagName === 'SELECT') {
         LDC_COUNTRIES.forEach(c => {
             const opt = document.createElement('option');
-            opt.value = c.name; // User sees Name
-            opt.dataset.code = c.code; // Store code? No, datalist doesn't support dataset on options easily accessible via input value.
-            // Put Code in label?
-            // opt.label = c.code; 
-            dataList.appendChild(opt);
+            opt.value = c.name;
+            opt.textContent = `${c.name} (${c.code})`;
+            countrySelect.appendChild(opt);
+        });
+        countrySelect.value = 'Malawi';
+
+        // Selecting a country does not fetch on its own — the fetch overwrites a dozen
+        // form fields, and that should follow an explicit click, not a dropdown change.
+        // Prompt instead, so the pending action is obvious.
+        countrySelect.addEventListener('change', () => {
+            const help = document.getElementById('country-help');
+            const btn = document.getElementById('fetchDataBtn');
+            if (help) {
+                help.innerText = `Click "Load Country Data" to pull ${countrySelect.value}'s figures ` +
+                    `into the form. Nothing has changed yet.`;
+                help.style.color = '#b45309';
+            }
+            if (btn) btn.classList.add('needs-attention');
         });
     }
 
@@ -3575,6 +3593,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const data = await ApiModule.fetchData(country);
         btn.innerText = originalText;
+        // The pending-load prompt is satisfied; clear it.
+        btn.classList.remove('needs-attention');
+        const cHelp = document.getElementById('country-help');
+        if (cHelp) {
+            cHelp.innerText = `Loaded ${countryObj.name}. Change the country and click Load again to switch context.`;
+            cHelp.style.color = '';
+        }
 
         // Helper for Flag Image (Windows friendly)
         const getFlagImg = (iso2) => {

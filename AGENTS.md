@@ -13,6 +13,11 @@ cat STATUS.md                 # where the work is right now
 npm test                      # must be green before you touch anything
 ```
 
+53 tests, about half a second, zero dependencies. If you change anything a user
+touches — a default, a form control, the country fetch — the suite that matters most is
+`tests/startup.test.js`, because it is the only one that exercises the state the browser
+actually ends up in.
+
 If `npm test` is **not** green when you arrive, **stop and report it**. Do not start your task on top of a broken tree; you will not be able to tell your breakage from the one you inherited.
 
 Node lives at `C:\Users\jrobertson\Repositories\node-v25.8.1-win-x64` on the maintainer's machine and is not on `PATH` by default:
@@ -53,6 +58,27 @@ Rules are tagged:
 
 **Re-recording a golden file to turn a red build green, without an ADR, is the single most damaging thing you can do in this repository.** It converts a caught regression into a silent one. The suite exists because eight of this project's fifteen commits are "Fix TypeError" hotfixes found by users.
 
+### Rule 2b — Test the state that runs, not the state that ships
+
+`index.html` defines the defaults. The app then **auto-fetches country data 500 ms after
+load and overwrites most of the form.** The shipped defaults exist for about half a
+second and are not what any user sees.
+
+This has already caused a Critical finding. A viable demonstration scenario was tuned,
+verified across the whole suite, committed — and a user opened the app and got an
+insolvent fund, because the fetch was setting the cost of capital to Malawi's 37.1%
+commercial lending rate (F-34).
+
+So: **`tools/baseline-inputs.js` and the golden scenarios describe `index.html`.
+`tests/startup.test.js` describes reality.** Both matter, and they are not the same
+thing. If your change touches a default, `fillParam`, or the fetch handler, the startup
+test is the one that tells you what a user will see.
+
+The general rule that fell out of it, worth keeping: **the fetch fills observed data,
+never negotiated terms or policy choices.** A market lending rate is not a term sheet; a
+poverty headcount is not a subsidy policy. Evidence informs the user; it does not move
+the dials.
+
 ### Rule 3 — One stage at a time
 
 [docs/ROADMAP.md](docs/ROADMAP.md) defines stages S0–S6, each with an entry gate and an exit gate.
@@ -87,6 +113,7 @@ A stage task is done when **all** of these hold. Not four of five.
 - [ ] The finding in `ANALYSIS.md` marked resolved, with the commit hash. **Do not delete the row.**
 - [ ] `STATUS.md` updated: what you did, what you did not, what the next agent should know.
 - [ ] `CHANGELOG.md` updated **in the same commit**, if the change alters what the model produces or what a user sees.
+- [ ] If you touched a default, a form control, or the fetch: `tests/startup.test.js` still passes, and you have read what it reports.
 - [ ] A test exists that would fail if your change were reverted.
 
 That last one is the real gate. A fix with no test is a fix that will be undone by the next refactor.
@@ -111,6 +138,8 @@ That last one is the real gate. A fix with no test is a fix that will be undone 
 | `docs/adr/` | Decision records. One per behaviour change. |
 | `tests/` | The safety net. |
 | `tools/load-model.js` | Loads the model headlessly. Keep the DOM stub minimal — if it has to *do* something, the model grew a hidden DOM dependency and that is the bug. |
+| `tests/fixtures/` | Recorded World Bank and administrative-unit responses. **Never fetch live in a test.** Re-record deliberately and treat the resulting move like a golden diff. |
+| `CHANGELOG.md` | User-facing record of every behaviour change. |
 
 ---
 
@@ -127,7 +156,9 @@ Things that have already caused real damage here. Check for each before you assu
 | **The model does not stop when the fund dies** | Ending cash depends on how long you ran the simulation, not on fund performance (F-31). Never compare runs of different `duration` until S3 task 1 lands. |
 | **"Model Integrity Verified" means nothing about viability** | It is printed for a run that goes insolvent and defaults on $750k (F-29). It checks arithmetic, not solvency. |
 | **`grantSupportPct` barely does anything** | It is a pacing lever; total subsidy is capped by the grant ledger (F-30). Do not use it as a tuning knob and do not conclude a change "worked" because it moved. |
-| **The defaults in `index.html` are not what runs** | The app auto-fetches country data 500 ms after load and overwrites most of the form. `tools/baseline-inputs.js` mirrors the *static* defaults; `tests/startup.test.js` covers the state a user actually gets. **Tuning a default without checking the startup test is how F-34 happened** — a scenario verified green in every suite while the browser opened on an insolvent fund. |
+| **The defaults in `index.html` are not what runs** | See Rule 2b. `tools/baseline-inputs.js` mirrors the *static* defaults; `tests/startup.test.js` covers what a user gets. Tuning a default without running the startup test is how F-34 shipped. |
+| **The DOM stubs must stay faithful** | `tests/smoke.test.js` and `tests/startup.test.js` build element stubs by parsing `index.html`. They report real `tagName`s and coerce `value` to a string, because the app branches on both. A stub that quietly differs from a browser produces green tests for code the browser never runs — which is the same failure as F-34, one layer down. If a stub needs to *do* something rather than merely exist, ask why the app needs it. |
+| **Percentages, not decimals** | Every rate field holds a percentage and is divided by 100 exactly once, in `getInputs`. Never re-introduce a magnitude heuristic (F-17). |
 | **Duplicate object keys** | Several exist (F-16). JavaScript silently keeps the last. Run the linter once S0 finishes. |
 
 ---
@@ -194,6 +225,7 @@ Stop. Do not guess. Ask, and say what you would do if forced to choose.
 - A golden value moves in a direction your ADR did not predict, or by an order of magnitude more than expected.
 - Your task appears to require changing a rule tagged `[AS-BUILT]`.
 - `npm test` was already failing when you arrived.
+- A change makes the startup scenario non-viable and you cannot see why.
 - The fix seems to need a rewrite. It almost certainly does not — see "What is deliberately not on this roadmap" in [ROADMAP.md](docs/ROADMAP.md).
 
 The maintainer would far rather answer a question than review a diff built on a guess.
@@ -207,4 +239,6 @@ The maintainer would far rather answer a question than review a diff built on a 
 - **Do not "clean up while you're in there".** Unrelated changes in a stage diff destroy reviewability. Register it and move on.
 - **Do not fix a bug during stage S5.** S5 moves code and proves it by a byte-identical `golden.json`. A fix makes that proof impossible.
 - **Do not delete a row from the findings register.** Mark it resolved with a commit hash. The history is the point.
-- **Do not trust the console.** `verifyLedger` reports real problems via `console.warn` where nobody sees them. If something matters, it goes on screen.
+- **Do not trust the console.** Real problems used to be reported via `console.warn`, where nobody sees them. If something matters, it goes on screen.
+- **Do not weaken a DOM stub to make a test pass.** The stub exists to imitate a browser. If it disagrees with one, fix the stub toward reality, never away from it.
+- **Do not let the fetch set a policy parameter.** See Rule 2b.
