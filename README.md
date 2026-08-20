@@ -31,6 +31,10 @@ What changed that a returning user will notice:
 
 ---
 
+## Live
+
+<https://washways.org/sanitation-fund-model/> — published from `main` by GitHub Pages. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 ## Running it
 
 No install, no build step, no dependencies.
@@ -102,6 +106,7 @@ Full specification: **[docs/MODEL_SPEC.md](docs/MODEL_SPEC.md)**. It is normativ
 | **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | Current shape, target shape, constraints. |
 | **[docs/adr/](docs/adr/)** | Decision records. |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | How to make a change. |
+| **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** | How to release, and what breaks under a subpath. |
 | `methodology.html` | User-facing explainer, served with the app. |
 
 ## Repository layout
