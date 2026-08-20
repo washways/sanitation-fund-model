@@ -1,0 +1,17 @@
+# Dependencies — the app is deliberately dependency-free (docs/adr/0002)
+node_modules/
+
+# Editor / OS
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Logs and scratch
+*.log
+npm-debug.log*
+/tmp/
+/scratch/
+
+# NOTE: tests/golden.json is the regression baseline and MUST be committed.
+# Never add it here. See docs/TESTING.md.

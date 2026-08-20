@@ -1,58 +1,84 @@
+/**
+ * server.js — static dev server.
+ *
+ * Previously resolved request paths as `'.' + request.url` with no normalisation and
+ * no root containment, so `/../../../../Users/you/.ssh/id_rsa` was served straight off
+ * the filesystem — and it bound every interface, making that reachable from the local
+ * network. It also answered missing files with HTTP 200. See finding F-18.
+ *
+ * `python -m http.server 8080` is an equally good alternative if Node is not to hand.
+ */
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const port = 8080;
+const PORT = process.env.PORT || 8080;
+const HOST = '127.0.0.1';        // loopback only — this is a dev server, not a host
+const ROOT = path.resolve(__dirname);
 
 const mimeTypes = {
-    '.html': 'text/html',
-    '.js': 'text/javascript',
-    '.css': 'text/css',
-    '.json': 'application/json',
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.md': 'text/markdown; charset=utf-8',
     '.png': 'image/png',
-    '.jpg': 'image/jpg',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
     '.gif': 'image/gif',
     '.svg': 'image/svg+xml',
-    '.wav': 'audio/wav',
-    '.mp4': 'video/mp4',
-    '.woff': 'application/font-woff',
-    '.ttf': 'application/font-ttf',
-    '.eot': 'application/vnd.ms-fontobject',
-    '.otf': 'application/font-otf',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
     '.wasm': 'application/wasm'
 };
 
-http.createServer(function (request, response) {
-    console.log('request ', request.url);
+function send(res, status, body, type = 'text/plain; charset=utf-8') {
+    res.writeHead(status, {
+        'Content-Type': type,
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff'
+    });
+    res.end(body);
+}
 
-    let filePath = '.' + request.url;
-    if (filePath == './') {
-        filePath = './index.html';
+http.createServer((req, res) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+        return send(res, 405, 'Method Not Allowed');
     }
 
-    const extname = String(path.extname(filePath)).toLowerCase();
-    const contentType = mimeTypes[extname] || 'application/octet-stream';
+    // Strip the query string and decode before resolving, so that neither can be used
+    // to smuggle traversal segments past the containment check below.
+    let pathname;
+    try {
+        pathname = decodeURIComponent(new URL(req.url, `http://${HOST}`).pathname);
+    } catch {
+        return send(res, 400, 'Bad Request');
+    }
+    if (pathname === '/') pathname = '/index.html';
 
-    fs.readFile(filePath, function (error, content) {
-        if (error) {
-            if (error.code == 'ENOENT') {
-                fs.readFile('./404.html', function (error, content) {
-                    response.writeHead(200, { 'Content-Type': contentType });
-                    response.end(content, 'utf-8');
-                });
+    const filePath = path.resolve(ROOT, '.' + pathname);
+
+    // Containment: the resolved path must sit inside ROOT. path.resolve has already
+    // collapsed any '..', so this is checked after normalisation, not before.
+    if (filePath !== ROOT && !filePath.startsWith(ROOT + path.sep)) {
+        console.warn(`blocked traversal attempt: ${req.url}`);
+        return send(res, 403, 'Forbidden');
+    }
+
+    fs.readFile(filePath, (err, content) => {
+        if (err) {
+            if (err.code === 'ENOENT' || err.code === 'EISDIR') {
+                return send(res, 404, 'Not Found');   // 404 means 404
             }
-            else {
-                response.writeHead(500);
-                response.end('Sorry, check with the site admin for error: ' + error.code + ' ..\n');
-                response.end();
-            }
+            console.error(err);
+            return send(res, 500, 'Internal Server Error');
         }
-        else {
-            response.writeHead(200, { 'Content-Type': contentType });
-            response.end(content, 'utf-8');
-        }
+        const type = mimeTypes[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
+        send(res, 200, content, type);
     });
-
-}).listen(port);
-
-console.log(`Server running at http://127.0.0.1:${port}/`);
+}).listen(PORT, HOST, () => {
+    console.log(`Serving ${ROOT}`);
+    console.log(`http://${HOST}:${PORT}/`);
+});

@@ -964,3 +964,43 @@ body {
         font-size: 0.8rem;
     }
 }
+/* Inline hint under an input (e.g. the cost-of-capital provenance note). */
+.help-text {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.7rem;
+    line-height: 1.35;
+    color: #64748b;
+}
+
+/* Country selector: flag a pending "Load Country Data" click after the
+   selection changes, so the user is not left wondering why nothing moved. */
+#fetchDataBtn.needs-attention {
+    animation: pulse-attention 1.4s ease-in-out infinite;
+    box-shadow: 0 0 0 2px rgba(180, 83, 9, 0.35);
+}
+
+@keyframes pulse-attention {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 2px rgba(180, 83, 9, 0.35);
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px rgba(180, 83, 9, 0.12);
+    }
+}
+
+.country-selector select {
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.country-selector small {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: #64748b;
+}

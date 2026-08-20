@@ -1,0 +1,87 @@
+{
+  "_comment": "Recorded from the World Bank Indicators API for Malawi (MWI). Tests must never hit the network; re-record deliberately, and expect scenario numbers to move when you do.",
+  "recordedAt": "2026-08-20",
+  "country": "MWI",
+  "indicators": {
+    "SP.RUR.TOTL": {
+      "value": 18307197,
+      "year": "2025"
+    },
+    "SH.STA.BASS.RU.ZS": {
+      "value": 49.505434868274,
+      "year": "2024"
+    },
+    "SH.STA.SMSS.RU.ZS": {
+      "value": 47.2932533710812,
+      "year": "2024"
+    },
+    "NY.GDP.PCAP.CD": {
+      "value": 671.506847203876,
+      "year": "2025"
+    },
+    "NY.GNP.PCAP.CD": {
+      "value": 600,
+      "year": "2025"
+    },
+    "FP.CPI.TOTL.ZG": {
+      "value": 28.3702565330281,
+      "year": "2025"
+    },
+    "SP.POP.GROW": {
+      "value": 2.55685698114353,
+      "year": "2025"
+    },
+    "FR.INR.LEND": {
+      "value": 37.0641666666667,
+      "year": "2024"
+    },
+    "SI.POV.GINI": {
+      "value": 38.5,
+      "year": "2019"
+    },
+    "SI.POV.DDAY": {
+      "value": 75.4,
+      "year": "2019"
+    },
+    "PV.EST": {
+      "value": null,
+      "year": null
+    }
+  },
+  "administrativeUnits": {
+    "source": "countriesnow.space",
+    "count": 30,
+    "names": [
+      "Balaka District",
+      "Blantyre District",
+      "Central Region",
+      "Chikwawa District",
+      "Chiradzulu District",
+      "Chitipa district",
+      "Dedza District",
+      "Dowa District",
+      "Karonga District",
+      "Kasungu District",
+      "Likoma District",
+      "Lilongwe District",
+      "Machinga District",
+      "Mangochi District",
+      "Mchinji District",
+      "Mulanje District",
+      "Mwanza District",
+      "Mzimba District",
+      "Nkhata Bay District",
+      "Nkhotakota District",
+      "Northern Region",
+      "Nsanje District",
+      "Ntcheu District",
+      "Ntchisi District",
+      "Phalombe District",
+      "Rumphi District",
+      "Salima District",
+      "Southern Region",
+      "Thyolo District",
+      "Zomba District"
+    ]
+  }
+}

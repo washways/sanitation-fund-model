@@ -6,13 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Methodology - Sanitation Revolving Fund Model</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background: #f8fafc;
             color: #334155;
-            line-height: 1.6;
+            line-height: 1.65;
             padding: 2rem;
             overflow-y: auto !important;
             height: auto !important;
@@ -39,20 +40,40 @@
         h2 {
             font-size: 1.75rem;
             color: #1e293b;
-            margin-top: 3rem;
+            margin-top: 3.5rem;
             border-bottom: 1px solid #e2e8f0;
             padding-bottom: 0.5rem;
+            scroll-margin-top: 1rem;
         }
 
         h3 {
-            font-size: 1.25rem;
+            font-size: 1.2rem;
             color: #334155;
             margin-top: 2rem;
             font-weight: 600;
         }
 
         p {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        ul,
+        ol {
+            margin-bottom: 1.25rem;
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 0.1rem 0.35rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #4338ca;
         }
 
         .formula-box {
@@ -61,34 +82,40 @@
             padding: 1.5rem;
             margin: 1.5rem 0;
             font-family: 'Courier New', monospace;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: #1e293b;
+            white-space: pre-wrap;
+            overflow-x: auto;
         }
 
         .param-table {
             width: 100%;
             border-collapse: collapse;
             margin: 2rem 0;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .param-table th {
             background: #e2e8f0;
             text-align: left;
-            padding: 1rem;
+            padding: 0.85rem;
             font-weight: 700;
             color: #334155;
         }
 
         .param-table td {
             border-bottom: 1px solid #e2e8f0;
-            padding: 1rem;
+            padding: 0.85rem;
             vertical-align: top;
         }
 
         .param-table tr:last-child td {
             border-bottom: none;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
         }
 
         .alert-box {
@@ -101,8 +128,39 @@
             margin: 2rem 0;
         }
 
+        .alert-box.green {
+            background: #f0fdf4;
+            border-left: 4px solid #16a34a;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+
+        .alert-box.blue {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            border-color: #bfdbfe;
+            color: #1e40af;
+        }
+
+        .alert-box.red {
+            background: #fef2f2;
+            border-left: 4px solid #dc2626;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+
+        .alert-box h3 {
+            margin-top: 0;
+            color: inherit;
+        }
+
+        .alert-box p:last-child,
+        .alert-box ul:last-child {
+            margin-bottom: 0;
+        }
+
         .nav {
-            margin-bottom: 3rem;
+            margin-bottom: 2.5rem;
         }
 
         .nav a {
@@ -121,403 +179,873 @@
             color: #3730a3;
             padding: 0.2rem 0.5rem;
             border-radius: 0.25rem;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        .alert-box.green {
-            background: #f0fdf4;
-            border-left: 4px solid #16a34a;
-            border-color: #bbf7d0;
-            color: #166534;
+        .lead {
+            font-size: 1.15rem;
+            color: #475569;
+        }
+
+        .toc {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1.5rem 2rem;
+            margin: 2.5rem 0;
+        }
+
+        .toc ol {
+            margin-bottom: 0;
+            columns: 2;
+            column-gap: 2.5rem;
+        }
+
+        .toc a {
+            color: #4338ca;
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        .meta {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        .changed {
+            background: #fef9c3;
+            color: #854d0e;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            white-space: nowrap;
         }
     </style>
 </head>
 
 <body>
-
     <div class="nav">
-        <a href="index.html">← Back to Simulator</a>
+        <a href="index.html">&larr; Back to Model</a>
     </div>
 
     <div class="container">
-        <h1>Methodology & Technical Note</h1>
-        <p class="lead">A detailed explanation of the financial mechanics, assumptions, and impact calculations powering
-            the Sanitation Revolving Fund Model.</p>
+        <h1>Methodology &amp; Technical Note</h1>
+        <p class="lead">How this model calculates what it calculates &mdash; the financial mechanics, the impact
+            assumptions, and the things it deliberately does not attempt.</p>
+        <p class="meta">Last revised 2026-08-20. This note is kept in step with the model specification in
+            <code>docs/MODEL_SPEC.md</code>; where the two disagree, the specification is authoritative and this page
+            is out of date.
+        </p>
 
-        <h2>1. Executive Summary: The Model Logic</h2>
-        <p>This simulator models a <strong>Blended Finance Vehicle</strong> designed to close the sanitation gap in
-            LDCs. Unlike traditional grant programs, it operates as a specialized Microfinance Institution (MFI):</p>
+        <div class="alert-box red">
+            <h3>If you are comparing against older outputs, re-run them</h3>
+            <p>This model was substantially corrected in August 2026. Figures produced before then are not comparable
+                &mdash; several headline numbers moved materially. Rate inputs from an older version must also be
+                <strong>re-entered rather than copied</strong>, because rates are now typed as percentages
+                (<code>40</code>, not <code>0.40</code>).
+            </p>
+            <p>Developers: the full change record is in <code>docs/ANALYSIS.md</code> and <code>docs/adr/</code>.</p>
+        </div>
+
+        <div class="toc">
+            <ol>
+                <li><a href="#scope">What this model does</a></li>
+                <li><a href="#verdicts">The two verdicts</a></li>
+                <li><a href="#waterfall">The monthly waterfall</a></li>
+                <li><a href="#ledgers">The dual ledger</a></li>
+                <li><a href="#portfolio">Loan portfolio mechanics</a></li>
+                <li><a href="#investor">Investor debt</a></li>
+                <li><a href="#growth">Growth and constraints</a></li>
+                <li><a href="#windup">Wind-up</a></li>
+                <li><a href="#impact">Impact methodology</a></li>
+                <li><a href="#parameters">Parameter dictionary</a></li>
+                <li><a href="#data">Data sources</a></li>
+                <li><a href="#limits">Assumptions and limitations</a></li>
+                <li><a href="#open">Open questions</a></li>
+            </ol>
+        </div>
+
+        <!-- ================================================================ -->
+        <h2 id="scope">1. What this model does</h2>
+
+        <p>It simulates a <strong>blended-finance revolving fund</strong> that finances market-based sanitation, month
+            by month, over a chosen horizon. Capital flows in three hops:</p>
+
+        <div class="formula-box">Investors ──grant──▶  GRANT LEDGER ──subsidy──▶ Households        (no repayment)
+          ──loan───▶  LOAN LEDGER  ──loan─────▶ Micro-enterprises (repay with interest)
+                                   ──loan─────▶ Households        (repay with interest)
+                      LOAN LEDGER  ──service──▶ Investors         (principal + interest)</div>
+
+        <p>It answers three questions, and it is built to answer these rather than to be a general-purpose financial
+            model:</p>
         <ol>
-            <li><strong>Seed Capital:</strong> The fund starts with Concessional Debt (Soft Loans) and Grants.</li>
-            <li><strong>Revolving Lending:</strong> Capital is lent to Households (for toilets) and Sanitation
-                Entrepreneurs (MEs).</li>
-            <li><strong>Repayment & Recycling:</strong> As loans are repaid with interest, the capital "revolves" to
-                fund new loans.</li>
-            <li><strong>Cross-Subsidy:</strong> Profits from the lending window are implicitly used to subsidize grants
-                for the poorest.</li>
+            <li><strong>Solvency.</strong> Does the fund run out of cash, and when?</li>
+            <li><strong>Repayment.</strong> Is senior debt repaid in full, within its term?</li>
+            <li><strong>Reach and impact.</strong> How many toilets, people, DALYs and tonnes of CO<sub>2</sub>e, at
+                what cost per unit?</li>
         </ol>
 
-        <h2>2. Financial Mechanics (The "Waterfall")</h2>
-        <p>The model runs a monthly simulation using a <strong>Centralized Cashflow Engine</strong> (Double-Entry
-            Ledger). In every month <code>m</code>, cash is allocated based on a <strong>Strict Priority
-                Waterfall</strong>:</p>
+        <p><strong>Deliberately out of scope:</strong> foreign exchange and multi-currency, taxation, sale of the
+            portfolio to a third party, borrower-level heterogeneity, district-level disaggregation, construction
+            quality, and behavioural adoption dynamics. Adding any of these is a decision to be recorded, not a
+            feature to be slipped in.</p>
 
-        <h3>Priority 1: Senior Debt Service (The Schedule)</h3>
-        <p>The model prioritizes the Investor. Principal and Interest due for the month are calculated and paid
-            <strong>before any other expense</strong>.
-        </p>
-        <div class="formula-box">
-            <strong>Inflow Priorities:</strong> 1. Investor Repayment &rarr; 2. Ops &rarr; 3. Growth
-        </div>
-        <p><em>Constraint:</em> If <code>CashBalance &lt; DueAmount</code>, the fund is flagged as insolvent.</p>
+        <!-- ================================================================ -->
+        <h2 id="verdicts">2. The two verdicts</h2>
 
-        <h3>Priority 2: Operational Costs (Fixed & Variable)</h3>
-        <p>Fixed costs (staff, office) and Variable costs (M&E per toilet) are deducted next.</p>
-        <p><strong>Hibernation Mode:</strong> If the fund stops lending (due to winding down or insolvency), fixed costs
-            do not disappear. Instead, they drop to a <strong>"Collections Floor"</strong> (30% of peak) to maintain a
-            skeleton crew for loan recovery.</p>
+        <p>After every run the model reports <strong>two separate results</strong>, and the distinction matters more
+            than any single number on the dashboard.</p>
 
-        <h3>Priority 3: The Solvency Constraint (New Lending)</h3>
-        <p>New loans and grants are <strong>only issued</strong> if the fund has "Free Cash".</p>
-        <div class="formula-box">
-            <strong>Reserves</strong> = (3-Months of Debt Service) + (3-Months of Fixed Ops)<br>
-            <strong>LendableBalance</strong> = CashBalance - Reserves
-        </div>
-        <p>If <code>LendableBalance > 0</code>, new loans are approved. If not, the fund <strong>automatically pauses
-                growth</strong> to rebuild liquidity.</p>
-
-        <h2>5. Intelligent Analysis (AI Advisor)</h2>
-        <p>The built-in Advisor uses a Rule-Based Engine (JavaScript) to analyze the final simulation results. It
-            checks:</p>
-        <ul>
-            <li><strong>Principal Repayment:</strong> Did the investor get 100% of their money back? (Even if the fund
-                is solvent, a shortfall is a failure).</li>
-            <li><strong>Structural Deficit:</strong> Do revenues cover fixed costs?</li>
-            <li><strong>Negative Yield:</strong> Is the Real Interest Rate (after inflation/default) positive?</li>
-        </ul>
-
-        <h2>3. Smart Data Integration (World Bank API)</h2>
-        <p>To ensure realism, the model fetches real-time macroeconomic indicators for the selected LDC country via the
-            World Bank API. These inputs drive the default assumptions:</p>
-
-        <table class="param-table">
-            <thead>
+        <div class="table-scroll">
+            <table class="param-table">
                 <tr>
-                    <th>Indicator</th>
-                    <th>WB Code</th>
-                    <th>Impact on Model</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><strong>Inflation (CPI)</strong></td>
-                    <td><code>FP.CPI.TOTL.ZG</code></td>
-                    <td>Escalates the cost of toilet construction annually. Increases the required loan size.</td>
+                    <th style="width:20%">Verdict</th>
+                    <th style="width:35%">Question</th>
+                    <th>What a failure means</th>
                 </tr>
                 <tr>
-                    <td><strong>Lending Rate</strong></td>
-                    <td><code>FR.INR.LEND</code></td>
-                    <td>Sets the baseline "Cost of Funds". The model adds a spread (default +10%) to estimate realistic
-                        MFI pricing.</td>
+                    <td><strong>Ledger integrity</strong></td>
+                    <td>Is the arithmetic internally consistent?</td>
+                    <td><strong>A defect in the model.</strong> Cash has appeared or vanished, a total does not match
+                        its components, or a value is not a number. Report it; do not work around it.</td>
                 </tr>
                 <tr>
-                    <td><strong>Poverty Headcount</strong></td>
-                    <td><code>SI.POV.DDAY</code></td>
-                    <td>Determines the "Grant Support %". The model assumes anyone living on &lt;$2.15/day requires a
-                        100% subsidy.</td>
+                    <td><strong>Fund viability</strong></td>
+                    <td>Does the fund actually work?</td>
+                    <td><strong>A finding about your scenario.</strong> The model is telling you the fund as specified
+                        does not stand up. That is a legitimate and useful result, not an error.</td>
                 </tr>
-                <tr>
-                    <td><strong>Rural Population</strong></td>
-                    <td><code>SP.RUR.TOTL</code></td>
-                    <td>Sets the Total Market Size.</td>
-                </tr>
-                <tr>
-                    <td><strong>Political Stability</strong></td>
-                    <td><code>PV.EST</code></td>
-                    <td>Determines the "Contingency Reserve". Lower stability scores trigger higher mandatory cash
-                        reserves (risk buffer).</td>
-                </tr>
-                <tr>
-                    <td><strong>Basic Sanitation (Rural)</strong></td>
-                    <td><code>SH.STA.BASS.RU.ZS</code></td>
-                    <td>Used to calculate the "Unserved Population" gap.</td>
-                </tr>
-                <tr>
-                    <td><strong>GDP per Capita</strong></td>
-                    <td><code>NY.GDP.PCAP.CD</code></td>
-                    <td>Used to calculate the Economic Value of DALYs and calibrate toilet Affordability.</td>
-                </tr>
-                <tr>
-                    <td><strong>GNI per Capita</strong></td>
-                    <td><code>NY.GNP.PCAP.CD</code></td>
-                    <td>Supplement to GDP for income estimation.</td>
-                </tr>
-                <tr>
-                    <td><strong>Population Growth</strong></td>
-                    <td><code>SP.POP.GROW</code></td>
-                    <td>Increases the target population annually, creating a moving target.</td>
-                </tr>
-                <tr>
-                    <td><strong>Gini Index</strong></td>
-                    <td><code>SI.POV.GINI</code></td>
-                    <td>Measure of inequality. High Gini (>40) suggests higher need for cross-subsidization.</td>
-                </tr>
-                </tr>
-            </tbody>
-        </table>
-
-        <h2>4. Impact Methodology</h2>
-        <p>We convert physical infrastructure (Latrines Built) into social and environmental outcomes using standard
-            development economics multipliers.</p>
-
-        <h3>🚑 Health: DALYs Averted</h3>
-        <p>Disability-Adjusted Life Years (DALYs) measure the burden of disease. Sanitation prevents diarrhea, stunting,
-            and cholera.</p>
-        <div class="formula-box">
-            <strong>DALYs</strong> = PeopleReached * 0.005 (WHO Standard Coefficient per person/year for basic
-            sanitation)
+            </table>
         </div>
 
-        <h3>💰 Economic Value of Health</h3>
-        <p>We monetize the DALYs to calculate an SROI.</p>
-        <div class="formula-box">
-            <strong>HealthValue ($)</strong> = DALYs * Value_Per_DALY (User Input Option)
-        </div>
-
-        <h3>🌿 Carbon Mitigation</h3>
-        <p>Replacing open defecation with improved latrines reduces methane emissions. Note: The model accrues carbon
-            revenue <strong>monthly</strong> to smooth cash flow, assuming a programmatic buyer.</p>
-        <div class="formula-box">
-            <strong>CarbonRev ($)</strong> = (CumulativeLatrines * 0.2 tCO2e/year) * CarbonPrice($) * Share(%)
-        </div>
-        <p><em>Assumption:</em> Default is 0.2 tons/year (Safe Latrine). Higher values (1.0+) require Biogas or CBS
-            technologies.</p>
-
-        <h2>6. Fund Philosophy: Impact vs. Evergreen</h2>
-        <div class="alert-box green">
-            <strong>Why is this an "Impact Fund"?</strong><br>
-            A traditional "Evergreen Fund" aims to preserve 100% of its capital forever (Profit >= Costs).
-            <br><br>
-            This model is designed as a <strong>Time-Bound Impact Fund</strong>. Its primary goal is to reach
-            <strong>Universal Coverage (SDG 6)</strong> within a target timeframe (e.g., 5-10 years).
-            <br><br>
-            <em>Trade-off:</em> To reach the poorest (Strategy: High Grants, Low Interest), the fund may slowly consume
-            its capital. This is acceptable as long as the <strong>Depletion Year</strong> > <strong>Target
-                Year</strong>.
-            <br>
-            <strong>Note:</strong> If the model proves successful ("Proof of Concept"), donors can inject a "Series B"
-            grant to recapitalize the fund.
-        </div>
-
-        <h2>7. Parameter Dictionary & Assumptions</h2>
-        <p>A complete guide to the model's inputs, their sources, and how they influence the results.</p>
-
-        <table class="param-table">
-            <thead>
-                <tr>
-                    <th style="width: 25%;">Parameter</th>
-                    <th style="width: 20%;">Default / Source</th>
-                    <th>Rationale & Impact</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Market -->
-                <tr>
-                    <td colspan="3" class="tag">Market Context</td>
-                </tr>
-                <tr>
-                    <td><strong>Target Population</strong></td>
-                    <td><em>API: World Bank</em></td>
-                    <td>Rural Population * (1 - Basic Sanitation Coverage). Defines the total volume of toilets needed.
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong># of Districts</strong></td>
-                    <td><em>API: CountriesNow</em><br>(or User Input)</td>
-                    <td>Number of Administrative Areas (States/Provinces). <br><strong>Impact:</strong> Divides the
-                        national target into manageable zones. Determines total MEs required (Target is distributed
-                        across districts).</td>
-                </tr>
-                <tr>
-                    <td><strong>Avg Household Size</strong></td>
-                    <td><code>5</code> (Standard LDC estimate)</td>
-                    <td>Converts "People" into "Households" (Loan Units). Lower size = More loans needed.</td>
-                </tr>
-
-                <!-- Capital -->
-                <tr>
-                    <td colspan="3" class="tag">Capital Structure</td>
-                </tr>
-                <tr>
-                    <td><strong>Grant Support %</strong></td>
-                    <td><em>Default: WB Poverty Rate (<$2.15 /day)</em>
-                    </td>
-                    <td>
-                        <strong>Calculation:</strong> The model automatically sets this to the percentage of the
-                        population living in extreme poverty (Source: World Bank).
-                        <br><strong>Inequality Context:</strong> In countries with a high Gini Index (>40), this "Grant
-                        Window" is essential to ensure the poorest aren't excluded by the market-based approach.
-                        <br><strong>Impact:</strong> Higher % = Faster Insolvency (unless huge grants are added).
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>Initial Capital</strong></td>
-                    <td>User Defined ($3M Grant / $5M Loan)</td>
-                    <td>The starting "fuel". The Mix (Grant vs Loan) determines the Cost of Capital.</td>
-                </tr>
-
-                <!-- Product -->
-                <tr>
-                    <td colspan="3" class="tag">Product & Supply Chain</td>
-                </tr>
-                <tr>
-                    <td><strong>Avg Toilet Cost</strong></td>
-                    <td><code>$50, $75, or $100</code></td>
-                    <td><strong>Smart Default:</strong> Auto-calibrated based on GDP per Capita tiers (<$1k, <$2.5k,>
-                            $2.5k). Represents a "Value for Money" durable latrine.</td>
-                </tr>
-                <tr>
-                    <td><strong># of MEs (Entrepreneurs)</strong></td>
-                    <td><em>Calculated (Per District)</em></td>
-                    <td>
-                        <strong>Formula:</strong> <code>Total MEs = (MEs per District) * (# of Districts)</code>.
-                        <br><strong>Logic:</strong> We first calculate the "Construction Rate" needed <em>per
-                            District</em> to meet the goal. We then divide that by one mason's capacity (5/mo) to see
-                        how many masons are needed per district.
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>ME Capacity</strong></td>
-                    <td><code>5 / month</code></td>
-                    <td>Real-world benchmark for a small team (1 mason + 2 helpers) building twin-pit latrines.</td>
-                </tr>
-
-                <!-- Lending Terms -->
-                <tr>
-                    <td colspan="3" class="tag">Lending Terms</td>
-                </tr>
-                <tr>
-                    <td><strong>HH Interest Rate</strong></td>
-                    <td><code>Inflation + ~15% Spread</code></td>
-                    <td>
-                        <strong>Rational:</strong> Not arbitrary. It is constructed as:
-                        <code>Cost of Funds + OPS Cost + Risk Premium + Inflation</code>.
-                        <br>The default aims for a "Break-even" rate where the fund doesn't lose value in real terms.
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>Loan Term (Months)</strong></td>
-                    <td><code>12 - 24</code></td>
-                    <td>Repayment duration. <br><strong>Impact:</strong> Longer terms = Smaller monthly payments (More
-                        Affordable) but slower Capital Recycling.</td>
-                </tr>
-                <tr>
-                    <td><strong>Default Rate</strong></td>
-                    <td><code>5%</code> (MFI Standard)</td>
-                    <td>
-                        <strong>Rationale:</strong> Standard conservative provision for unsecured micro-lending in rural
-                        markets.
-                        <br><strong>Impact:</strong> Directly reduces the "Revolving Fund" capacity over time.
-                    </td>
-                </tr>
-
-                <!-- Operations -->
-                <tr>
-                    <td colspan="3" class="tag">Operational Efficiency</td>
-                </tr>
-                <tr>
-                    <td><strong>Ops Cap (%)</strong></td>
-                    <td><code>15%</code></td>
-                    <td>Maximum limit of Fund Balance reserved for Operations.</td>
-                </tr>
-                <tr>
-                    <td><strong>Mgmt Fee (%)</strong></td>
-                    <td><code>2%</code></td>
-                    <td>Annual fee on the Portfolio to cover overheads.</td>
-                </tr>
-            </tbody>
-        </table>
+        <p>A run is <strong>viable</strong> only if all four of these hold:</p>
+        <div class="formula-box">V1  min(cash balance) >= 0                    never insolvent
+V2  principal repaid >= senior loan - $1,000  senior debt repaid in full
+V3  capitalised interest < $1,000             never had to roll up unpaid interest
+V4  OSS >= 1.0                                operations cover themselves</div>
 
         <div class="alert-box">
-            <strong>The "Insolvency Trap":</strong> Note that a high OSS doesn't guarantee survival. If you lend too
-            fast (High Leverage) and have a bad month of collections, you may run out of liquidity to pay the Senior
-            Investor. The model aggressively tracks "Months Insolvent" to warn you of this risk.
+            <h3>Why this is called out so prominently</h3>
+            <p>Until 2026-08-20 the model printed <strong>&ldquo;Model Integrity Verified&rdquo;</strong> for its own
+                shipped demonstration scenario &mdash; a fund that went insolvent in year four and defaulted on 18.7% of
+                its senior loan. The insolvency and the default were written to the browser console, where nobody sees
+                them. The line that would have failed the run was commented out and labelled &ldquo;optional
+                strictness&rdquo;.</p>
+            <p>A green tick against a failing fund is worse than no check at all, because it stops anyone
+                looking. The two verdicts are now computed separately, shown separately, and never merged into a single
+                &ldquo;model OK&rdquo; indicator.</p>
         </div>
 
-        <h2>8. Understanding the Charts</h2>
-        <ul>
-            <li><strong>Cash Balance (Green Line):</strong> The most critical line. If it hits zero, the model stops new
-                loans. Spikes indicate Carbon Payments or Capital Injections.</li>
-            <li><strong>Fund Health (Bar Chart):</strong>
-                <ul>
-                    <li><span style="color:#2563eb; font-weight:bold;">Blue (Portfolio):</span> Money currently in the
-                        hands of borrowers.</li>
-                    <li><span style="color:#16a34a; font-weight:bold;">Green (Cash):</span> Money in the bank ready to
-                        be lent.</li>
-                    <li><span style="color:#ef4444; font-weight:bold;">Red (Debt):</span> Money owed to the original
-                        investor.</li>
-                </ul>
-                <em>Goal:</em> Keep Blue + Green > Red at all times.
-            </li>
-            <h2>9. Programme Summary Glossary</h2>
-            <p>Definitions for the metrics found in the "Copy Full Report" CSV export.</p>
-            <table class="param-table">
-                <thead>
-                    <tr>
-                        <th>Metric</th>
-                        <th>Definition</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>Total Latrines</strong></td>
-                        <td>Sum of all toilets built by both Loans and Grants over the project life.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Loans (Count/Value)</strong></td>
-                        <td>Number and total $ value of loans disbursed to households.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Grants (Count/Value)</strong></td>
-                        <td>Number and total $ value of fully subsidized toilets for ultra-poor.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Households Reached</strong></td>
-                        <td>Equivalent Key Performance Indicator (KPI) to "Total Latrines".</td>
-                    </tr>
-                    <tr>
-                        <td><strong>People Reached</strong></td>
-                        <td><code>Households * Avg HH Size</code>. The total beneficiaries.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>MEs Supported</strong></td>
-                        <td>Number of Sanitation Entrepreneurs (Masons/SMEs) actively employed. <br><em>Calculated
-                                as:</em> <code>(Target Toilets / Year) / (Toilet Capacity per ME)</code>. Higher targets
-                            require more MEs.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>DALYs Averted</strong></td>
-                        <td>Disability-Adjusted Life Years saved (Health Impact).</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Economic Value</strong></td>
-                        <td>Monetized value of DALYs (<code>DALYs * $/DALY</code>).</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Carbon Mitigated</strong></td>
-                        <td>Tons of CO2 equivalent avoided by replacing open defecation.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Job Creation</strong></td>
-                        <td>Estimated non-ME jobs (supply chain) derived from ME count (<code>MEs * 3</code>).</td>
-                    </tr>
-                </tbody>
-            </table>
-    </div>
+        <!-- ================================================================ -->
+        <h2 id="waterfall">3. The monthly waterfall</h2>
 
+        <p>Within each month, operations run in this exact order. The ordering is the point: debt and operations are
+            funded <em>before</em> the fund is permitted to lend, which is what makes the solvency gate meaningful.</p>
+
+        <div class="table-scroll">
+            <table class="param-table">
+                <tr>
+                    <th style="width:8%">#</th>
+                    <th style="width:42%">Step</th>
+                    <th>Effect</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Retire toilets past their service life</td>
+                    <td>Stops carbon crediting for that vintage</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Micro-enterprise closures</td>
+                    <td>Reduces production capacity</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Inflation and unit cost for the month</td>
+                    <td>&mdash;</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Collect household repayments and interest</td>
+                    <td>Loan ledger <strong>+</strong></td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Collect micro-enterprise repayments and interest</td>
+                    <td>Loan ledger <strong>+</strong></td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>Service investor debt &mdash; interest first, then principal</td>
+                    <td>Loan ledger <strong>&minus;</strong></td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>Pay fixed operating costs</td>
+                    <td>Loan ledger <strong>&minus;</strong></td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td><strong>Solvency gate</strong> &mdash; may the fund lend at all?</td>
+                    <td>&mdash;</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>Micro-enterprise expansion lending</td>
+                    <td>Loan ledger <strong>&minus;</strong></td>
+                </tr>
+                <tr>
+                    <td>10</td>
+                    <td>Toilet production &mdash; grants first, then loans</td>
+                    <td>Grant ledger <strong>&minus;</strong>, loan ledger <strong>&minus;</strong></td>
+                </tr>
+                <tr>
+                    <td>11</td>
+                    <td>Carbon revenue</td>
+                    <td>Grant ledger <strong>+</strong></td>
+                </tr>
+                <tr>
+                    <td>12</td>
+                    <td>Record impact and push the audit trail</td>
+                    <td>&mdash;</td>
+                </tr>
+            </table>
+        </div>
+
+        <h3>The solvency gate</h3>
+        <p>New lending is permitted only when the fund holds more than its operating reserve:</p>
+        <div class="formula-box">requiredReserve = 3 months of current fixed operating cost
+solvent         = loanCash >= requiredReserve  AND  grantCash >= 0
+lendable        = solvent ? max(0, loanCash - requiredReserve) : 0</div>
+
+        <p>One consequence worth knowing before you read too much into a healthy-looking cash line: <strong>the fund
+                lends down to exactly this floor</strong>, so minimum cash across a run converges on three months of
+            operating cost almost regardless of how well the fund is doing. Thin headroom is a property of the lending
+            rule, not necessarily a sign of distress.</p>
+
+        <!-- ================================================================ -->
+        <h2 id="ledgers">4. The dual ledger</h2>
+
+        <p>Two cash pools that never transfer into one another. This is the structure that stops concessional subsidy
+            and repayable capital silently cross-subsidising each other.</p>
+
+        <div class="table-scroll">
+            <table class="param-table">
+                <tr>
+                    <th></th>
+                    <th>Grant ledger</th>
+                    <th>Loan ledger</th>
+                </tr>
+                <tr>
+                    <td><strong>Funded by</strong></td>
+                    <td>Initial grant capital, carbon revenue</td>
+                    <td>Initial loan capital, all repayments and interest received</td>
+                </tr>
+                <tr>
+                    <td><strong>Pays for</strong></td>
+                    <td>Household subsidies and their variable fees</td>
+                    <td>Household loans, micro-enterprise loans, fixed and variable operating costs, investor
+                        principal and interest</td>
+                </tr>
+            </table>
+        </div>
+
+        <p>The headline cash figure is the <strong>sum</strong> of the two, which means a healthy grant ledger can mask
+            an overdrawn loan ledger in the top-line chart. The CSV export separates them.</p>
+
+        <p><strong>Write-offs are not cash.</strong> A loan written down reduces the portfolio balance and is reported
+            as a write-off, but no money leaves the building. This is checked on every run: net cash flow is rebuilt
+            from its components and must reconcile.</p>
+
+        <!-- ================================================================ -->
+        <h2 id="portfolio">5. Loan portfolio mechanics</h2>
+
+        <h3>Cohorts, not a blended balance</h3>
+        <p>Every disbursement creates its own cohort with its own balance, payment and remaining term. Cohorts are
+            never merged. This is what makes term structure and run-off behave correctly &mdash; a loan made in month 30
+            matures in month 30 plus its term, not on some averaged schedule.</p>
+
+        <h3>Payments</h3>
+        <div class="formula-box">payment = rate == 0
+    ? principal / termMonths
+    : (principal × rate) / (1 - (1 + rate)^(-termMonths))</div>
+        <p>The zero-rate branch is not decoration. Without it, a 0% concessional loan produces <code>0/0</code>, and the
+            resulting <code>NaN</code> propagates silently through the entire ledger &mdash; passing every consistency
+            check on the way, because <code>NaN</code> comparisons are always false.</p>
+
+        <h3>Rate conversion</h3>
+        <p>Annual rates convert to monthly <strong>geometrically</strong>, never by dividing by twelve:</p>
+        <div class="formula-box">monthlyRate = (1 + annualRate)^(1/12) - 1</div>
+
+        <div class="alert-box">
+            <h3>The write-down rate is not the share of loans that fail</h3>
+            <p>The field labelled &ldquo;Annual Write-down Rate&rdquo; is converted to a monthly hazard and applied to
+                the <strong>outstanding balance</strong> every month:</p>
+            <div class="formula-box"
+                style="background:#fffbeb; border-left-color:#f97316; color:#7c2d12; margin-top:1rem;">monthlyHazard = 1 - (1 - annualRate)^(1/12)
+writeOff[m]   = balance × monthlyHazard</div>
+            <p>This is a continuous fractional write-down, not a discrete &ldquo;x% of borrowers default&rdquo;. Because
+                an amortising balance declines over its term, <strong>realised loss as a share of money lent is lower
+                    than the headline rate</strong>, and the gap depends on the loan term. On a short term the
+                difference is large.</p>
+            <p>Interest is charged on the post-write-down balance, so a deteriorating loan also earns less. The payment
+                schedule is not re-amortised, so the loss lands on the final payment rather than as a missed one.</p>
+        </div>
+
+        <!-- ================================================================ -->
+        <h2 id="investor">6. Investor debt</h2>
+
+        <p>A single senior loan, drawn in full at the start, with <strong>flat principal amortisation</strong> over the
+            repayment term after any grace period, plus interest on the outstanding balance.</p>
+
+        <h3>Grace defers principal, not interest</h3>
+        <p>Interest accrues from month one regardless of grace. A grace period delays <em>principal</em> repayment so
+            that capital can be deployed; it does not make the money free. The model previously gated both on the grace
+            condition, which silently forgave the interest outright.</p>
+
+        <h3>The fund never pays money it does not have</h3>
+        <div class="formula-box">available  = max(0, loanCash)
+actualInt  = min(scheduledInt, available)
+actualPrin = min(scheduledPrin, max(0, available - actualInt))</div>
+        <p>Interest ranks ahead of principal.</p>
+
+        <h3>Arrears capitalise</h3>
+        <p>Interest the fund cannot pay is <strong>added to the outstanding balance</strong> in the month it is missed,
+            and reported separately as capitalised interest. Unpaid principal is carried forward and caught up
+            automatically once cash allows.</p>
+        <p>The closing liability is the balance the simulation actually tracked. It previously reconstructed the figure
+            as <em>original loan minus principal repaid</em>, which by construction cannot know about arrears &mdash; in
+            a stressed scenario that overstated net assets by more than the original loan.</p>
+
+        <div class="alert-box blue">
+            <p><strong>A longer repayment term can repay less, not more.</strong> Principal amortises flat, so
+                stretching the term lowers each payment &mdash; but if the schedule now runs past the fund's productive
+                life, the later payments simply never happen and become permanent arrears. The tool's advice engine no
+                longer suggests extending the term, because testing it against the model shows it makes things
+                worse.</p>
+        </div>
+
+        <!-- ================================================================ -->
+        <h2 id="growth">7. Growth and constraints</h2>
+
+        <h3>Production capacity</h3>
+        <div class="formula-box">capacity[m] = activeMicroEnterprises[m] × toiletsPerMePerMonth</div>
+        <p>No learning curve, no seasonality, no supply-chain lag.</p>
+
+        <h3>Enterprise closure is separate from loan write-down</h3>
+        <p>These are two different events and they have two different parameters:</p>
+        <ul>
+            <li><strong>Write-down rate</strong> reduces the value of the loan portfolio.</li>
+            <li><strong>Closure rate</strong> reduces the number of enterprises, and therefore capacity.</li>
+        </ul>
+        <p>They come apart in both directions: a business can wind down in good order having repaid in full, and a
+            business can fall behind on payments while continuing to build. Deriving one from the other would bake in an
+            equivalence that does not hold. Previously only write-down was modelled, so a 50% write-down rate left
+            production capacity completely untouched.</p>
+
+        <h3>Demand</h3>
+        <div class="formula-box">backlog[m] = backlog[m-1] × (1 + populationGrowth)^(1/12) - production[m]</div>
+        <p>The unserved backlog <strong>grows</strong>. Population growth was previously collected from the user,
+            auto-filled from World Bank data, and used nowhere &mdash; so the model showed a fund closing a gap that is
+            in reality widening.</p>
+
+        <h3>What binds</h3>
+        <p>Each month, production is the tightest of three limits:</p>
+        <div class="formula-box">capacity   = enterprises × toilets per enterprise per month   supply
+demand     = outstanding backlog                              market
+maxUnits   = lendable / fully-burdened unit cost              capital</div>
+        <p>Grants are allocated first, up to the grant support percentage; loans fill the remainder as far as capital
+            allows.</p>
+
+        <div class="alert-box">
+            <h3>Grant Support % paces subsidy, it does not increase it</h3>
+            <p>Total grant-funded output is capped by the grant ledger, so the affordability limit binds long before the
+                target percentage does. Sweeping this parameter from 5% to 90% &mdash; an eighteen-fold change &mdash;
+                moves grant-funded toilets by under 4%. What it does change is <strong>how fast the grant fund is
+                    spent</strong>: at 5% it lasts around two years, at 90% around four months.</p>
+            <p>Treat it as a deployment-rate control. To subsidise more households, add grant capital.</p>
+        </div>
+
+        <!-- ================================================================ -->
+        <h2 id="windup">8. Wind-up</h2>
+
+        <p>The fund is <strong>wound up</strong> at the first month that opens with nothing left to do:</p>
+        <div class="formula-box">portfolio == 0      nothing left to collect
+production == 0     nothing being built
+lendable  == 0      gate shut, no capital to redeploy</div>
+
+        <p>From that month, operating costs stop, interest stops accruing, and the ledger is frozen. Closing figures are
+            measured <strong>at wind-up</strong>, not at whatever horizon happened to be requested.</p>
+
+        <p>Without this, a fund that collapsed in year four kept paying a collections team for the remaining sixteen
+            years of a twenty-year run, against no income at all. Reported ending cash was therefore a measure of how
+            long the simulation was left running rather than of how the fund performed &mdash; the same fund closed at
+            &minus;$36,351 over five years and &minus;$1,029,034 over twenty. Extending the horizon now changes nothing.
+        </p>
+
+        <!-- ================================================================ -->
+        <h2 id="impact">9. Impact methodology</h2>
+
+        <h3>Health &mdash; DALYs averted</h3>
+        <div class="formula-box">dalys[m] = activeToilets[m] × householdSize × dalysPerPersonPerYear / 12</div>
+        <p>Accrued monthly against toilets in service, so a toilet built in month one contributes more over the run than
+            one built in month one hundred. This area-under-the-curve treatment is deliberate.</p>
+
+        <h3>Time saved</h3>
+        <div class="formula-box">hours[m]  = activeToilets[m] × householdSize × hoursPerPersonPerDay × 30
+hourValue = (avgAnnualIncome / 2,080) × timeValueFactor</div>
+
+        <p>The hourly value is <strong>derived from the country's own income</strong>, not from a fixed figure. Two
+            reasons:</p>
+        <ul>
+            <li>The tool models many countries. A single global constant is right for at most one of them.</li>
+            <li>The hour saved is household time &mdash; walking to, queueing for, or managing sanitation &mdash; not
+                forgone paid employment. Valuing non-market time below the market wage is standard practice in both WASH
+                and transport cost&ndash;benefit analysis. The default factor is 30%.</li>
+        </ul>
+
+        <div class="alert-box">
+            <p><strong>Check this factor before publishing.</strong> The method &mdash; derive from local income,
+                discount below the wage &mdash; is well founded. The specific 30% is a conventional round number rather
+                than a figure verified against current published guidance. Confirm it against whichever cost&ndash;
+                benefit guidance your programme reports against, and set the input accordingly.</p>
+            <p>It replaces a hardcoded $0.50/hour whose origin nobody could reconstruct. The arithmetic suggests it was
+                Malawi's income per working hour at the <em>full</em> wage rate, frozen into a multi-country tool.</p>
+        </div>
+
+        <h3>Carbon</h3>
+        <div class="formula-box">tonnes[m]  = creditingToilets[m] × tonnesPerToiletPerYear / 12
+revenue[m] = tonnes[m] × valuePerTonne × fundShare</div>
+
+        <p>Credits accrue <strong>annually, against toilets still within their service life</strong>. Carbon
+            methodologies issue credits over a finite crediting period, and a toilet past its service life is not
+            abating anything. Service life is an input, defaulting to five years.</p>
+
+        <p>Carbon revenue accrues to the <strong>grant ledger</strong>, on the reasoning that carbon finance is
+            concessional.</p>
+
+        <div class="alert-box red">
+            <h3>Carbon was previously understated by roughly 250,000&times;</h3>
+            <p>Three unit errors stacked on one input labelled &ldquo;Tonnes/Yr&rdquo;: it was divided by 1,000 as
+                though it were kilograms; the fund's share was divided by 100 a second time having already been
+                converted; and the credit was granted once at construction rather than each year of operation.</p>
+            <p>The component was, in effect, switched off &mdash; and switched off in a way that produced a plausible
+                small number rather than a zero, so it read as &ldquo;carbon does not move the needle&rdquo; rather than
+                as a defect. For container-based sanitation and biogas models, where carbon revenue is often decisive,
+                this removed the central argument. Corrected, carbon-financed scenarios shift from
+                <em>capital-constrained</em> to <em>capacity-constrained</em>.
+            </p>
+        </div>
+
+        <h3>Social return</h3>
+        <div class="formula-box">socialValue = (DALYs × valuePerDALY)
+            + (hoursSaved × hourValue)
+            + (carbonTonnes × valuePerTonne)
+
+SROI                = socialValue / capitalInvested
+capitalPreservation = netAssets   / capitalInvested</div>
+
+        <p><strong>SROI measures social value only.</strong> Financial performance is reported beside it, never folded
+            in. Previously the DALY term was computed, displayed prominently on the impact card, and then silently
+            excluded from the ratio &mdash; so the screen contradicted itself &mdash; while ending cash sat inside a
+            <em>social</em> numerator, letting a fund that hoarded capital and built nothing score well.
+        </p>
+
+        <div class="alert-box">
+            <p><strong>SROI figures are not comparable to anything produced before 2026-08-20.</strong> Three
+                independent changes moved it: the hours-saved formula was corrected, DALYs were brought in, cash was
+                taken out, and the hourly value was re-derived.</p>
+        </div>
+
+        <div class="alert-box blue">
+            <p><strong>A known inconsistency, stated rather than hidden.</strong> Service life currently stops carbon
+                crediting but <em>not</em> health or time benefits &mdash; a retired toilet keeps averting DALYs
+                indefinitely. The coherent position is to apply service life to all three, but that would move headline
+                impact substantially and is a decision for the model owner rather than a side-effect of a carbon fix.
+                See <a href="#open">Q13</a>.</p>
+        </div>
+
+        <!-- ================================================================ -->
+        <h2 id="parameters">10. Parameter dictionary</h2>
+
+        <div class="alert-box green">
+            <h3>Every rate is entered as a percentage</h3>
+            <p>Type <code>40</code> for 40%, not <code>0.40</code>. Conversion happens once, when the model reads the
+                form, and nothing downstream guesses at units.</p>
+            <p>The form previously taught both conventions at once, under two heuristics that contradicted each other:
+                one divided anything above 1 by 100, the other multiplied anything below 1 by 100. So 100% was
+                ambiguous, and <strong>any rate above 100% was unrepresentable</strong> &mdash; a user modelling 150%
+                inflation, entirely plausible in the countries this tool targets, silently got 1.5%.</p>
+        </div>
+
+        <div class="table-scroll">
+            <table class="param-table">
+                <tr>
+                    <th style="width:26%">Parameter</th>
+                    <th style="width:12%">Unit</th>
+                    <th>Meaning and notes</th>
+                </tr>
+                <tr>
+                    <td colspan="3"><span class="tag">Capital structure</span></td>
+                </tr>
+                <tr>
+                    <td>Initial Grant Capital</td>
+                    <td>USD</td>
+                    <td>Seeds the grant ledger. <strong>Caps total subsidy</strong> for the whole run.</td>
+                </tr>
+                <tr>
+                    <td>Initial Loan Capital</td>
+                    <td>USD</td>
+                    <td>Seeds the loan ledger. Senior debt; must be repaid.</td>
+                </tr>
+                <tr>
+                    <td>Duration</td>
+                    <td>years</td>
+                    <td>Simulation horizon. Since wind-up was introduced, extending it no longer changes the outcome of
+                        a fund that has finished.</td>
+                </tr>
+                <tr>
+                    <td>Fund Repayment Term</td>
+                    <td>years</td>
+                    <td>Flat principal amortisation. Longer is not always better &mdash; see &sect;6.</td>
+                </tr>
+                <tr>
+                    <td>Investor Grace Period</td>
+                    <td>months</td>
+                    <td>Defers <strong>principal only</strong>. Interest accrues throughout.</td>
+                </tr>
+                <tr>
+                    <td>Fund Cost of Capital</td>
+                    <td>%</td>
+                    <td>Annual interest paid to senior investors. <strong>This control did not exist before
+                            2026-08-20</strong>, so the value defaulted to zero and the fund paid its investors nothing
+                        in every result the tool ever produced. Auto-filled from the World Bank commercial lending rate
+                        on country load; default 2%, representing concessional senior debt.</td>
+                </tr>
+                <tr>
+                    <td colspan="3"><span class="tag">Market context</span></td>
+                </tr>
+                <tr>
+                    <td>Pop. Needing Toilets</td>
+                    <td>people</td>
+                    <td>People, not households. Divided by household size to give the toilet backlog.</td>
+                </tr>
+                <tr>
+                    <td>Annual Pop Growth</td>
+                    <td>%</td>
+                    <td>Grows the backlog monthly. Previously collected and unused.</td>
+                </tr>
+                <tr>
+                    <td>Avg Household Size</td>
+                    <td>people</td>
+                    <td>One toilet serves one household.</td>
+                </tr>
+                <tr>
+                    <td>Avg Toilet Cost</td>
+                    <td>USD</td>
+                    <td>Base cost, before inflation and the variable mark-up.</td>
+                </tr>
+                <tr>
+                    <td>Avg Annual Income</td>
+                    <td>USD</td>
+                    <td>From GNI per capita. Now sets the value of time saved; previously collected and unused.</td>
+                </tr>
+                <tr>
+                    <td>Annual Inflation</td>
+                    <td>%</td>
+                    <td>Applies to unit costs and fixed operating costs. <strong>Not</strong> to household incomes.</td>
+                </tr>
+                <tr>
+                    <td colspan="3"><span class="tag">Delivery network</span></td>
+                </tr>
+                <tr>
+                    <td>Administrative Units</td>
+                    <td>count</td>
+                    <td>With enterprises per unit, sets the hard ceiling on the network.</td>
+                </tr>
+                <tr>
+                    <td>Micro-enterprises / Unit</td>
+                    <td>count</td>
+                    <td>Ceiling, not a target.</td>
+                </tr>
+                <tr>
+                    <td>Toilets / ME / Month</td>
+                    <td>count</td>
+                    <td>Flat productivity. No learning curve.</td>
+                </tr>
+                <tr>
+                    <td>ME Setup Cost</td>
+                    <td>USD</td>
+                    <td>Cost to train, equip and register one enterprise.</td>
+                </tr>
+                <tr>
+                    <td>ME Annual Closure Rate</td>
+                    <td>%</td>
+                    <td>Businesses ceasing to trade each year. Reduces capacity. Distinct from the write-down rate,
+                        which reduces loan value. Default 10% &mdash; a convention, not a measurement; replace it if you
+                        have cohort survival data.</td>
+                </tr>
+                <tr>
+                    <td colspan="3"><span class="tag">Lending terms</span></td>
+                </tr>
+                <tr>
+                    <td>HH / ME Loan Interest Rate</td>
+                    <td>%</td>
+                    <td>Annual, converted geometrically. A rate of 0 is valid and handled.</td>
+                </tr>
+                <tr>
+                    <td>HH / ME Loan Term</td>
+                    <td>months</td>
+                    <td>Drives affordability far more than the rate does at these loan sizes.</td>
+                </tr>
+                <tr>
+                    <td>HH / ME Annual Write-down Rate</td>
+                    <td>%</td>
+                    <td><strong>Not the share of loans that fail.</strong> A continuous hazard on outstanding balance
+                        &mdash; see &sect;5.</td>
+                </tr>
+                <tr>
+                    <td>Grant Support</td>
+                    <td>%</td>
+                    <td>Target share of production that is grant-funded. In practice a <strong>pacing</strong> control
+                        &mdash; see &sect;7.</td>
+                </tr>
+                <tr>
+                    <td colspan="3"><span class="tag">Costs</span></td>
+                </tr>
+                <tr>
+                    <td>Annual Fixed Ops Cost</td>
+                    <td>USD/yr</td>
+                    <td>Inflated monthly. Falls to 30% during hibernation, and stops entirely at wind-up.</td>
+                </tr>
+                <tr>
+                    <td>Mgmt Fee Ratio</td>
+                    <td>%</td>
+                    <td>Charged on every disbursement.</td>
+                </tr>
+                <tr>
+                    <td>M&amp;E Cost</td>
+                    <td>%</td>
+                    <td>Monitoring and evaluation. Not micro-enterprise.</td>
+                </tr>
+                <tr>
+                    <td>Cost Contingency</td>
+                    <td>%</td>
+                    <td>A <strong>per-unit mark-up on delivery cost</strong> reflecting fragility and delivery risk
+                        &mdash; not a reserve held back and drawn on. Auto-set from the political-stability indicator:
+                        5% base, 7% below the 50th percentile, 10% below the 25th.</td>
+                </tr>
+                <tr>
+                    <td>Max Ops Reserve Cap</td>
+                    <td>%</td>
+                    <td>Sizes the opening enterprise cohort. <strong>Applies in month zero only</strong>, but because it
+                        determines the starting network it drives the entire growth path.</td>
+                </tr>
+                <tr>
+                    <td colspan="3"><span class="tag">Impact</span></td>
+                </tr>
+                <tr>
+                    <td>DALYs Averted / Person</td>
+                    <td>DALY/yr</td>
+                    <td>Per person per year of toilet service.</td>
+                </tr>
+                <tr>
+                    <td>Value per DALY</td>
+                    <td>USD</td>
+                    <td>Included in SROI since 2026-08-20.</td>
+                </tr>
+                <tr>
+                    <td>Toilet Service Life</td>
+                    <td>years</td>
+                    <td>Carbon crediting stops after this. Health and time benefits currently do not &mdash; see <a
+                            href="#open">Q13</a>.</td>
+                </tr>
+                <tr>
+                    <td>Hours Saved / Person / Day</td>
+                    <td>hours</td>
+                    <td>Was a hardcoded constant appearing in two formulas that disagreed with each other.</td>
+                </tr>
+                <tr>
+                    <td>Value of Saved Time</td>
+                    <td>% of wage</td>
+                    <td>Applied to income per working hour. Default 30%.</td>
+                </tr>
+                <tr>
+                    <td>CO<sub>2</sub>e / Toilet</td>
+                    <td>tonnes/yr</td>
+                    <td>Tonnes, per toilet, per year of service.</td>
+                </tr>
+                <tr>
+                    <td>Value per Tonne / Fund Carbon Share</td>
+                    <td>USD / %</td>
+                    <td>Share is the fund's cut after broker and verification costs.</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- ================================================================ -->
+        <h2 id="data">11. Data sources</h2>
+
+        <p>Country context is fetched from the <strong>World Bank Indicators API</strong>. Every fetched value is a
+            starting suggestion and is fully editable.</p>
+
+        <div class="table-scroll">
+            <table class="param-table">
+                <tr>
+                    <th style="width:30%">Indicator</th>
+                    <th style="width:22%">Code</th>
+                    <th>Used for</th>
+                </tr>
+                <tr>
+                    <td>Rural population</td>
+                    <td><code>SP.RUR.TOTL</code></td>
+                    <td>Target population, with the sanitation gap</td>
+                </tr>
+                <tr>
+                    <td>Basic / safely managed sanitation</td>
+                    <td><code>SH.STA.BASS.RU.ZS</code>, <code>SH.STA.SMSS.RU.ZS</code></td>
+                    <td>Size of the unserved gap</td>
+                </tr>
+                <tr>
+                    <td>GNI per capita</td>
+                    <td><code>NY.GNP.PCAP.CD</code></td>
+                    <td>Affordability, and the value of time saved</td>
+                </tr>
+                <tr>
+                    <td>Inflation (CPI)</td>
+                    <td><code>FP.CPI.TOTL.ZG</code></td>
+                    <td>Cost escalation</td>
+                </tr>
+                <tr>
+                    <td>Population growth</td>
+                    <td><code>SP.POP.GROW</code></td>
+                    <td>Growth of the unserved backlog</td>
+                </tr>
+                <tr>
+                    <td>Commercial lending rate</td>
+                    <td><code>FR.INR.LEND</code></td>
+                    <td>Benchmark rate; seeds the fund's cost of capital</td>
+                </tr>
+                <tr>
+                    <td>Poverty headcount</td>
+                    <td><code>SI.POV.DDAY</code></td>
+                    <td>Suggested grant support level</td>
+                </tr>
+                <tr>
+                    <td>Political stability</td>
+                    <td><code>PV.EST</code></td>
+                    <td>Cost contingency mark-up</td>
+                </tr>
+            </table>
+        </div>
+
+        <p>Administrative units come from <code>countriesnow.space</code>. Where an indicator is unavailable the most
+            recent non-null value within five years is used; where none exists, the field keeps its default.</p>
+
+        <!-- ================================================================ -->
+        <h2 id="limits">12. Assumptions and limitations</h2>
+
+        <p>Read this section before quoting any figure from this tool.</p>
+
+        <h3>What the model is</h3>
+        <ul>
+            <li><strong>Deterministic.</strong> Nothing random happens. There are no shocks, no bad years, no supply
+                disruptions. Every run of the same inputs gives the same answer.</li>
+            <li><strong>Nominal.</strong> All figures include inflation. There is no discounting, and no NPV or IRR is
+                produced. Figures from scenarios with different inflation assumptions are <strong>not
+                    comparable</strong>.</li>
+            <li><strong>Single-currency.</strong> Labelled USD. No exchange-rate risk.</li>
+            <li><strong>Monthly.</strong> Everything happens at month end, in the order set out in &sect;3.</li>
+        </ul>
+
+        <h3>Simplifications worth knowing</h3>
+        <ul>
+            <li>Inflation raises costs but <strong>not household incomes</strong>, so affordability silently tightens
+                over a long run.</li>
+            <li>One household, one toilet, once. No repeat or upgrade demand.</li>
+            <li>Enterprise productivity is flat &mdash; no learning curve, no seasonality, no supply-chain lag.</li>
+            <li>Enterprise expansion is capped by two hardcoded constants (10% of lendable capital, 10% growth per
+                month) that are not exposed as inputs. The second materially shapes the growth curve.</li>
+            <li>Grants and loans are the only instruments. No results-based finance, no guarantees, no equity.</li>
+            <li>The break-even solver assumes net assets rise monotonically with the interest rate. That holds in most
+                regimes but <strong>breaks when capital is tight</strong>, where the solver may converge on a
+                non-solution without saying so.</li>
+        </ul>
+
+        <h3>Margin of interpretation</h3>
+        <p>The impact figures rest on three assumptions the model cannot validate: DALYs averted per person, hours saved
+            per person per day, and CO<sub>2</sub>e abated per toilet. Each is a user input with a plausible default;
+            none is measured. <strong>Treat impact outputs as scenario arithmetic, not as evidence.</strong></p>
+
+        <!-- ================================================================ -->
+        <h2 id="open">13. Open questions</h2>
+
+        <p>These are modelling decisions awaiting the model owner's judgement. They are listed here rather than settled
+            quietly, because each changes what the outputs mean.</p>
+
+        <div class="table-scroll">
+            <table class="param-table">
+                <tr>
+                    <th style="width:10%">Ref</th>
+                    <th>Question</th>
+                </tr>
+                <tr>
+                    <td><strong>Q13</strong></td>
+                    <td>Service life stops carbon crediting but not health or time benefits. Should a retired toilet
+                        stop averting DALYs too? The coherent answer is yes; it would move headline impact
+                        substantially.</td>
+                </tr>
+                <tr>
+                    <td><strong>Q2</strong></td>
+                    <td>Is 30% the right share of the wage at which to value saved household time, against current
+                        published guidance?</td>
+                </tr>
+                <tr>
+                    <td><strong>Q3</strong></td>
+                    <td>Should grant support be means-tested against household income rather than applied as a flat
+                        share of production?</td>
+                </tr>
+                <tr>
+                    <td><strong>Q6</strong></td>
+                    <td>May the ledgers cross-lend &mdash; can idle grant capital be on-lent once the subsidy quota is
+                        met?</td>
+                </tr>
+                <tr>
+                    <td><strong>Q7</strong></td>
+                    <td>Is a household limited to one toilet forever, or should repeat and upgrade demand exist?</td>
+                </tr>
+                <tr>
+                    <td><strong>Q9</strong></td>
+                    <td>Should the collections floor taper as the portfolio runs off, rather than stopping abruptly at
+                        wind-up?</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="alert-box green">
+            <h3>How to check any of this yourself</h3>
+            <p>The model self-verifies on every run against fourteen ledger invariants, and the repository carries a
+                regression suite covering input wiring, those invariants, twenty-two recorded scenarios, and an
+                end-to-end run of the application.</p>
+            <p style="margin-top:0.75rem;"><code>npm test</code> &mdash; the suite.<br>
+                <code>node tools/verify-findings.js</code> &mdash; re-runs every measurement behind the audit and
+                reports whether each defect is still present.
+            </p>
+        </div>
+
+        <p class="meta" style="margin-top:3rem;">Specification: <code>docs/MODEL_SPEC.md</code> &middot; Audit:
+            <code>docs/ANALYSIS.md</code> &middot; Decisions: <code>docs/adr/</code> &middot; Current state:
+            <code>STATUS.md</code>
+        </p>
+    </div>
 </body>
 
 </html>
