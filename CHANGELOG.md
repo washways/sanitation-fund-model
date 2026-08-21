@@ -12,6 +12,75 @@ Every change that alters what the model produces, what a user sees, or how the p
 
 ---
 
+## 2026-08-21 (3) — Model owner reviewed the open items; all recommendations implemented
+
+The model owner reviewed the eight open questions from the previous session and said: follow the recommendations. All eight are now resolved — six by decision alone (no code change), two by code change with a measured, ADR-first prediction.
+
+### Fixed
+
+- **F-36 — CSV export was completely broken.** `UI.downloadCSV()` was defined twice; JavaScript silently ran the second, which threw a `TypeError` referencing KPI fields that don't exist since the F-14-era flattening — the Export button crashed on every click. The shadowed first definition (a richer, more detailed monthly table) would also have thrown, from an unrelated bug (`s` used before its declaration). Kept the first, fixed both its bugs plus a shared `inputs.grantFund` typo (should be `investGrant`), deleted the second — its prose-report content duplicated the separate, already-working `copyAnalysisReport()`. [ADR-0026](docs/adr/0026-restore-the-detailed-csv-export.md). `tests/export.test.js` added; nothing tested this function before today. **No model output changed** — this was a UI bug fix.
+- **F-10 — the debt-service lookahead the README has always claimed did not exist. Now it does.** The solvency gate held back 3 months of ops cost but ignored investor principal due in the next quarter, and used the *hibernation-reduced* ops figure, so the buffer shrank exactly when the fund was most fragile. Fixed: `requiredReserves = 3 * fullFixedOps + sum(next 3 months of scheduled investor principal)`. `opsReserveCap` (the *different* input that sizes the month-0 starting network) was relabelled "Starting Capacity Throttle (%)" rather than folded into the new reserve — the two are genuinely different jobs. [ADR-0027](docs/adr/0027-debt-service-lookahead-reserve.md). **This is the largest behaviour change since the original audit**: baseline reach fell 133,469 → 121,358 toilets (-9%), 476 golden values moved across 21 scenarios — but no scenario's viability verdict changed, and minimum cash improved or held in every scenario checked (confirmed by re-running the old formula against all 21 scenarios before recording, not by assumption).
+
+### Changed (modelling decisions, recorded as ADRs)
+
+- **Q13 — toilet service life now gates DALYs and time-saved credit, matching carbon.** A retired toilet no longer averts disease or saves time in the model, the same way it already stopped earning carbon credit. [ADR-0025](docs/adr/0025-service-life-gates-all-impact.md). No effect at the shipped 5-year default duration; on the two golden scenarios that actually run past their service life, DALYs/hours/SROI fall ~38-51%.
+- **Q3 — Grant Support % stays a flat share of production.** Means-testing against household income was considered and rejected for now: the model has one national income figure per run, not a household-level distribution, so gating on it wouldn't actually mean-test anything. [ADR-0021](docs/adr/0021-grant-support-stays-flat-rate.md).
+- **Q6 — the grant and loan ledgers stay strictly separate.** No cross-lending of idle grant capital. [ADR-0022](docs/adr/0022-ledgers-stay-separate.md).
+- **Q7 — one household, one toilet, once.** No repeat or upgrade demand modelled. [ADR-0023](docs/adr/0023-no-repeat-or-upgrade-demand.md).
+- **Q9 — the collections floor stops abruptly at wind-up, not a taper.** A taper rate would have been an invented number. [ADR-0024](docs/adr/0024-collections-floor-stays-abrupt.md).
+
+None of the five decisions above changed any code or moved any golden value — each closes an open question by keeping current behaviour, with the reasoning now on record instead of implicit.
+
+### Left open
+
+- **Q2** — the 30% factor for valuing saved household time. The *method* is settled; confirming the specific factor needs the model owner's own published cost-benefit guidance, which no agent can supply. This is now the only open modelling question.
+
+`npm test`: 60 → 65 (`tests/export.test.js` added; two new invariants, INV-15 and INV-16). `golden.json` re-recorded once, after ADR-0027 (ADR-0025's move was recorded in the same session as its ADR). `npm run lint`: clean.
+
+---
+
+## 2026-08-21 (2) — Three findings closed, one found
+
+### Fixed
+
+- **F-26.** Added `tests/writedown.test.js` (`T-DEF-1`), pinning realised loss as a share of disbursed principal for household and micro-enterprise write-downs at several loan terms. Writing it surfaced a second, smaller defect:
+- **F-35.** `MODEL_SPEC.md` §R-3.4 claimed realised loss is "always less than the headline [write-down] rate." Measured: true below ~18 months (a 5% headline realises 1.50% at 6 months), false above ~24 months (a 5% headline realises 8.02% at 36 months — *more* than the headline, because cumulative multi-year exposure overtakes the amortisation effect). No code changed; the spec's prose was corrected to state the actual relationship, with a table.
+
+### Added
+
+- **`meExpansionBudgetShare`** and **`meMaxMonthlyGrowthRate`** (both default 10%) — F-21, half fixed. Replace two hardcoded `0.1` constants governing how fast the fund recruits new micro-enterprises. Defaults unchanged, so no golden scenario moved (confirmed by `golden:diff`). [ADR-0019](docs/adr/0019-expose-me-growth-constants.md). The other half of F-21 — three ME-capital-requirement formulas that disagree with each other (R-6.1) — is unchanged and still open; unifying them **would** move ME lending and needs its own ADR.
+- **ESLint** (`eslint.config.js`, three rules only: `no-dupe-keys`, `no-undef`, `no-unused-vars` — F-19) and **CI** (`.github/workflows/ci.yml`, GitHub Actions, Node 20 and 22, running tests + lint + golden diff on every push and PR). [ADR-0020](docs/adr/0020-eslint-is-a-devdependency.md) documents this as the project's first devDependency, narrowly scoped to tooling that never ships to the browser.
+
+### Found, not fixed — **F-36, Critical**
+
+**The CSV export button is completely broken.** ESLint's very first run over `app.js` caught a duplicate `downloadCSV()` definition in the `UI` object (JavaScript silently keeps the second). Tracing both:
+
+- The copy that runs throws a `TypeError` — it references `kpis.impact.sroi`, `kpis.impact.toilets` and `kpis.impact.peopleReached`, none of which exist in the KPI shape `UI.updateKPIs` produces since the F-14-era flattening.
+- The copy that's shadowed would **also** throw if un-shadowed — `s` is used before its `const s = ...` declaration (a temporal-dead-zone `ReferenceError`).
+- Both reference `inputs.grantFund`, which does not exist (`getInputs()` produces `investGrant`) — this one doesn't throw, it would silently print `GrantFund,$undefined`, the same class of defect as the already-fixed F-13.
+
+Not fixed here: the two copies produce genuinely different report formats (one a detailed monthly data table, one a prose summary followed by a different, shorter table), and choosing between them — or merging them — is a product decision, not a mechanical cleanup. See [docs/ANALYSIS.md#f-36](docs/ANALYSIS.md#f-36--csv-export-is-completely-broken-both-copies).
+
+**No golden scenario moved.** `npm test`: 53 → 60. `npm run lint`: introduced, 0 errors (16 pre-existing violations recorded and suppressed at file level, per `docs/ROADMAP.md`'s own instruction not to fix findings while adding a linter).
+
+---
+
+## 2026-08-21 — Documentation reconciliation
+
+**No model behaviour changed.** `npm test` (53/53), `golden:diff` (clean) and `verify-findings.js` (18/0) confirmed green throughout.
+
+Several fixes landed on 2026-08-20 never got their bookkeeping updated, so the project's own status pages disagreed with the code and with each other:
+
+- `docs/ANALYSIS.md`'s findings register was missing its ✅ for F-08, F-17, F-24 and F-28, all genuinely fixed on 2026-08-20. Register is now 27 of 34 resolved.
+- `tools/verify-findings.js`'s "deliberately outstanding" footer still listed F-08, F-20, F-24 and F-25 as open.
+- `STATUS.md`'s "Baseline today" table predated [ADR-0014](docs/adr/0014-me-attrition-is-separate-from-write-down.md) (ME closure rate) landing, so it quoted toilet/cash/net-asset figures the model no longer produces on the shipped defaults. Re-measured and corrected (133,469 toilets, not 139,148).
+- `docs/ROADMAP.md`'s stage-map table and `docs/ARCHITECTURE.md`'s "current shape" diagrams still described defects (F-01, F-04, F-05, F-11, F-17, F-18, F-22, F-29) as live, and `app.js`'s line count and module boundaries as they were at audit time (3,667 lines) rather than today's (4,028).
+- `README.md`'s status section, test-suite description (four suites, not five) and finding count were stale in the same way.
+
+All corrected. See `STATUS.md`'s log for the full list.
+
+---
+
 ## 2026-08-20 — Audit and correction
 
 The model was audited end to end, a regression suite was built, and 18 of 33 findings were fixed. **Numbers produced before this date should be re-run**, and rate inputs re-entered rather than copied.

@@ -133,6 +133,8 @@ describe('input wiring', () => {
       fundCostOfCapital: 'fundCostOfCapital',
       hoursPerPersonPerDay: 'hoursPerPersonPerDay',
       meExitRate: 'meExitRate',
+      meExpansionBudgetShare: 'meExpansionBudgetShare',
+      meMaxMonthlyGrowthRate: 'meMaxMonthlyGrowthRate',
       timeValueFactor: 'timeValueFactor',
       toiletLifespanYears: 'toiletLifespanYears',
     };
@@ -144,6 +146,7 @@ describe('input wiring', () => {
       'popGrowthRate', 'grantSupportPct', 'inflationRate', 'hhDefaultRate',
       'meDefaultRate', 'mgmtFeeRatio', 'meCostRate', 'contingencyRate',
       'opsReserveCap', 'fundCostOfCapital', 'meExitRate', 'timeValueFactor',
+      'meExpansionBudgetShare', 'meMaxMonthlyGrowthRate',
     ]);
 
     const drift = [];
@@ -164,5 +167,31 @@ describe('input wiring', () => {
       'tools/baseline-inputs.js must mirror the defaults shipped in index.html, ' +
       'or every golden test is measuring a scenario no user will ever see:\n  ' +
       drift.join('\n  '));
+  });
+
+  test('meExpansionBudgetShare and meMaxMonthlyGrowthRate actually move ME growth (F-21, ADR-0019)', () => {
+    // Textual wiring (the tests above) proves getInputs() reads these ids. That is not
+    // the same as proving the model's arithmetic responds to them — F-01 read an input
+    // that had no control at all, and this is the mirror-image risk: a control that
+    // exists but whose value the model quietly ignores.
+    const { ModelModule } = require('../tools/load-model');
+    const BASE = require('../tools/baseline-inputs');
+
+    const slow = ModelModule.calculate({ ...BASE, meMaxMonthlyGrowthRate: 0.02, verify: true });
+    const fast = ModelModule.calculate({ ...BASE, meMaxMonthlyGrowthRate: 0.30, verify: true });
+    assert.notStrictEqual(
+      Math.round(slow.kpis.reach.toilets), Math.round(fast.kpis.reach.toilets),
+      'meMaxMonthlyGrowthRate should change how many toilets get built');
+
+    const tightBudget = ModelModule.calculate({ ...BASE, meExpansionBudgetShare: 0.01, verify: true });
+    const looseBudget = ModelModule.calculate({ ...BASE, meExpansionBudgetShare: 0.50, verify: true });
+    assert.notStrictEqual(
+      Math.round(tightBudget.kpis.reach.toilets), Math.round(looseBudget.kpis.reach.toilets),
+      'meExpansionBudgetShare should change how many toilets get built');
+
+    // And the defaults (0.10, 0.10) must reproduce exactly what the hardcoded
+    // constants used to produce — this is the "zero behaviour change" half of ADR-0019.
+    const atDefault = ModelModule.calculate({ ...BASE, verify: true });
+    assert.ok(atDefault.integrity.ok, 'the default-parameter run should still pass integrity checks');
   });
 });

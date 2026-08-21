@@ -53,7 +53,7 @@ Checks 1–3 carry an allow-list of the defects that exist today. It cuts both w
 
 ## `invariants.test.js` — is the ledger self-consistent?
 
-INV-1 to INV-14, defined normatively in [MODEL_SPEC.md §12](MODEL_SPEC.md). Each runs across a **16-scenario matrix** — no capital, no debt, zero inflation, 45% inflation, zero defaults, 40% defaults, 1-year and 20-year horizons, capital-tight, demand-exhausted, carbon on, and so on — and collects every failure before reporting, so one run tells you whether a break is universal or confined to one corner.
+INV-1 to INV-15, defined normatively in [MODEL_SPEC.md §12](MODEL_SPEC.md). INV-1 through INV-14 run across a **16-scenario matrix** — no capital, no debt, zero inflation, 45% inflation, zero defaults, 40% defaults, 1-year and 20-year horizons, capital-tight, demand-exhausted, carbon on, and so on — and collects every failure before reporting, so one run tells you whether a break is universal or confined to one corner.
 
 That distinction is the whole value of the matrix. "INV-1 fails" is a puzzle; "INV-1 fails only when `investLoan` is 0" is a diagnosis.
 

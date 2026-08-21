@@ -14,21 +14,24 @@ The one exception is Chart.js, loaded from a CDN — which is also [F-22](ANALYS
 
 ```
 index.html ──▶ style.css
-           ──▶ https://cdn.jsdelivr.net/npm/chart.js   ⚠️ unpinned, no SRI (F-22)
-           ──▶ app.js  ─────────── 3,667 lines, six globals
+           ──▶ https://cdn.jsdelivr.net/npm/chart.js@4.4.1   pinned, SRI-hashed (F-22 fixed)
+           │                                                  falls back to vendor/chart.umd.min.js offline
+           ──▶ app.js  ─────────── 3,935 lines, six globals
 methodology.html         user-facing explainer, standalone
-server.js                dev static server ⚠️ path traversal (F-18)
-favicon.png              286 KB — larger than app.js
+server.js                dev static server, hardened (F-18 fixed)
+favicon.png
 ```
 
-`app.js` contains four concerns with no boundary between them:
+`app.js` grew from 3,667 lines at audit time (commit `2d81863`) to 3,935 as fixes landed and, on 2026-08-21, a 128-line broken duplicate CSV export was deleted (F-36) — mostly new inputs, ADR-cited behaviour, and the two-verdict reporting. Re-run `grep -n "^const ApiModule\|^const ModelModule\|^const UI\|^const LDC_COUNTRIES" app.js` before trusting these line numbers; they shift with every fix.
+
+It still contains four concerns with no boundary between them:
 
 | Lines | Module | Concern | Pure? |
 |---|---|---|---|
-| 46–118 | `ApiModule` | World Bank + country-states fetching | no — network |
-| 120–1115 | `ModelModule` | **The simulation, KPIs, solvers, invariant checks** | **yes** |
-| 1117–2984 | `UI` | Input reading, KPI rendering, charts, tables, CSV, advisor | no — DOM |
-| 2986–3667 | controller | `LDC_COUNTRIES`, event wiring, `runCalculation` | no — DOM |
+| 60–133 | `ApiModule` | World Bank + country-states fetching | no — network |
+| 134–1471 | `ModelModule` | **The simulation, KPIs, solvers, invariant checks** | **yes** |
+| 1472–3261 | `UI` | Input reading, KPI rendering, charts, tables, CSV, advisor | no — DOM |
+| 3262–3935 | controller | `LDC_COUNTRIES`, event wiring, `runCalculation` | no — DOM |
 
 **`ModelModule` is already pure.** INV-12 verifies it: `calculate()` is deterministic and does not mutate its input. That is why `tools/load-model.js` can test it headlessly, and why stage S5's split is a low-risk move rather than a rewrite.
 
@@ -38,8 +41,8 @@ favicon.png              286 KB — larger than app.js
   index.html form
         │
         ▼
-  UI.getInputs()                    ← ⚠️ silent defaults on missing ids (F-01)
-        │                             ⚠️ magnitude-guessing unit heuristics (F-17)
+  UI.getInputs()                    ← still fails silently on a missing DOM id
+        │                             (returns getRaw's default; tests/wiring.test.js is the guard, F-01)
         ▼
   ModelModule.calculate(inputs)     ← pure, deterministic
         │
@@ -48,21 +51,19 @@ favicon.png              286 KB — larger than app.js
         │     cohorts:     hhCohorts | meCohorts
         │
         ├─▶ computeKPIs(series, inputs)
-        └─▶ verifyLedger(series, inputs, kpis)   ← ⚠️ gated on a solver flag (F-11)
-        │                                          ⚠️ warns to console only (F-29)
+        └─▶ verifyLedger(series, inputs, kpis)   ← two independent verdicts: integrity, viability (F-11, F-29 fixed)
         ▼
   { series, kpis }
         │
-        ├─▶ UI.updateKPIs()      ← ⚠️ mutates the KPI object (F-14)
+        ├─▶ UI.updateKPIs()      ← ⚠️ still mutates the KPI object in place (F-14, open)
         ├─▶ UI.renderCharts()
         └─▶ UI.renderDataTable()
         │
         ▼
-  runCalculation(isAutoAdjust)
-        └──▶ ⚠️ WRITES BACK into the form and re-enters itself (F-04)
+  runCalculation(isAutoAdjust)      ← advisory only; does not write back into the form (F-04, F-05 fixed)
 ```
 
-**The write-back arrow at the bottom is the architectural defect that matters most.** It makes the data flow a cycle rather than a pipeline: the app can change the inputs it just read, then recompute, up to five times, without telling the user. Everything downstream — reproducibility, A/B comparison, the meaning of an exported CSV — depends on breaking that cycle, which is stage S2.
+**The write-back cycle described here at audit time is gone.** `runCalculation` used to rewrite the inputs it had just read and re-enter itself, up to five times, without telling the user — that broke reproducibility, A/B comparison and the meaning of an exported CSV. Stage S2 made the advisor advisory-only; `tests/smoke.test.js` asserts directly that `runCalculation` does not mutate any input. The remaining live defect in this diagram is `UI.updateKPIs()` mutating the KPI object it is handed (F-14) — not yet fixed, tracked for S3.
 
 ---
 
@@ -99,20 +100,25 @@ Write-offs reduce cohort balances but are **never** cash outflows — INV-11 ver
 | **Dual ledger** | Correct structure for blended finance; keeps subsidy and revolving capital from silently cross-subsidising. |
 | **Cohort-based portfolios** | Vintages rather than a blended balance, so term structure and run-off behave correctly. |
 | **Cash identity by construction** | `netFlow` is assembled from the same buckets that mutate the ledgers, so the two cannot drift. |
-| **Self-verification after every run** | Unusual and valuable. Needs strengthening (F-11, F-12, F-29), not replacing. |
+| **Self-verification after every run** | Unusual and valuable. Strengthened, not replaced — F-11, F-12 and F-29 are fixed; two independent verdicts (integrity, viability) now render on screen. |
 | **Buildless** | Runs anywhere, forever, with no toolchain rot. |
 
-## Design decisions to reverse
+## Design decisions already reversed
+
+| Decision | Problem | Fixed in |
+|---|---|---|
+| Controller wrote back into inputs | Broke reproducibility (F-04, F-05) | S2, [ADR-0009](adr/0009-advisory-not-automatic.md) |
+| `console.warn` as a reporting channel | Nobody has devtools open (F-29) | S1, [ADR-0008](adr/0008-integrity-versus-viability.md) |
+| One flag controlled solvers *and* verification | Disabling one silently disabled the other (F-11) | S1 |
+| Magnitude-guessing unit heuristics | Two of them, contradictory (F-17) | S1, [ADR-0012](adr/0012-percentage-entry-convention.md) |
+| Unpinned CDN dependency | Non-reproducible; blank charts offline (F-22) | S0 |
+
+## Design decisions still to reverse
 
 | Decision | Problem | Stage |
 |---|---|---|
-| Controller writes back into inputs | Breaks reproducibility (F-04, F-05) | S2 |
-| Renderer mutates the model's output | Non-idempotent; hidden coupling (F-14) | S2 |
-| `console.warn` as a reporting channel | Nobody has devtools open (F-29) | S1 |
-| One flag controls solvers *and* verification | Disabling one silently disables the other (F-11) | S1 |
-| Magnitude-guessing unit heuristics | Two of them, contradictory (F-17) | S1 |
-| Unpinned CDN dependency | Non-reproducible; blank charts offline (F-22) | S0 |
-| Everything in one file | 3,667 lines, six globals, no boundaries (F-19) | S5 |
+| Renderer mutates the model's output | Non-idempotent; hidden coupling (F-14) | S3 (carried from S2) |
+| Everything in one file | 3,935 lines, six globals, no boundaries — the lint/CI half of F-19 is done; this structural half is S5's whole job | S5 |
 
 ---
 

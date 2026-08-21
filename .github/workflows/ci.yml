@@ -1,0 +1,26 @@
+name: CI
+
+# F-19. Runs the regression suite and the linter on every push and PR against main,
+# on both Node versions the project claims to support (package.json: >=20).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: test (node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - run: npm run golden:diff

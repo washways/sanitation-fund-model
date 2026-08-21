@@ -12,7 +12,7 @@ It answers three questions:
 
 ## Status: mid-repair, and honest about it
 
-An audit on 2026-08-20 found **33 defects**, two of them Critical, and reproduced 16 by executing the model. **17 are now fixed and verified** (`node tools/verify-findings.js`). The rest are listed in [STATUS.md](STATUS.md) with what is blocking each.
+An audit on 2026-08-20 found 34 defects; adding a linter on 2026-08-21 found two more (F-35, a spec-documentation error; F-36, a live crash in CSV export). Of **36 known defects, 32 are fixed** (see [docs/ANALYSIS.md](docs/ANALYSIS.md)); `node tools/verify-findings.js` re-measures 19 of them programmatically against the live model. The rest are listed in [STATUS.md](STATUS.md) with what is blocking each.
 
 What changed that a returning user will notice:
 
@@ -20,14 +20,16 @@ What changed that a returning user will notice:
 |---|---|
 | **The fund now pays its investors interest.** | `fundCostOfCapital` had no control in the form, so it defaulted to 0 — every result the tool had ever produced omitted the cost of senior debt. The control now exists and defaults to 2% concessional. ([F-01](docs/ANALYSIS.md#f-01--fundcostofcapital-has-no-input-control-so-it-is-always-zero)) |
 | **Rates are entered as percentages now.** | Type `40`, not `0.40`. The form used to teach both conventions at once, and any rate above 100% was silently divided by 100 — 150% inflation became 1.5%. Old scenarios must be re-entered, not copied. ([F-17](docs/ANALYSIS.md#f-17--two-opposing-percent-heuristics-hyperinflation-becomes-2)) |
-| **The demo scenario now works.** | It used to go insolvent in year 4 and default on $749,981 of senior debt. It now repays in full, stays solvent and reaches 139,148 households — about 3.5% of the target population, which is the honest headline. ([ADR-0013](docs/adr/0013-viable-default-scenario.md)) |
+| **The demo scenario now works.** | It used to go insolvent in year 4 and default on $749,981 of senior debt. It now repays in full, stays solvent and reaches 121,358 toilets — about 2.2% of the target population, which is the honest headline. ([ADR-0013](docs/adr/0013-viable-default-scenario.md)) |
 | **A failing scenario is now labelled as failing.** | The tool used to print "Model Integrity Verified" on the shipped defaults — a fund that goes insolvent in year 4.1 and defaults on $749,981 of senior principal. There are now two separate verdicts: whether the arithmetic is sound, and whether the fund works. ([F-29](docs/ANALYSIS.md#f-29--the-integrity-check-passes-a-run-that-went-insolvent-and-defaulted)) |
 | **Your inputs stay where you put them.** | Recalculate used to silently cut Grant Support % up to five times per click, and the interest rates you typed were overwritten a second after load. Suggestions are now offered, not applied. ([F-04](docs/ANALYSIS.md#f-04--the-auto-solver-rewrites-the-users-inputs-and-re-runs-itself)) |
 | **Carbon revenue was ~250,000x too small.** | Divided by 1000 as if kilograms, share divided by 100 twice, credited once instead of annually. Now correct — which flips carbon-financed scenarios from capital-constrained to capacity-constrained. ([F-33](docs/ANALYSIS.md#f-33--the-carbon-input-is-labelled-tonnes-per-year-and-used-as-kilograms-once)) |
+| **The fund now actually reserves against debt it owes.** | The solvency gate held back 3 months of ops cost but ignored investor principal due next quarter, despite the README's long-standing claim that it didn't. It does now — baseline reach fell a further ~9% as a direct result. ([F-10](docs/ANALYSIS.md#f-10--reserves-are-enforced-once-and-the-documented-debt-reserve-does-not-exist), [ADR-0027](docs/adr/0027-debt-service-lookahead-reserve.md)) |
+| **CSV export works.** | It was defined twice; the copy that ran threw a `TypeError` on every click, and the copy that didn't run would also have thrown if it had. Nothing tested it before. ([F-36](docs/ANALYSIS.md#f-36--csv-export-is-completely-broken-both-copies), [ADR-0026](docs/adr/0026-restore-the-detailed-csv-export.md)) |
 
-**Numbers produced before 2026-08-20 should be re-run, and rate inputs re-entered** (percentages, not decimals). Everything found is listed with evidence, severity and a fix in the [audit](docs/ANALYSIS.md); nothing is hidden. Six modelling questions still need the model owner's judgement — see [STATUS.md](STATUS.md).
+**Numbers produced before 2026-08-21 should be re-run, and rate inputs re-entered** (percentages, not decimals). Everything found is listed with evidence, severity and a fix in the [audit](docs/ANALYSIS.md); nothing is hidden. One modelling question still needs the model owner's judgement (Q2, the value-of-time factor) — see [STATUS.md](STATUS.md).
 
-`methodology.html` has not yet been reconciled with these changes and still describes the old carbon, grace-period and reserve behaviour.
+[methodology.html](methodology.html) has been rewritten to match the current model; see [STATUS.md](STATUS.md) for what is still open.
 
 ---
 
@@ -61,12 +63,15 @@ Opening `index.html` directly via `file://` also works, but the browser will blo
 npm test
 ```
 
-53 tests in about 0.5 seconds, zero dependencies (Node's built-in runner, Node ≥ 20). Currently **53 pass, 0 todo, 0 fail**. Four suites: wiring (does each input reach the model), invariants (is the ledger self-consistent, across 16 scenarios), golden (did any output move), and smoke (does the whole app actually run).
+65 tests in about 1 second (Node's built-in runner, Node ≥ 20; ESLint is the one devDependency — `npm ci` once to install it). Currently **65 pass, 0 todo, 0 fail**. Seven suites: golden (did any of 21 recorded scenarios move), invariants (16 ledger checks — is the ledger self-consistent), smoke (does the whole app actually run), startup (what does a user opening the page in a browser actually get, once the country fetch has run), wiring (does each input reach the model, and does it actually move the model's output), write-down (does realised loss on a written-down loan behave the way `MODEL_SPEC.md` says it does), and export (does clicking "Export CSV" actually produce a CSV instead of throwing — F-36).
 
 ```bash
 npm run golden:diff   # would any model output change?
 npm run verify        # reproduce the audit findings against the live model
+npm run lint          # ESLint — no-dupe-keys, no-undef, no-unused-vars only (F-19)
 ```
+
+CI (`.github/workflows/ci.yml`) runs `npm test`, `npm run lint` and `npm run golden:diff` on every push and PR against `main`, on Node 20 and 22.
 
 ---
 
@@ -113,15 +118,17 @@ Full specification: **[docs/MODEL_SPEC.md](docs/MODEL_SPEC.md)**. It is normativ
 
 ```
 index.html          the form and dashboard
-app.js              model + KPIs + solvers + UI + controller (3,667 lines; split in S5)
+app.js              model + KPIs + solvers + UI + controller (3,935 lines; split in S5)
 style.css
 methodology.html    user-facing methodology note
 server.js           dev static server
+eslint.config.js    3 rules only — no-dupe-keys, no-undef, no-unused-vars (F-19)
 
-tests/              wiring, invariants, smoke, 18 golden scenarios
+tests/              wiring, invariants, smoke, startup, write-down, export, 21 golden scenarios
 vendor/             pinned Chart.js, for offline use
 tools/              headless model loader, finding verification, diagnostics
 docs/               audit, spec, roadmap, parameters, testing, architecture, ADRs
+.github/workflows/  CI — npm test + lint + golden:diff on push/PR, Node 20 & 22
 ```
 
 ## Data sources
@@ -136,4 +143,4 @@ Read [AGENTS.md](AGENTS.md) first — it applies to humans too. In short: the sp
 
 ## Status
 
-Pre-1.0. The model core is structurally sound — pure, deterministic, with a cash identity that holds by construction — and is being corrected stage by stage against a written specification and a regression suite. Stages S0–S2 are complete and S3 is in progress. See [STATUS.md](STATUS.md).
+Pre-1.0. The model core is structurally sound — pure, deterministic, with a cash identity that holds by construction — and is being corrected stage by stage against a written specification and a regression suite. Stages S0–S2 are complete; S3 (model correctness) is partially landed. See [STATUS.md](STATUS.md).

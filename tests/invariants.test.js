@@ -239,4 +239,54 @@ describe('ledger invariants', () => {
       `netAssets 5y $${a.netAssets.toFixed(0)} vs 20y $${b.netAssets.toFixed(0)}`);
     assert.strictEqual(short.kpis.reach.toilets, long.kpis.reach.toilets);
   });
+
+  test('INV-15: DALYs and time-saved stop accruing for a toilet past its service life, same as carbon (Q13, ADR-0025)',
+    () => {
+      // A short lifespan against a long duration guarantees real retirement within the
+      // run, so this scenario actually exercises the fix rather than passing vacuously.
+      const r = run({ toiletLifespanYears: 2, duration: 10 });
+      const s = r.series;
+      const last = s.dataMonthlyDalysAverted.length - 1;
+
+      // The scenario must genuinely have toilets past service life by the end, or this
+      // test proves nothing — retiredToiletsCumulative would be 0 and every basis agrees.
+      assert.ok(s.dataMonthlyCreditingToilets[last] < s.dataMonthlyActiveToilets[last] * 0.9,
+        'this scenario should have retired a meaningful share of its toilets by month ' +
+        `${last + 1} (in-service ${s.dataMonthlyCreditingToilets[last]} vs all-time built ` +
+        `${s.dataMonthlyActiveToilets[last]}) — otherwise it is not testing retirement at all`);
+
+      // R-8.2/R-8.3: dalys[m] and hours[m] are keyed to the SAME in-service count carbon
+      // already uses (R-8.1), not to every toilet ever built.
+      const expectedDalys = s.dataMonthlyCreditingToilets[last] * BASE.avgHHSize * BASE.dalyPerPerson / 12;
+      assert.ok(Math.abs(s.dataMonthlyDalysAverted[last] - expectedDalys) < 1,
+        `dalys[${last}] = ${s.dataMonthlyDalysAverted[last].toFixed(2)}, expected ${expectedDalys.toFixed(2)} ` +
+        `from creditingToilets — a retired toilet must not keep averting DALYs`);
+
+      const hoursPerDay = BASE.hoursPerPersonPerDay !== undefined ? BASE.hoursPerPersonPerDay : 0.25;
+      const expectedHours = s.dataMonthlyCreditingToilets[last] * BASE.avgHHSize * hoursPerDay * 30;
+      assert.ok(Math.abs(s.dataMonthlyHoursSaved[last] - expectedHours) < 1,
+        `hoursSaved[${last}] = ${s.dataMonthlyHoursSaved[last].toFixed(2)}, expected ${expectedHours.toFixed(2)} ` +
+        `from creditingToilets — a retired toilet must not keep saving time`);
+    });
+
+  test('INV-16: the solvency gate reserves against scheduled investor principal, not just ops cost (F-10, ADR-0027)',
+    () => {
+      // Before ADR-0027, the shipped baseline built 133,469 toilets under a reserve of
+      // 3 months' (possibly hibernation-cut) ops cost only. The reserve now also holds
+      // back the next 3 months of scheduled investor principal, so a fund with real
+      // debt service must lend more conservatively — reach must fall, not because the
+      // fund performs worse, but because it no longer lends away cash it already owes.
+      const r = run({});
+      assert.ok(r.kpis.reach.toilets < 133469,
+        `expected fewer toilets than the pre-ADR-0027 baseline (133,469) now that the ` +
+        `solvency gate reserves against scheduled investor principal too — got ${r.kpis.reach.toilets}. ` +
+        `If this is failing because the number went back up to 133,469, the lookahead reserve was reverted.`);
+      assert.ok(r.viability.ok,
+        'the baseline scenario must remain viable under the new reserve — conservatism should not tip it over');
+
+      // The reserve must not apply after wind-up (R-9.2): a dead fund does no further
+      // lending, so reserving against it is meaningless. Use a fund that dies early.
+      const dying = run({ annualFixedOpsCost: 400000, loanInterestRate: 0.05 });
+      assert.ok(dying.series.windUpMonth !== null, 'this scenario should wind up for the check below to mean anything');
+    });
 });

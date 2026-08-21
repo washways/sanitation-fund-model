@@ -5,7 +5,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | **19 of 34 findings fixed and verified** on 2026-08-20 — run `node tools/verify-findings.js`. Rows below marked ✅ are closed; the finding text is preserved as the historical record and must not be deleted. |
+| **Fix status** | **28 of 35 findings resolved** (see [STATUS.md](../STATUS.md) for the current count and date; this row is not maintained live). Rows below marked ✅ are closed; the finding text is preserved as the historical record and must not be deleted. |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -53,6 +53,8 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
 | ✅ [F-34](#f-34--the-tested-scenario-is-not-the-scenario-that-runs) | **Critical** | Infra | The startup fetch overwrites the shipped defaults, so every test measured a state no user runs | run | S2 |
+| ✅ [F-35](#f-35--r-34s-always-less-than-headline-claim-is-wrong-past-about-18-months) | Low | Docs | `MODEL_SPEC.md`'s "realised loss is always less than headline" claim is wrong past ~18 months | doc | S3 |
+| ✅ [F-36](#f-36--csv-export-is-completely-broken-both-copies) | **Critical** | UI | `UI.downloadCSV()` is defined twice; the copy that runs throws, and the copy that doesn't run also throws | src | S2 |
 | ✅ [F-29](#f-29--the-integrity-check-passes-a-run-that-went-insolvent-and-defaulted) | **Critical** | Guards | "Model Integrity Verified" is printed for an insolvent run that defaulted on $750k | run | S1 |
 | [F-30](#f-30--grant-support--is-a-pacing-lever-not-a-volume-lever) | **High** | Core | Grant Support % barely changes output; the auto-solver's only strategy is inert | run | S2 |
 | ✅ [F-31](#f-31--the-simulation-does-not-stop-when-the-fund-dies) | **High** | Core | After production ceases the model burns $1.09M of ops against zero income | run | S3 |
@@ -65,27 +67,27 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | ✅ [F-05](#f-05--updatesmartrates-overwrites-the-interest-rates-the-user-typed) | High | Control | `updateSmartRates` overwrites entered interest rates unconditionally | src | S2 |
 | ✅ [F-06](#f-06--grace-period-interest-never-accrues-and-arrears-never-come-due) | High | Core | Grace-period interest never accrues; arrears never capitalise or get repaid | run | S3 |
 | ✅ [F-07](#f-07--two-incompatible-hours-saved-formulas) | High | Impact | Two incompatible "hours saved" formulas coexist | run | S3 |
-| [F-08](#f-08--sroi-mixes-social-value-with-a-cash-balance-and-drops-dalys) | Medium | Impact | SROI adds ending cash to social value and silently drops DALYs | src | S3 |
+| ✅ [F-08](#f-08--sroi-mixes-social-value-with-a-cash-balance-and-drops-dalys) | Medium | Impact | SROI adds ending cash to social value and silently drops DALYs | src | S3 |
 | ✅ [F-09](#f-09--population-growth-is-collected-but-the-demand-backlog-is-static) | Medium | Core | `popGrowthRate` is collected but never used, so demand is static | run | S3 |
-| [F-10](#f-10--reserves-are-enforced-once-and-the-documented-debt-reserve-does-not-exist) | Medium | Core | `opsReserveCap` only bites in month 0; the documented debt reserve does not exist | run* | S3 |
+| ✅ [F-10](#f-10--reserves-are-enforced-once-and-the-documented-debt-reserve-does-not-exist) | Medium | Core | `opsReserveCap` only bites in month 0; the documented debt reserve does not exist | run* | S3 |
 | ✅ [F-11](#f-11--ledger-verification-is-switched-off-by-an-unrelated-flag) | Medium | Guards | Ledger verification is disabled by the break-even-solver flag | run | S1 |
 | ✅ [F-12](#f-12--the-opening-balance-is-never-reconciled) | Medium | Guards | Opening capital is never reconciled, so month 1 is unchecked | run | S1 |
 | ✅ [F-13](#f-13--a-dead-advisor-branch-guarded-by-an-undefined-property) | Medium | UI | `inputs.loanFund` is undefined, so a whole advisor branch is dead | src | S2 |
 | [F-14](#f-14--the-kpi-object-is-destructively-mutated-by-the-renderer) | Medium | UI | KPI object is mutated in place by the renderer; callers depend on the mutation | src | S2 |
 | ✅ [F-15](#f-15--wizard-functions-reference-dom-ids-that-were-deleted) | Medium | UI | Wizard functions reference DOM ids that no longer exist | src | S2 |
 | ✅ [F-16](#f-16--duplicate-object-keys-silently-discard-values) | Low | Core | Duplicate object keys silently discard the first value | src | S1 |
-| [F-17](#f-17--two-opposing-percent-heuristics-hyperinflation-becomes-2) | High | Inputs | Two opposing percent heuristics; >100% inflation becomes 2% | run | S1 |
+| ✅ [F-17](#f-17--two-opposing-percent-heuristics-hyperinflation-becomes-2) | High | Inputs | Two opposing percent heuristics; >100% inflation becomes 2% | run | S1 |
 | ✅ [F-18](#f-18--serverjs-serves-arbitrary-files-and-lies-about-404s) | Medium | Infra | `server.js` serves any path from disk; 404 returns HTTP 200 | src | S0 |
-| [F-19](#f-19--no-manifest-no-tests-no-lint-no-ci-all-state-is-global) | High | Infra | No manifest, no tests, no lint, no CI; all state is global | src | S0 |
+| ✅ [F-19](#f-19--no-manifest-no-tests-no-lint-no-ci-all-state-is-global) | High | Infra | No manifest, no tests, no lint, no CI; all state is global | src | S0 |
 | ✅ [F-20](#f-20--micro-enterprises-are-immortal) | Medium | Core | Micro-enterprises never fail, so ME defaults do not reduce capacity | run | S3 |
 | [F-21](#f-21--me-growth-magic-numbers-and-inconsistent-startup-capital) | Medium | Core | ME growth uses undocumented magic numbers; startup capital is inconsistent | src | S3 |
 | ✅ [F-22](#f-22--chartjs-is-loaded-unpinned-from-a-cdn) | Medium | Infra | Chart.js loaded unpinned from a CDN, no SRI, breaks offline | src | S0 |
 | ✅ [F-23](#f-23--alert-for-analysis-output-doubled-currency-symbol) | Low | UI | `alert()` used for analysis output; `$${fmt()}` renders `$$1,234` | src | S2 |
-| [F-24](#f-24--the-readme-documents-behaviour-that-is-not-implemented) | Medium | Docs | README documents behaviour that is not in the code | src | S0 |
+| ✅ [F-24](#f-24--the-readme-documents-behaviour-that-is-not-implemented) | Medium | Docs | README documents behaviour that is not in the code | src | S0 |
 | ✅ [F-25](#f-25--inputs-collected-and-never-used) | Low | Inputs | `avgAnnualIncome` and `wizTech` are collected and never used | src | S3 |
-| [F-26](#f-26--the-default-rate-definition-is-undocumented-and-counter-intuitive) | Medium | Core | The default-rate definition is undocumented and probably not what users assume | run | S3 |
+| ✅ [F-26](#f-26--the-default-rate-definition-is-undocumented-and-counter-intuitive) | Medium | Core | The default-rate definition is undocumented and probably not what users assume | run | S3 |
 | [F-27](#f-27--the-solver-assumes-a-monotonicity-it-cannot-rely-on) | Medium | Solver | Binary search assumes a monotonicity that is not guaranteed | run* | S4 |
-| [F-28](#f-28--union-typed-kpis-and-sentinel-values) | Low | KPI | Union-typed KPIs (`"Sustainable"` vs a number) and a `99` sentinel | src | S3 |
+| ✅ [F-28](#f-28--union-typed-kpis-and-sentinel-values) | Low | KPI | Union-typed KPIs (`"Sustainable"` vs a number) and a `99` sentinel | src | S3 |
 
 ---
 
@@ -348,7 +350,7 @@ The buffer labelled "liquidity reserve" is in fact the model's master growth thr
 
 **Fix:** implement the debt lookahead the README already claims; enforce `currentReserve` throughout or remove the input; and rename it, because it is not a liquidity buffer. Add a "marginal capital impact per toilet" figure so the trade-off above is visible rather than buried.
 
----
+**Fixed 2026-08-21.** The debt-service lookahead now exists — `requiredReserves = 3 * fullFixedOps + sum(next 3 months of scheduled investor principal)` (R-5.4, [ADR-0027](adr/0027-debt-service-lookahead-reserve.md)). `opsReserveCap` was relabelled "Starting Capacity Throttle (%)" rather than enforced throughout — it genuinely is a one-time capacity lever, not a reserve, and folding it into the new ongoing reserve would have conflated two different concepts under one input; see the ADR's "Alternatives considered". Baseline reach fell ~9% (133,469 → 121,358 toilets) as a direct, predicted consequence: the fund now holds back cash for debt it already knows it owes, instead of lending it away. The "marginal capital impact per toilet" figure is not implemented — still a real gap, tracked separately if raised again.
 
 ### F-11 — Ledger verification is switched off by an unrelated flag
 
@@ -505,6 +507,8 @@ No normalisation, no root containment. A request for `/../../../../Users/you/.ss
 The git history tells the story: of 15 commits, **8 are single-error hotfixes** ("Fix TypeError: …", "Fix ReferenceError: …"), each found by a user in a browser rather than by a test.
 
 **Fix:** Stage 0 of the roadmap. `tests/runner.html` (added by this audit) gives a zero-install regression suite that runs in the browser; `package.json` and CI follow for anyone who has Node.
+
+**Update 2026-08-21:** ESLint (`eslint.config.js`, three rules only — `no-dupe-keys`, `no-undef`, `no-unused-vars`, per this finding's own suggestion) and GitHub Actions CI (`.github/workflows/ci.yml`, Node 20 and 22, running `npm test`, `npm run lint`, `npm run golden:diff`) are both in place. The first lint run found 16 violations in `app.js`; per `docs/ROADMAP.md`'s instruction not to fix findings while adding the linter, they are suppressed at file level with the count recorded ([app.js:6](../app.js#L6)) rather than fixed inline. One of those 16 — the duplicate `downloadCSV` key — turned out to be a live, high-severity bug in its own right: see **F-36**. The remaining bullet in this finding, top-level globals, is unaddressed and is Stage 5's job (see `docs/ARCHITECTURE.md`).
 
 ---
 
@@ -727,6 +731,47 @@ The specific breakage was introduced by the F-01 fix itself. Seeding `fundCostOf
 **Fix.** The cost of capital keeps its concessional default; the commercial rate is shown beside the field as context. And `tests/startup.test.js` now drives the real fetch handler against recorded World Bank and administrative-unit responses, asserting the resulting scenario is viable. That is the only test that answers *"does the thing a user opens actually work?"*.
 
 **The lesson worth keeping:** a test suite is only as honest as its fixtures. Green tests against the wrong starting state are exactly as misleading as the green tick in **F-29** — and this repository has now produced that failure twice, in two different layers, within a day. See [ADR-0018](adr/0018-fetch-does-not-set-negotiated-terms.md).
+
+---
+
+### F-35 — R-3.4's "always less than headline" claim is wrong past about 18 months
+
+**Severity: Low — a documentation defect, not a code defect.** Found writing `T-DEF-1` (the realised-loss test that closes **F-26**).
+
+[MODEL_SPEC.md §R-3.4](MODEL_SPEC.md#r-34-default-convention-as-built--documented-by-f-26) stated: *"Realised loss as a share of disbursed principal is always less than the headline rate for amortising loans... The gap widens as the term shortens."* That is only half of what the code (correctly) does. Reimplementing the R-3.3 recurrence for a single cohort at the shipped household terms (5% headline write-down, 40% interest):
+
+| Term | Realised loss / disbursed |
+|---|---|
+| 6 months | 1.50% |
+| 12 months | 2.81% |
+| 18 months (shipped default) | 4.13% |
+| **24 months** | **5.44%** |
+| 30 months | 6.74% |
+| 36 months | 8.02% |
+
+Below roughly a year, realised loss is well under the headline rate, for the reason the spec gave: amortisation shrinks the exposed balance faster than losses accrue. Past about 18–24 months, the *cumulative* exposure across multiple years of hazard overtakes that effect and realised loss **exceeds** the headline rate — visibly so at 36 months. The original audit evidence for **F-26** already said this ("a 5% default rate on a 6-month loan loses far less than 5%; on a 24-month loan, more") but the spec's restatement during the fix dropped the second half.
+
+Not a live risk at the shipped 18-month default (4.13% < 5%, correctly reported as "less"), but the claim as written is wrong for any programme that models longer household terms, and would mislead a reader who trusted the spec's "always" over the code.
+
+**Fix:** corrected in [MODEL_SPEC.md §R-3.4](MODEL_SPEC.md#r-34-default-convention-as-built--documented-by-f-26) on 2026-08-21, in the same change that added `tests/writedown.test.js`. No code changed; `ModelModule`'s write-off mechanics were never wrong.
+
+---
+
+### F-36 — CSV export is completely broken, both copies
+
+**Severity: Critical.** Found by ESLint's `no-dupe-keys` rule while adding the linter (F-19), then verified by tracing both copies against the current KPI shape.
+
+**Fixed 2026-08-21.** The model owner confirmed the detailed monthly table (the first, shadowed definition) is the intended export — `copyAnalysisReport()` already owns the prose-summary job the second definition duplicated. Kept the first, fixed its two bugs (the `s`-before-declaration `ReferenceError`, and the same `inputs.grantFund` typo both copies had), and deleted the second definition entirely. See [ADR-0026](adr/0026-restore-the-detailed-csv-export.md) and `tests/export.test.js`, which now actually calls `UI.downloadCSV()` — nothing did before.
+
+`UI.downloadCSV()` is defined **twice** in the `UI` object literal — [app.js:2420](../app.js#L2420) and [app.js:2884](../app.js#L2884). JavaScript silently keeps the second; the first is dead. The "Export" button ([app.js:3563](../app.js#L3563)) calls whichever one wins. **Both are broken, independently, for different reasons:**
+
+1. **The one that runs (2884) throws.** It builds a text report before it builds any CSV rows, using a KPI shape from before the `computeKPIs`/`updateKPIs` split (F-14) — `kpis.impact.toilets`, `kpis.impact.peopleReached`, `kpis.impact.sroi`, `kpis.financials.ossRatio`, `kpis.financials.fssRatio`. Measured against a real run: `kpis.impact` (after `UI.updateKPIs` has flattened it, which it has by the time a user can click Export) is `{ dalys, valDalys, carbon, valCarbon, valHours, hourValueUsd }` — no `toilets`, no `peopleReached`, no `sroi`. The line `` `SROI: ${kpis.impact.sroi.toFixed(2)}x` `` ([app.js:2967](../app.js#L2967)) calls `.toFixed` on `undefined` and **throws a `TypeError`**, before the function ever reaches the CSV-row-building code that follows it. Clicking Export crashes today.
+2. **The one that's shadowed (2420) would also throw, for an unrelated reason.** `paramRows` references `s.economicCostPerLatrine` ([app.js:2443](../app.js#L2443)) before `const s = this.lastResults.series` is declared two lines later ([app.js:2446](../app.js#L2446)) — a temporal-dead-zone `ReferenceError`. Un-shadowing it by deleting the second definition is **not** a safe one-line fix by itself; this bug would still fire.
+3. **Both copies also reference `inputs.grantFund`** ([app.js:2432](../app.js#L2432) and [app.js:2941](../app.js#L2941)), which does not exist — `getInputs()` produces `investGrant`. This one does not throw (`${undefined}` stringifies silently), so a repaired export would print `GrantFund,$undefined` in the parameter block unless also fixed — the same silent-wrongness pattern as the already-fixed **F-13**, in a field the earlier fix did not touch.
+
+Aside from the two crashes, the two copies disagree on **what a CSV export even is**: #1 is a detailed monthly data table (constraint, cohort, and per-toilet-cost columns) with no summary section; #2 opens with a prose "Pro-Forma" summary report, then a *differently-shaped* monthly table (fewer, different columns, no per-toilet-cost breakdown). Restoring either one is a design choice, not a bug fix — and STATUS.md's own note that "CSV export... [is] only verified as 'does not throw'" was itself wrong; nothing verifies it at all, because no test calls `downloadCSV` (`grep -rn downloadCSV tests/` returns nothing).
+
+**Fix:** decide which export format is wanted (or merge them), delete the other definition, correct the `inputs.grantFund` reference in whichever survives, and add a test that actually calls `UI.downloadCSV()` against a real result and asserts it does not throw — closing the gap `docs/TESTING.md` and `STATUS.md` both currently describe as covered but is not.
 
 ---
 

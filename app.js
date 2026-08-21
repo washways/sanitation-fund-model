@@ -3,6 +3,20 @@
  * Handles Logic, API Fetching, and UI Updates
  */
 
+/* eslint-disable no-unused-vars --
+ * F-19 baseline, recorded 2026-08-21 when ESLint was first added: 15 no-unused-vars
+ * violations plus 1 no-dupe-keys violation. The no-dupe-keys one was the duplicate
+ * `downloadCSV` — a real bug (F-36), fixed the same day (ADR-0026), which is why it
+ * is no longer in this list. The no-unused-vars ones are recorded, not fixed, per
+ * docs/ROADMAP.md's S0 task: "do not fix findings while adding the linter — record
+ * the count, ... remove the suppressions stage by stage."
+ *
+ * Do not add a new violation under this suppression. Run `npx eslint app.js` before
+ * committing a change to this file; if the count goes up, that is a new defect, not
+ * baseline noise. Removing this line (or narrowing it) is the exit criterion for
+ * whichever findings it currently covers — see docs/ANALYSIS.md.
+ */
+
 // --- Global State ---
 let chartInstances = {};
 
@@ -204,7 +218,10 @@ const ModelModule = {
             inputs.investorGracePeriod || 0
         );
 
-        // Reserves
+        // Starting capacity throttle (R-6.1) — sizes the month-0 ME cohort only, and
+        // does nothing after. Relabelled from "Liquidity Buffer" 2026-08-21 (F-10,
+        // ADR-0027) — it is not the fund's ongoing solvency reserve; that is
+        // `requiredReserves`, computed fresh every month below (R-5.4).
         // Already a decimal - converted once at the input boundary (R-2.3).
         const opsReserveRate = inputs.opsReserveCap !== undefined ? inputs.opsReserveCap : 0.15;
         const totalOpsReserve = (inputs.investGrant + inputs.investLoan) * opsReserveRate;
@@ -496,8 +513,21 @@ const ModelModule = {
             loanCash -= opsCost;
 
             // 7. New Business (Lending & Grants)
-            // Hard-stop solvency gate: only lend if cash exceeds reserve floor
-            const requiredReserves = opsCost * 3; // 3-month ops buffer
+            // Hard-stop solvency gate: only lend if cash exceeds reserve floor.
+            //
+            // R-5.4, F-10, ADR-0027: 3 months of the FULL fixed ops cost — not
+            // `opsCost`, which is already cut to 30% during hibernation, so the buffer
+            // must not shrink exactly when the fund is most fragile — plus the next 3
+            // months of scheduled investor principal, so the fund does not lend away
+            // cash it already knows it owes next quarter. The README has claimed this
+            // debt-service lookahead existed since before the audit; it did not.
+            const lookaheadPrincipal =
+                (investorSchedule[m + 1]?.principal || 0) +
+                (investorSchedule[m + 2]?.principal || 0) +
+                (investorSchedule[m + 3]?.principal || 0);
+            const requiredReserves = windUpMonth !== null
+                ? 0
+                : (currentFixedOps * 3) + lookaheadPrincipal;
             const solvent = (loanCash >= requiredReserves) && (grantCash >= 0);
             let lendable = solvent ? Math.max(0, loanCash - requiredReserves) : 0;
             if (isWindingDown) lendable = 0;
@@ -510,11 +540,12 @@ const ModelModule = {
             // A. ME Expansion
             // Only if lendable > 0 and backlog > 0
             if (lendable > 0 && backlogToilets > 0) {
-                // Basic growth logic
-                const expansionBudget = lendable * 0.1;
+                // Basic growth logic (R-6.2). Both shares were hardcoded at 0.1 until
+                // ADR-0019 exposed them as inputs, defaults unchanged.
+                const expansionBudget = lendable * inputs.meExpansionBudgetShare;
                 const meSetup = inputs.meSetupCost;
                 if (expansionBudget > meSetup) {
-                    const potentialNew = Math.min(Math.floor(expansionBudget / meSetup), Math.ceil(currentMEs * 0.1));
+                    const potentialNew = Math.min(Math.floor(expansionBudget / meSetup), Math.ceil(currentMEs * inputs.meMaxMonthlyGrowthRate));
                     // Check against Max Cap
                     const space = maxTotalMEs - currentMEs;
                     const newMes = Math.min(potentialNew, space);
@@ -649,15 +680,16 @@ const ModelModule = {
 
             // 9. Impact (Area Under Curve)
             //
-            // NOTE: health and time benefits accrue against ALL toilets ever built, not
-            // against `creditingToilets`. A toilet past its service life therefore stops
-            // earning carbon but keeps averting DALYs, which is internally inconsistent.
-            // Applying the lifespan here would move headline impact substantially, so it
-            // is left as an explicit open question (Q13) rather than decided in passing.
+            // Health and time benefits are gated by the same in-service count carbon
+            // already uses (R-8.1) — a retired toilet stops averting DALYs and saving
+            // time, same as it stops earning carbon credit. Resolves Q13, ADR-0025.
+            // Was `toiletsBuiltCumulative` (every toilet ever built, retired or not),
+            // which kept crediting health/time benefits forever after service life —
+            // internally inconsistent with carbon's own accrual rule one line above.
             const hoursPerPersonPerDay = inputs.hoursPerPersonPerDay !== undefined
                 ? inputs.hoursPerPersonPerDay : 0.25;
-            const hours = toiletsBuiltCumulative * inputs.avgHHSize * hoursPerPersonPerDay * 30;
-            const dalys = (toiletsBuiltCumulative * inputs.avgHHSize * inputs.dalyPerPerson) / 12;
+            const hours = creditingToilets * inputs.avgHHSize * hoursPerPersonPerDay * 30;
+            const dalys = (creditingToilets * inputs.avgHHSize * inputs.dalyPerPerson) / 12;
 
             cumulativeDalys += dalys;
 
@@ -1481,6 +1513,10 @@ const UI = {
             meDefaultRate: getPercent('meDefaultRate', 5),
             // Business closure, distinct from loan write-down — see R-6.3.
             meExitRate: getPercent('meExitRate', 10),
+            // In-loop ME expansion pacing (R-6.2). Both were hardcoded 0.1 until
+            // ADR-0019; defaults unchanged.
+            meExpansionBudgetShare: getPercent('meExpansionBudgetShare', 10),
+            meMaxMonthlyGrowthRate: getPercent('meMaxMonthlyGrowthRate', 10),
             mgmtFeeRatio: getPercent('mgmtFeeRatio', 2),
             inflationRate: getPercent('inflationRate', 0),
             contingencyRate: getPercent('contingencyRate', 5),
@@ -2420,11 +2456,12 @@ const UI = {
 
         // Phase 35: Enhanced Export (Parameters)
         const inputs = UI.getInputs();
+        const s = this.lastResults.series;
         const paramRows = [
             `Parameter,Value`,
             `Country,${inputs.country}`,
             `Districts,${inputs.districts}`,
-            `GrantFund,$${inputs.grantFund}`,
+            `GrantFund,$${inputs.investGrant}`,
             `LoanFund,$${inputs.investLoan}`,
             `AvgToiletCost,$${inputs.avgToiletCost}`,
             `LoanInterestRate,${inputs.loanInterestRate}`,
@@ -2438,7 +2475,6 @@ const UI = {
             `EconomicCostPerLatrine,$${(s && s.economicCostPerLatrine ? s.economicCostPerLatrine.toFixed(2) : '0')}`
         ];
 
-        const s = this.lastResults.series;
         // Header
         const headers = [
             "Month", "Constraint", "ActiveMEs", "BaseCost", "InflationFx", "InflatedCost", "UnitContingencyAdd",
@@ -2481,7 +2517,6 @@ const UI = {
             // Arrays are now Cumulative (Step 4808)
             const cumLoan = (s.dataToiletsMonthlyLoan[i] || 0);
             const cumGrant = (s.dataToiletsMonthlyGrant[i] || 0);
-            const totalRow = cumLoan + cumGrant;
 
             const row = [
                 s.monthlyLabels[i],
@@ -2503,7 +2538,7 @@ const UI = {
                 (s.dataMonthlyRevenueMe[i] || 0).toFixed(2),
                 (s.dataMonthlyFundPrincipal[i] || 0).toFixed(2),
                 (s.dataMonthlyOps[i] || 0).toFixed(2),
-                (s.dataMonthlyBadDebt[i] || 0).toFixed(2),
+                ((s.dataMonthlyDefaultsHh[i] || 0) + (s.dataMonthlyDefaultsMe[i] || 0)).toFixed(2),
                 (s.dataMonthlyFundInt[i] || 0).toFixed(2),
                 (s.dataMonthlyNet[i] || 0).toFixed(2),
                 (s.dataMonthlyPortfolioHh[i] || 0).toFixed(2),
@@ -2876,134 +2911,6 @@ const UI = {
     },
 
     // --- Export ---
-    downloadCSV() {
-        if (!this.lastResults || !this.lastResults.series) {
-            alert("No data available. Run model first.");
-            return;
-        }
-
-        const kpis = this.lastResults.kpis;
-        const inputs = UI.getInputs();
-        const s = this.lastResults.series;
-
-        // Helper functions for formatting
-        const format = (n) => (n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
-        const formatNum = (n) => (n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
-
-        let report = `SANITATION FUND ANALYSIS (Pro-Forma)\n${new Date().toLocaleDateString()}\n-------------------------------------\n\n`;
-        report += `SCENARIO INPUTS\n`;
-        report += `Investment: Grant $${format(inputs.investGrant)} | Loan $${format(inputs.investLoan)}\n`;
-        report += `Loan Terms: ${((inputs.loanInterestRate) * 100).toFixed(1)}% Interest | ${inputs.fundRepaymentTerm} yr Term\n`;
-        report += `Ops Model: $${format(inputs.annualFixedOpsCost)} Fixed Ops | ${inputs.mgmtFeeRatio * 100}% Mgmt Fee\n\n`;
-
-        report += `KEY RESULTS (Year ${inputs.duration})\n`;
-        report += `Total Latrines: ${formatNum(kpis.impact.toilets)}\n`;
-        report += `People Reached: ${formatNum(kpis.impact.peopleReached)}\n`;
-        report += `Fund Balance: $${format(s.dataMonthlyCashBalance[s.dataMonthlyCashBalance.length - 1])}\n`;
-        report += `Investor Repaid: $${format(kpis.financials.investorRepaid)}\n`;
-        report += `Leverage Ratio: ${kpis.financials.leverage.toFixed(2)}x\n\n`;
-
-        report += `SUSTAINABILITY\n`;
-        report += `OSS Ratio: ${(kpis.financials.ossRatio * 100).toFixed(1)}%\n`;
-        report += `FSS Ratio: ${(kpis.financials.fssRatio * 100).toFixed(1)}%\n`;
-        report += `Depletion: ${kpis.value.depletionYear}\n\n`;
-
-        report += `IMPACT & VALUE\n`;
-        report += `SROI: ${kpis.impact.sroi.toFixed(2)}x\n`;
-        report += `Econ Value (Health): $${format(kpis.value.economicValue)}\n`;
-        report += `DALYs Averted: ${formatNum(kpis.impact.dalys)}\n`;
-        report += `Hours Saved: ${formatNum(kpis.impact.hours)}\n\n`; // Fix: Use 'hours' property from new structure
-
-        report += `UNIT ECONOMICS\n`;
-        report += `Grant Subsidy / Latrine: $${format(kpis.value.subsidyPerLatrine)}\n`;
-        report += `True Prog Cost / Latrine: $${format(kpis.value.economicCostPerLatrine)}\n`;
-
-        report += `\n-------------------------------------\n`;
-        report += `DEFINITIONS:\n`;
-        report += `DALYs: Monthly accumulation (ActiveToilets * 5 * Rate/12).\n`;
-        report += `SROI: (Total Social Value + Final Fund Equity) / Total Investment.\n`;
-        report += `OSS: Operating Income / (Ops Expenses + Write-offs). Excludes Grants.\n`;
-        report += `FSS: Total Income / Total Expenses (inc. Cost of Capital).\n`;
-        report += `Leverage: Total Loans Disbursed / Initial Grant Fund.\n`;
-        report += `Grant Subsidy: Total Grant Outflows / Latrines Built.\n`;
-        report += `True Prog Cost: (Total Investment - Recovered Equity) / Latrines Built.\n`;
-
-        // Phase 35: Enhanced Export (Parameters)
-        const paramRows = [
-            `Parameter,Value`,
-            `Country,${inputs.country}`,
-            `Districts,${inputs.districts}`,
-            `GrantFund,$${inputs.grantFund}`,
-            `LoanFund,$${inputs.investLoan}`,
-            `AvgToiletCost,$${inputs.avgToiletCost}`,
-            `LoanInterestRate,${(inputs.loanInterestRate * 100).toFixed(1)}%`,
-            `Duration,${inputs.duration} Years`,
-            `GrantSupportPct,${(inputs.grantSupportPct * 100).toFixed(0)}%`,
-            `Duration,${inputs.duration} Years`,
-            `GrantSupportPct,${(inputs.grantSupportPct * 100).toFixed(0)}%`,
-            `CostPerLatrine,$${(kpis.sustainability.costPerLatrine || 0).toFixed(2)}`,
-            `EffectiveCostPerLatrine,$${(kpis.sustainability.effectiveCostPerLatrine || 0).toFixed(2)}`
-        ];
-
-        // Header
-        const headers = [
-            "Month",
-            "CumLatrineLoan", "CumLatrineGrant", "CumTotal",
-            "MoLatrineLoan", "MoLatrineGrant", "MoTotal",
-            "NewLoanValHH", "NewLoanValME",
-            "RevIntHH", "RevIntME",
-            "FundPrincipalCfl", "FixedOps", "VariableOps", "Defaults", "FundIntExp",
-            "NetCashFlow", "CashBalance"
-        ];
-
-        const rows = [...paramRows, "", headers.join(",")];
-        const len = s.monthlyLabels.length;
-
-        for (let i = 0; i < len; i++) {
-            // Delta Calculations
-            const cumLoan = (s.dataToiletsMonthlyLoan[i] || 0);
-            const prevLoan = i > 0 ? (s.dataToiletsMonthlyLoan[i - 1] || 0) : 0;
-            const moLoan = cumLoan - prevLoan;
-
-            const cumGrant = (s.dataToiletsMonthlyGrant[i] || 0);
-            const prevGrant = i > 0 ? (s.dataToiletsMonthlyGrant[i - 1] || 0) : 0;
-            const moGrant = cumGrant - prevGrant;
-
-            const row = [
-                s.monthlyLabels[i],
-                // Cumulative
-                cumLoan.toFixed(0),
-                cumGrant.toFixed(0),
-                (cumLoan + cumGrant).toFixed(0),
-                // Monthly
-                moLoan.toFixed(0),
-                moGrant.toFixed(0),
-                (moLoan + moGrant).toFixed(0),
-
-                // Financials
-                (s.dataMonthlyNewLoansHhVal[i] || 0).toFixed(2),
-                (s.dataMonthlyNewLoansMeVal[i] || 0).toFixed(2),
-                (s.dataMonthlyRevenueHh[i] || 0).toFixed(2),
-                (s.dataMonthlyRevenueMe[i] || 0).toFixed(2),
-                (s.dataMonthlyFundPrincipal[i] || 0).toFixed(2),
-                (s.dataMonthlyOps[i] || 0).toFixed(2),
-                (s.dataMonthlyFees[i] || 0).toFixed(2),
-                ((s.dataMonthlyDefaultsHh[i] || 0) + (s.dataMonthlyDefaultsMe[i] || 0)).toFixed(2),
-                (s.dataMonthlyFundInt[i] || 0).toFixed(2),
-                (s.dataMonthlyNet[i] || 0).toFixed(2),
-                (s.dataMonthlyCashBalance[i] || 0).toFixed(2)
-            ];
-            rows.push(row.join(","));
-        }
-
-        const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(rows.join("\n"));
-        const link = document.createElement("a");
-        link.setAttribute("href", csvContent);
-        link.setAttribute("download", "model_debug_data.csv");
-        document.body.appendChild(link); // Required for Firefox
-        link.click();
-        document.body.removeChild(link);
-    },
 
     renderDataTable(results) {
         if (!results || !results.series) return;

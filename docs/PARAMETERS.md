@@ -1,6 +1,6 @@
 # Parameter Dictionary
 
-**The canonical unit, source and meaning of every input.** Check this file before touching any field. Three of the audit's findings (F-02, F-17, F-33) were unit errors; two are fixed and F-17 is blocked on a decision (Q10).
+**The canonical unit, source and meaning of every input.** Check this file before touching any field. Three of the audit's findings (F-02, F-17, F-33) were unit errors; all three are now fixed.
 
 ✅ marks a defect fixed and verified on 2026-08-20. ⚠️ marks one still open.
 
@@ -58,6 +58,8 @@ Columns:
 | `hhDefaultRate` | HH Default Rate (0.05 = 5%) | 0.05 | **decimal** | decimal | poverty-derived | ⚠️ **Not the share of loans that fail.** It is an annual write-down hazard on outstanding balance. 5% headline ⇒ 1.50% realised loss on disbursed at a 6-month term. [F-26](ANALYSIS.md#f-26--the-default-rate-definition-is-undocumented-and-counter-intuitive). |
 | `meDefaultRate` | ME Annual Write-down Rate (%) | 5 | percent | decimal | user | Same convention as the household rate. Reduces **loan value**. |
 | `meExitRate` | ME Annual Closure Rate (%) | 10 | percent | decimal | user | ✅ [F-20](ANALYSIS.md#f-20--micro-enterprises-are-immortal) fixed. Reduces **capacity**. Deliberately separate from write-down: a business can close having repaid, and a loan can be written down by a business that keeps trading. The 10% default is a convention, not a measurement. |
+| `meExpansionBudgetShare` | ME Expansion Budget Share (%) | 10 | percent | decimal | user | Share of `lendable` cash committed each month to recruiting new MEs. Was a hardcoded `0.1` with no control ([F-21](ANALYSIS.md#f-21--me-growth-magic-numbers-and-inconsistent-startup-capital), [ADR-0019](adr/0019-expose-me-growth-constants.md)); default unchanged. |
+| `meMaxMonthlyGrowthRate` | ME Max Monthly Growth Rate (%) | 10 | percent | decimal | user | Ceiling on ME-network growth per month, as a share of the current network. **The dominant driver of the recruitment curve** — 10%/month compounds to ~3.1x/year. Was a hardcoded `0.1` with no control ([F-21](ANALYSIS.md#f-21--me-growth-magic-numbers-and-inconsistent-startup-capital), [ADR-0019](adr/0019-expose-me-growth-constants.md)); default unchanged. |
 | `grantSupportPct` | Grant Support (% of Households) | 0.10 | **decimal** | decimal | affordability calc | ⚠️ **A pacing lever, not a volume lever.** 5%→90% moves output 3.6%; it changes *when* the grant fund is spent (month 28 vs month 4), not how much — total subsidy is capped by the grant ledger. [F-30](ANALYSIS.md#f-30--grant-support--is-a-pacing-lever-not-a-volume-lever). ✅ No longer rewritten by the auto-solver ([F-04](ANALYSIS.md#f-04--the-auto-solver-rewrites-the-users-inputs-and-re-runs-itself)); the label still overstates what it does. |
 
 ## Costs
@@ -68,7 +70,8 @@ Columns:
 | `mgmtFeeRatio` | Mgmt Fee Ratio (0.01 = 1%) | 0.01 | **decimal** | decimal | fixed 2% on fetch | Part of `variableRate`, charged on every disbursement. |
 | `meCostRate` | M&E Cost (0.02 = 2%) | 0.02 | **decimal** | decimal | user | Part of `variableRate`. Monitoring & evaluation — not micro-enterprise. |
 | `contingencyRate` | Cost Contingency (% mark-up) | 5 | percent | decimal | political stability (`PV.EST`) | ✅ Relabelled. It is a **per-unit uplift on delivery cost**, not a reserve — the implementation was right and the name was wrong ([ADR-0017](adr/0017-contingency-is-a-cost-mark-up.md)). |
-| `opsReserveCap` | Max Ops Reserve Cap (%) | 15 | **percent (raw)** | percent, `/100` in model | user | ⚠️ **Unit differs from every other rate on the form** — [F-17](ANALYSIS.md#f-17--two-opposing-percent-heuristics-hyperinflation-becomes-2). ⚠️ Applies **only in month 0**, yet determines the whole growth path: 0% ⇒ 645 MEs / 216,934 toilets; 90% ⇒ 0 MEs / 0 toilets. [F-10](ANALYSIS.md#f-10--reserves-are-enforced-once-and-the-documented-debt-reserve-does-not-exist). |
+| `opsReserveCap` | Starting Capacity Throttle (%) | 15 | percent | percent, `/100` in model | user | ✅ Relabelled 2026-08-21 ([ADR-0027](adr/0027-debt-service-lookahead-reserve.md)) — it was called "Max Ops Reserve Cap" / "Liquidity Buffer", which invited confusion with the fund's actual ongoing solvency reserve (below). It applies **only in month 0**, sizing the starting ME cohort, and nothing thereafter — that is its whole, narrow job, not a defect. 0% ⇒ 645 MEs / 216,934 toilets; 90% ⇒ 0 MEs / 0 toilets, at pre-ADR-0027 figures. |
+| — | **Solvency reserve** (not a form field — computed every month) | 3 × ops + next 3mo principal | USD | USD | derived | ✅ Added 2026-08-21 ([ADR-0027](adr/0027-debt-service-lookahead-reserve.md), [F-10](ANALYSIS.md#f-10--reserves-are-enforced-once-and-the-documented-debt-reserve-does-not-exist)). The README's long-claimed "3-month Debt Lookahead" now actually exists — R-5.4. Reduced baseline reach ~9% (133,469 → 121,358 toilets) because the fund now holds back cash it had previously been lending away. |
 | `inflationRate` | Annual Inflation (0.0332 = 3.32%) | 0.0332 | **decimal** | decimal | `FP.CPI.TOTL.ZG` | ⚠️ Rates above 100% are unrepresentable — [F-17](ANALYSIS.md#f-17--two-opposing-percent-heuristics-hyperinflation-becomes-2). Applies to unit cost and fixed ops, not to income. |
 
 ## Impact
@@ -81,7 +84,7 @@ Columns:
 | `co2Value` | Value per Tonne CO2e ($) | 15 (overridden) | USD/tonne | USD/tonne | user | |
 | `carbonCreditShare` | Fund Carbon Share (1.0 = 100%) | 1.0 in HTML, 50 at runtime | ambiguous | decimal | user | ✅ [F-02](ANALYSIS.md#f-02--carboncreditshare-is-percentage-divided-twice) fixed — the second `/100` is gone. ⚠️ The HTML default and the runtime override still use different conventions; that is part of Q10. |
 | `timeValueFactor` | Value of Saved Time (% of wage) | 30 | percent | decimal | user | ✅ Replaces the hardcoded, uncited `$0.50`/hour. The hourly value is now `avgAnnualIncome / 2080 × factor` — $0.147 at the shipped defaults, shown beneath the input. ⚠️ The 0.30 factor is a convention; confirm against your programme's guidance (Q2). [ADR-0015](adr/0015-value-of-saved-time.md) |
-| `toiletLifespanYears` | Toilet Service Life (Years) | 5 | years | years | user | ✅ Carbon crediting stops after this ([ADR-0016](adr/0016-toilet-service-life.md)). ⚠️ Health and time benefits do **not** stop — see Q13. |
+| `toiletLifespanYears` | Toilet Service Life (Years) | 5 | years | years | user | ✅ Carbon crediting, DALYs and time-saved all stop after this ([ADR-0016](adr/0016-toilet-service-life.md), [ADR-0025](adr/0025-service-life-gates-all-impact.md)). No effect at the shipped 5-year default duration; on longer runs, all three impact channels stop for a retired toilet. |
 | `hoursPerPersonPerDay` | Hours Saved / Person / Day | 0.25 | hours | hours | user assumption | ✅ [F-07](ANALYSIS.md#f-07--two-incompatible-hours-saved-formulas) fixed — one definition, in the loop, and now a real control. |
 
 ## Not used by the model

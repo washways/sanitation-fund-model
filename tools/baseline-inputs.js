@@ -49,6 +49,8 @@ module.exports = {
   hhDefaultRate: 0.05,
   meDefaultRate: 0.05,
   meExitRate: 0.10,        // annual business closure — distinct from write-down (R-6.3)
+  meExpansionBudgetShare: 0.10,  // in-loop ME expansion pacing (R-6.2, ADR-0019)
+  meMaxMonthlyGrowthRate: 0.10,  // ceiling on ME-network growth per month (R-6.2, ADR-0019)
   termHh: 18,
   termMe: 12,
 

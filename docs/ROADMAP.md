@@ -17,11 +17,11 @@ Progress is tracked in [STATUS.md](../STATUS.md), which is the first file to rea
 
 | Stage | Theme | Findings closed | Risk | Depends on |
 |---|---|---|---|---|
-| ✅ **S0** | Scaffolding and safety net | F-19 (partial), F-22 ✅, F-18 ✅, F-24 (partial) | Very low | — |
-| ✅ **S1** | Silent-wrongness fixes | F-29 ✅, F-01 ✅, F-02 ✅, F-33 ✅, F-03 ✅, F-11 ✅, F-12 ✅, F-16 ✅, F-17 (blocked on Q10) | Low | S0 |
-| ✅ **S2** | Give the user back control | F-04 ✅, F-05 ✅, F-30 ✅, F-13 ✅, F-14, F-15 ✅, F-23 ✅ | Medium | S1 |
-| 🔄 **S3** | Model correctness | F-06 ✅, F-07 ✅, F-09 ✅, F-31 ✅, F-32 ✅, F-28 ✅, F-10, F-20, F-21, F-25, F-26 | **High** | S2 |
-| **S4** | Decision support | F-08, F-27, Q1–Q11 | Medium | S3 |
+| ✅ **S0** | Scaffolding and safety net | F-19 ✅, F-22 ✅, F-18 ✅, F-24 ✅ | Very low | — |
+| ✅ **S1** | Silent-wrongness fixes | F-29 ✅, F-01 ✅, F-02 ✅, F-33 ✅, F-03 ✅, F-11 ✅, F-12 ✅, F-16 ✅, F-17 ✅ | Low | S0 |
+| ✅ **S2** | Give the user back control | F-04 ✅, F-05 ✅, F-30 (partial — solver behaviour fixed, relabel/runway deferred), F-13 ✅, F-14 (deferred), F-15 ✅, F-23 ✅, F-36 ✅ | Medium | S1 |
+| 🔄 **S3** | Model correctness | F-06 ✅, F-07 ✅, F-09 ✅, F-31 ✅, F-32 ✅, F-28 ✅, F-20 ✅, F-25 ✅, F-08 ✅, F-26 ✅, F-10 ✅, F-14, F-21 (half), F-30 | **High** | S2 |
+| **S4** | Decision support | F-27, Q2 (factor), Q3, Q6, Q7, Q9, Q13 | Medium | S3 |
 | **S5** | Structure | — (enables everything after) | Medium | S3 |
 | **S6** | Presentation and reach | — | Low | S5 |
 
@@ -41,7 +41,7 @@ The ordering is deliberate and is not a priority ranking:
 
 **Entry gate:** none.
 
-**Status:** ✅ Complete except ESLint/CI (F-19) and reconciling `methodology.html` (F-24). See [STATUS.md](../STATUS.md).
+**Status:** ✅ Complete. See [STATUS.md](../STATUS.md).
 
 ### Done
 
@@ -59,9 +59,9 @@ The ordering is deliberate and is not a priority ranking:
 |---|---|---|
 | ~~Pin Chart.js, add SRI, vendor a local fallback~~ | F-22 | ✅ Done — 4.4.1, sha384 SRI, `vendor/chart.umd.min.js` fallback. |
 | ~~Harden `server.js`~~ | F-18 | ✅ Done — containment check, real 404s, binds `127.0.0.1`. |
-| Reconcile `methodology.html` with the model | F-24 | It still describes the old carbon, grace-period and reserve behaviour. |
-| Add ESLint with `no-dupe-keys`, `no-undef`, `no-unused-vars` | F-19 | Expect a large first run. **Do not fix findings while adding the linter** — record the count, add `eslint-disable` at file level, and remove the suppressions stage by stage. |
-| Add CI running `npm test` on push | F-19 | GitHub Actions, Node 20 and 22. |
+| ~~Reconcile `methodology.html` with the model~~ | F-24 | ✅ Done — rewritten to match the current model, and `README.md` states only what the code does. |
+| ~~Add ESLint with `no-dupe-keys`, `no-undef`, `no-unused-vars`~~ | F-19 | ✅ Done, [ADR-0020](adr/0020-eslint-is-a-devdependency.md). First run found 16 violations, suppressed at file level per this row's own instruction — see `app.js:6`. One of them was **F-36**, a live Critical bug, not noise. |
+| ~~Add CI running `npm test` on push~~ | F-19 | ✅ Done — `.github/workflows/ci.yml`, Node 20 and 22, runs `npm test`, `npm run lint`, `npm run golden:diff`. |
 | `.gitignore` | F-19 | ✅ Done. |
 
 **Exit gate:**
@@ -130,6 +130,7 @@ npm test    # 0 failures; INV-8 no longer todo
 | 6 | **Fix `inputs.loanFund` -> `investLoan`**; add a test that the idle-cash hint fires on an over-capitalised scenario. | F-13 |
 | 7 | **Delete `applyWizardSettings`, `showWizardStep`, `wizTech`** and the dead ids. | F-15 |
 | 8 | **Replace `alert()` with an in-page panel**; fix the `$${fmt()}` double dollar sign. | F-23 |
+| 9 | ✅ **Fix CSV export.** `UI.downloadCSV()` was defined twice; the copy that ran threw, and the shadowed copy would also have thrown if un-shadowed. Kept the shadowed (richer) definition, fixed both its reference bugs, deleted the duplicate. [ADR-0026](adr/0026-restore-the-detailed-csv-export.md); `tests/export.test.js` added — nothing called `downloadCSV` before. | **F-36** |
 
 **Exit gate:**
 
@@ -153,19 +154,21 @@ npm test    # 0 failures
 
 | # | Task | Finding | Rule |
 |---|---|---|---|
-| 1 | **Terminal state / wind-up.** Stop billing ops against a dead fund; measure end state at wind-up, not at the horizon. | **F-31** | R-9 |
-| 2 | **Arrears.** Interest accrues during grace; unpaid interest capitalises; liability is tracked, not reconstructed. | **F-06** | R-4.3, R-4.5, R-4.6 |
-| 3 | **One hours-saved formula**, in the loop, with `hoursPerPersonPerDay` as an input. | **F-07** | R-8.2 |
-| 4 | **Population growth** in the demand backlog. | F-09 | R-7.1 |
-| 5 | **Reserves.** Debt-service lookahead; enforce or remove `opsReserveCap`; rename it. | F-10 | R-5.4 |
-| 6 | **ME attrition** on write-down. | F-20 | R-6.3 |
-| 7 | **One ME capital requirement**; expose the two hardcoded `0.1` growth constants as inputs. | F-21 | R-6.1, R-6.2 |
-| 8 | **Relabel the default rate** to "annual portfolio write-down rate"; add the realised-loss test. | F-26 | R-3.4 |
-| 9 | **Fix KPI types**: `depletionMonth: number\|null`, `opsRunway: number\|null`. | F-28 | R-11 |
-| 10 | **Ground the advisor in the model** — every recommendation re-runs the simulation and confirms it improves the objective before showing it. | **F-32** | — |
-| 11 | Use `avgAnnualIncome` or delete it; rename `outflows.defaults*` to `writeOffs`. | F-25 | R-3.5 |
+| 1 | ✅ **Terminal state / wind-up.** Stop billing ops against a dead fund; measure end state at wind-up, not at the horizon. | **F-31** | R-9 |
+| 2 | ✅ **Arrears.** Interest accrues during grace; unpaid interest capitalises; liability is tracked, not reconstructed. | **F-06** | R-4.3, R-4.5, R-4.6 |
+| 3 | ✅ **One hours-saved formula**, in the loop, with `hoursPerPersonPerDay` as an input. | **F-07** | R-8.2 |
+| 4 | ✅ **Population growth** in the demand backlog. | F-09 | R-7.1 |
+| 5 | ✅ **Reserves.** Debt-service lookahead now exists (3mo full ops + next 3mo scheduled investor principal); `opsReserveCap` relabelled "Starting Capacity Throttle (%)" rather than enforced-or-removed — it does a genuinely separate job (R-6.1). [ADR-0027](adr/0027-debt-service-lookahead-reserve.md). Baseline reach fell ~9%; no scenario's viability verdict changed. | F-10 | R-5.4 |
+| 6 | ✅ **ME attrition** on write-down. | F-20 | R-6.3 |
+| 7 | ✅ *(half)* Expose the two hardcoded `0.1` growth constants as inputs — done, [ADR-0019](adr/0019-expose-me-growth-constants.md), zero behaviour change. **Still open:** one `meCapitalRequirement` shared by the startup cohort, in-loop expansion and affordability check (R-6.1) — this half changes ME lending and needs its own ADR. | F-21 | R-6.1, R-6.2 |
+| 8 | ✅ Labels changed to "annual portfolio write-down rate"; `tests/writedown.test.js` (`T-DEF-1`) pins realised loss to disbursed at several terms. Writing it surfaced [F-35](ANALYSIS.md#f-35--r-34s-always-less-than-headline-claim-is-wrong-past-about-18-months) — `MODEL_SPEC.md`'s "always less than headline" claim was wrong past ~18 months; corrected the same day. | F-26 | R-3.4 |
+| 9 | ✅ **Fix KPI types**: `depletionMonth: number\|null`, `opsRunway: number\|null`. | F-28 | R-11 |
+| 10 | ✅ **Ground the advisor in the model** — every recommendation re-runs the simulation and confirms it improves the objective before showing it. | **F-32** | — |
+| 11 | ✅ Use `avgAnnualIncome` — it now sets the value of saved time. | F-25 | R-3.5 |
 
 **Order matters:** do **1 and 2 first**. They interact — arrears only make sense once the fund has a defined end — and together they change what every other task is measured against. Task 10 must be **last**: the advisor can only be grounded in a model that is already correct.
+
+**Status:** 10 of 11 tasks done (1–6, 8–11). **Remaining: 7 (F-21, half — R-6.1's `meCapitalRequirement` unification, a behaviour-changing fix that needs its own ADR).** Also carried forward: F-14 and F-30 (from S2).
 
 **Exit gate:**
 
@@ -175,7 +178,7 @@ npm test    # 0 failures; INV-13 and INV-14 no longer todo
 
 - One ADR per task, each predicting direction and magnitude before the code changed.
 - `golden.json` re-recorded once per task, never in a batch.
-- Re-run `node tools/verify-findings.js`: F-06, F-07, F-09, F-20, F-26 report NOT CONFIRMED (the defect is gone).
+- Re-run `node tools/verify-findings.js`: 0 still present among the findings it exercises.
 - [MODEL_SPEC.md](MODEL_SPEC.md) tags flipped from **[TARGET]** to **[AS-BUILT]** for every rule landed.
 
 ---
@@ -190,10 +193,10 @@ npm test    # 0 failures; INV-13 and INV-14 no longer todo
 |---|---|---|
 | 1 | **Robust solvers.** Coarse grid to bracket a sign change, then bisect; return `{ ok, value, reason }`; never report failure as a value. | **F-27** |
 | 2 | **Cache/debounce solvers.** 22 full simulations per recalculation is wasteful and will not survive a bigger model. | F-27 |
-| 3 | **Resolve SROI** (Q1, Q2) — requires a human decision, then implement. | **F-08** |
+| 3 | ~~Resolve SROI (Q1, Q2-method)~~ — done. SROI is social-value-only (ADR-0011); the value of saved time is derived from local income (ADR-0015). What remains is confirming the **0.30 factor** against published guidance (Q2), which does not block anything else. | — |
 | 4 | **Sensitivity analysis.** One-at-a-time tornado over the top 8 parameters. The `opsReserveCap` table in F-10 shows why: the master growth throttle was mislabelled as a liquidity buffer, and nobody noticed. | — |
 | 5 | **Scenario save/load/compare** as JSON. Reproducibility for board papers. |  — |
-| 6 | **Answer the open questions** Q3–Q9 in [MODEL_SPEC.md](MODEL_SPEC.md) §13, each as an ADR. (Q8, Q10, Q11 are needed earlier — see S1.) | — |
+| 6 | **Answer the open questions** Q2 (factor), Q3, Q6, Q7, Q9, Q13 in [MODEL_SPEC.md](MODEL_SPEC.md) §13, each as an ADR. (Q1, Q4, Q5, Q8, Q10, Q11, Q12 are already resolved — see [STATUS.md](../STATUS.md).) | — |
 
 **Exit gate:** solvers return typed results and are tested against a known-non-monotonic scenario (`capital constrained`, which has 14 downward steps — see F-27). Sensitivity output is reproducible from the CLI.
 

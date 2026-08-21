@@ -9,12 +9,13 @@
 | | |
 |---|---|
 | **Stages complete** | **S0** (scaffolding), **S1** (silent-wrongness fixes), **S2** (user control) — plus the S3 correctness items that S2 depended on |
-| **Current stage** | **S3 — model correctness**, partially landed. See "What is left". |
-| **Last updated** | 2026-08-20 |
+| **Current stage** | **S3 — model correctness**, nearly done — 1 open finding (F-21, half) plus F-14/F-30 carried from S2 and F-27 (S4). Only one open question left (Q2). See "What is left". |
+| **Last updated** | 2026-08-21 |
 | **Branch** | `audit-and-correction` — pushed to `origin`. |
-| **Tests** | ✅ 53 tests — **53 pass, 0 todo, 0 fail** (`npm test`, ~0.5s) |
-| **Goldens** | ✅ 22 scenarios, current |
-| **Findings** | 19 of 34 fixed and verified (`node tools/verify-findings.js` → *18 fixed, 0 still present*) |
+| **Tests** | ✅ 65 tests — **65 pass, 0 todo, 0 fail** (`npm test`, ~1s) |
+| **Lint** | ✅ `npm run lint` (ESLint, 3 rules — F-19). CI on push/PR, Node 20 & 22 (`.github/workflows/ci.yml`). |
+| **Goldens** | ✅ 21 scenarios, current |
+| **Findings** | 32 of 36 resolved (`docs/ANALYSIS.md`); `node tools/verify-findings.js` exercises 19 of them programmatically — *18 checks, 0 still present* |
 
 ---
 
@@ -45,6 +46,15 @@ An audit of commit `2d81863`, a regression suite, three stages of fixes, and eig
 | 🔴 | **F-25** | `avgAnnualIncome` finally does something — it sets the value of saved time. It was the last input collected and ignored. |
 | | F-33 (part) | Carbon crediting stops after a configurable 5-year service life. [ADR-0016](docs/adr/0016-toilet-service-life.md) |
 | | — | `contingencyRate` relabelled "Cost Contingency (% mark-up)": the implementation was right, the name was wrong. [ADR-0017](docs/adr/0017-contingency-is-a-cost-mark-up.md) |
+| | F-28 | KPI types fixed: `depletionMonth` is `number \| null` with `isSustainable: boolean` carrying the flag; `opsRunway` is `number \| null` — the `99`-year sentinel is gone. |
+| | F-24 | `README.md` and `methodology.html` reconciled with the model. |
+| | F-26 | Realised-loss test written (`tests/writedown.test.js`, `T-DEF-1`). Found and fixed a documentation defect while writing it — [F-35](docs/ANALYSIS.md#f-35--r-34s-always-less-than-headline-claim-is-wrong-past-about-18-months): `MODEL_SPEC.md` claimed realised loss is "always less than headline"; measured, it crosses over and exceeds headline between 18 and 24 months. |
+| | F-21 *(half)* | `meExpansionBudgetShare` and `meMaxMonthlyGrowthRate` exposed as inputs, replacing two hardcoded `0.1` constants. [ADR-0019](docs/adr/0019-expose-me-growth-constants.md); defaults unchanged, zero behaviour change (confirmed by `golden:diff`). **Still open:** unifying the three inconsistent ME-capital-requirement formulas (R-6.1) — a behaviour-changing fix that needs its own ADR. |
+| | F-19 | ESLint (3 rules: `no-dupe-keys`, `no-undef`, `no-unused-vars`) and GitHub Actions CI added. First lint run found 16 violations, suppressed at file level per the roadmap's own instruction not to fix findings while adding the linter — see [app.js:6](app.js#L6). One of the 16, a duplicate `downloadCSV` key, turned out to be F-36. |
+| 🔴 | **F-36** | CSV export was completely broken — `UI.downloadCSV()` was defined twice, and *both* copies threw. Restored the detailed monthly table (the shadowed, richer definition), fixed its two reference bugs, deleted the broken duplicate (its prose-report content duplicated the separate, already-working `copyAnalysisReport()`). [ADR-0026](docs/adr/0026-restore-the-detailed-csv-export.md); `tests/export.test.js` now actually calls it. |
+| 🔴 | **F-10** | The debt-service lookahead the README has always claimed now actually exists: the solvency gate reserves 3 months of full (not hibernation-cut) ops cost **plus the next 3 months of scheduled investor principal**. `opsReserveCap` relabelled "Starting Capacity Throttle (%)" rather than folded into the new reserve — it does a genuinely different, narrower job. [ADR-0027](docs/adr/0027-debt-service-lookahead-reserve.md). Baseline reach fell ~9% (133,469 → 121,358 toilets); no scenario's viability verdict changed, and minimum cash improved or held everywhere checked. |
+| | Q13 | Service life now stops DALYs and time-saved credit, matching carbon. [ADR-0025](docs/adr/0025-service-life-gates-all-impact.md). No effect at the shipped 5-year duration; found and fixed a spec-prose error along the way — see F-35 above. |
+| | Q3, Q6, Q7, Q9 | All four resolved by keeping current behaviour, each with a short ADR explaining why (flat grant support, separate ledgers, no repeat demand, no collections taper). [ADR-0021](docs/adr/0021-grant-support-stays-flat-rate.md)–[0024](docs/adr/0024-collections-floor-stays-abrupt.md). |
 
 ### New in the safety net
 
@@ -58,23 +68,23 @@ An audit of commit `2d81863`, a regression suite, three stages of fixes, and eig
 
 
 
-The defaults themselves changed (ADR-0013), so this compares the old demo with the new one:
+The defaults themselves changed (ADR-0013), and the solvency gate got stricter since (ADR-0027 — F-10), so this compares the original pre-audit demo with today's:
 
-| | Before | After |
+| | Before (pre-audit) | After (today) |
 |---|---|---|
-| Toilets | 211,317 | 139,148 |
-| People reached | 1,056,585 | 695,740 (3.5% of target) |
-| Ending cash | -$36,351 | **+$17,790** |
-| Minimum cash | -$36,351 | **+$15,935** |
-| Net assets | -$786,332 | **+$1,426,422** |
+| Toilets | 211,317 | 121,358 |
+| People reached | 1,056,585 | 606,790 (2.2% of target) |
+| Ending cash | -$36,351 | **+$17,742** |
+| Minimum cash | -$36,351 | **+$17,742** |
+| Net assets | -$786,332 | **+$1,174,828** |
 | Investor repaid | $3,250,019 of $4,000,000 (18.7% default) | **$4,000,000 — repaid in full** |
 | Investor interest | $0 | $221,312 (at 2% cost of capital) |
-| OSS / FSS | 0.80 / 0.70 | **2.43 / 1.58** |
+| OSS / FSS | 0.80 / 0.70 | **2.36 / 1.52** |
 | Verdict shown | `✅ Model Integrity Verified` | **integrity OK, viability OK — both stated** |
 
-Reach fell 34%, which is the honest trade: the old scenario built more toilets *because* it was not repaying its investor. The new one works and reaches 3.5% of the target — a better starting point for a policy conversation than either a green tick on a broken fund or a wall of warnings.
+Reach fell 43% from the pre-audit figure — three separate, honest reasons, not one: the old scenario built more toilets *because* it was not repaying its investor; ADR-0014's micro-enterprise closure rate (10%/yr) now takes a real bite out of capacity; and ADR-0027's debt-service lookahead reserve (2026-08-21) now holds back cash the fund used to lend away, dropping baseline reach a further ~9% (133,469 → 121,358) on its own. The fund works and stays safely solvent throughout — minimum cash now equals ending cash, i.e. it never dips below where it finishes.
 
-The parameter set was not hand-picked. A grid over five levers found 308 viable combinations of 675; those were re-scored against six stress cases and ranked. The chosen point survives all six. Details and the stress table are in [ADR-0013](docs/adr/0013-viable-default-scenario.md).
+The parameter set was not hand-picked. A grid over five levers found 308 viable combinations of 675; those were re-scored against six stress cases and ranked. The chosen point survives all six. Details and the stress table are in [ADR-0013](docs/adr/0013-viable-default-scenario.md). That grid search predates ADR-0027; it has not been re-run against the stricter reserve rule, so the "308 of 675" figure describes the search that chose these defaults, not a guarantee that still holds exactly today.
 
 ### What the browser actually opens on
 
@@ -84,8 +94,8 @@ The parameter set was not hand-picked. A grid over five levers found 308 viable 
 |---|---|
 | Inflation / HH rate / cost of capital | 28.4% / 48.4% / 2.0% |
 | Districts / ops cost / grant support | 30 / $25,000 / 40% |
-| Toilets | 196,264 (981,320 people) |
-| Min cash / repaid / OSS | +$8,458 / 100% / 2.99 |
+| Toilets | 181,587 (907,935 people) |
+| Min cash / repaid / OSS | +$21,919 / 100% / 2.95 |
 | Verdict | **viable** |
 
 ---
@@ -96,23 +106,17 @@ The parameter set was not hand-picked. A grid over five levers found 308 viable 
 
 | Finding | Blocked on |
 |---|---|
-| — | **Q13** — should service life stop DALYs and time saved too, not just carbon? |
-| — | **Q2** — is 30% the right share of the wage for saved household time? Method settled, factor is a convention |
-| F-10 | is `opsReserveCap` a real reserve or just a month-0 growth throttle? |
-| — | **Q3, Q6, Q7, Q9** — see [MODEL_SPEC §13](docs/MODEL_SPEC.md) |
+| — | **Q2** — is 30% the right share of the wage for saved household time? Method settled (R-8.6); confirming the factor needs the model owner's own published-guidance source, not a code change. **The only genuinely open question left.** |
 
 ### Not blocked, just not done
 
 | Finding | Task | Stage |
 |---|---|---|
-| F-19 | ESLint + CI | S0 |
-| F-24 | ✅ Done — `methodology.html` fully rewritten and reconciled with the model | S0 |
 | F-14 | `computeKPIs` still returns a nested shape that the renderer mutates | S2 |
-| F-21 | One ME capital requirement; expose the two hardcoded `0.1` growth constants | S3 |
-| F-26 | ✅ Labels changed; the realised-loss test is still to be written | S3 |
+| F-21 | Unify the three inconsistent ME-capital-requirement formulas (R-6.1) into one `meCapitalRequirement(inputs)` — behaviour-changing, needs its own ADR. Constant-exposure half (R-6.2) is done. | S3 |
 | F-27 | Solver bisection still assumes monotonicity it lacks in the capital-tight regime | S4 |
 | F-30 | Relabel Grant Support % and show grant-fund runway beside it | S2 |
-| — | **Browser click-through.** The startup path is now covered by a fixture test, but charts, CSV export and the advisor panel are still only verified as "does not throw". | now |
+| — | **Browser click-through.** The startup path is now covered by a fixture test, and CSV export now has a real test (F-36), but charts and the advisor panel are still only verified as "does not throw". | now |
 
 ---
 
@@ -122,14 +126,13 @@ Each is a modelling decision, not a defect. An agent must not resolve one by wri
 
 **Resolved 2026-08-20:** Q1, Q8, Q10, Q12 (first round) and Q2-method, Q4, Q5, Q11 (second round). Eight ADRs, 0004–0017.
 
+**Resolved 2026-08-21:** Q13, Q3, Q6, Q7, Q9 — each recommended by the model owner and implemented the same day. [ADR-0021](docs/adr/0021-grant-support-stays-flat-rate.md) through [ADR-0025](docs/adr/0025-service-life-gates-all-impact.md).
+
 Still open:
 
 | | Question |
 |---|---|
-| **Q13** | *New, raised by the fix for Q11.* Service life stops carbon crediting but not DALYs or time saved, so a retired toilet keeps averting disease forever. Applying the lifespan to all three is the coherent position, and would move headline impact substantially. |
-| **Q2** | The *method* for valuing saved time is settled — local income, discounted below the wage. The **0.30 factor** is a conventional round number, not a figure verified against current published guidance. Confirm it against whatever your programme reports against. |
-| **Q9** | Should the collections floor taper as the portfolio runs off, rather than stopping abruptly at wind-up? |
-| **Q3, Q6, Q7** | Means-tested grant support; whether the ledgers may cross-lend; repeat/upgrade demand. All Stage 4. |
+| **Q2** | The *method* for valuing saved time is settled — local income, discounted below the wage. The **0.30 factor** is a conventional round number, not a figure verified against current published guidance. Confirm it against whatever your programme reports against — this needs a source only the model owner has, not a code change. |
 
 ---
 
@@ -140,8 +143,10 @@ Node is **not** on `PATH`:
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"
 node --version                    # v25.8.1
-npm test                          # 43 pass, 0 fail
-node tools/verify-findings.js     # 17 fixed, 0 still present
+npm ci                            # installs ESLint — first time only, or after eslint.config.js changes
+npm test                          # 65 pass, 0 fail
+npm run lint                      # ESLint, F-19
+node tools/verify-findings.js     # 18 fixed, 0 still present
 ```
 
 Run the app: `python -m http.server 8080`, or `npm run serve`. Charts now work offline (vendored Chart.js). `file://` works too, but the World Bank fetch will be CORS-blocked.
@@ -156,3 +161,6 @@ Run the app: `python -m http.server 8080`, or `npm run serve`. Charts now work o
 | 2026-08-20 | S1–S3 | 17 findings fixed across 7 ADRs. Goldens re-recorded; all three `todo` invariants closed; smoke suite added. |
 | 2026-08-20 | S1–S3 | Model owner resolved Q1, Q8, Q10, Q12. Percentage entry convention (ADR-0012), SROI redefined (ADR-0011), viable default scenario and 2% cost of capital (ADR-0013). |
 | 2026-08-20 | S3 | Model owner resolved Q2 (method), Q4, Q5, Q11. Value of saved time derived from income (ADR-0015), enterprise closure separated from write-down (ADR-0014), 5-year carbon crediting life (ADR-0016), contingency relabelled (ADR-0017). `methodology.html` rewritten. 18 findings fixed, 47 tests passing. |
+| 2026-08-21 | — | Reconciliation pass, no model behaviour changed. `npm test` (53/53), `golden:diff` (clean) and `verify-findings.js` (18/0) confirmed green. Fixed drift the audit itself had accumulated: F-08, F-17 and F-24 were fixed on 2026-08-20 but never got their ✅ in `docs/ANALYSIS.md`, and `verify-findings.js`'s outstanding-findings footer still listed F-08, F-20, F-24, F-25 as open. This page's own "Baseline today" table predated ADR-0014 (ME closure) landing, so it was quoting toilets/cash/net-assets figures the model no longer produces; re-measured and corrected. README.md's status section, test-suite description and stage summary were stale in the same way; updated to match. `docs/ROADMAP.md` and `docs/ARCHITECTURE.md` had the same class of staleness — both described several already-fixed defects (F-01, F-04/F-05, F-11, F-17, F-18, F-22, F-29) as current, and cited `app.js`'s audit-time line count (3,667) rather than today's (4,028); corrected. |
+| 2026-08-21 | S3/S0 | Agent-executable, low-risk items done in one pass. **F-26**: wrote the realised-loss test (`tests/writedown.test.js`); found it was pinning a spec claim that was itself wrong past ~18 months, registered and fixed as **F-35**. **F-21 (half)**: exposed `meExpansionBudgetShare`/`meMaxMonthlyGrowthRate` as inputs, [ADR-0019](docs/adr/0019-expose-me-growth-constants.md), zero behaviour change confirmed by `golden:diff`; R-6.1's capital-requirement unification (the behaviour-changing half) is still open. **F-19**: added ESLint (3 rules) and GitHub Actions CI. The first lint run surfaced **F-36** — `UI.downloadCSV()` is defined twice, and *both* copies throw when called; nothing ever tested it. Registered, not fixed — the two copies produce different report formats and picking one is a product decision, not a cleanup. `npm test`: 53 → 60. `golden:diff`: clean throughout. |
+| 2026-08-21 (2) | S3/S2 | Model owner reviewed the open items and said: follow the recommendations. Implemented all of them. **F-36** fixed — kept the detailed CSV table, fixed its two reference bugs, deleted the broken duplicate ([ADR-0026](docs/adr/0026-restore-the-detailed-csv-export.md)); `tests/export.test.js` added, nothing tested this before. **F-10** fixed — the debt-service lookahead reserve now actually exists (3mo full ops + next 3mo scheduled investor principal), `opsReserveCap` relabelled "Starting Capacity Throttle (%)" rather than folded into it ([ADR-0027](docs/adr/0027-debt-service-lookahead-reserve.md)) — **the largest behaviour change of the day**: baseline reach 133,469 → 121,358 toilets (-9%), 476 golden values moved across 21 scenarios, but no scenario's viability verdict changed and minimum cash improved or held everywhere checked (verified by re-running the pre-change formula against the same 21 scenarios before recording). **Q13** resolved and implemented — service life now gates DALYs/time-saved, matching carbon ([ADR-0025](docs/adr/0025-service-life-gates-all-impact.md); zero effect at the shipped 5-year duration, ~50%/~38% impact reduction on the two scenarios that actually run past their service life). **Q3, Q6, Q7, Q9** resolved by keeping current behaviour, each with a short ADR ([0021](docs/adr/0021-grant-support-stays-flat-rate.md)–[0024](docs/adr/0024-collections-floor-stays-abrupt.md)) explaining why, so the decision is recorded rather than left implicit. **Q2 deliberately left open** — needs the model owner's own published-guidance source, which no agent can supply. Test-first throughout (`INV-15`, `INV-16`, `tests/export.test.js` all written and confirmed failing before their fixes landed). `npm test`: 60 → 65. Two full `golden:record` cycles, each preceded by a measured (not guessed) prediction in its ADR. |

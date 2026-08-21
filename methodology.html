@@ -240,7 +240,7 @@
         <h1>Methodology &amp; Technical Note</h1>
         <p class="lead">How this model calculates what it calculates &mdash; the financial mechanics, the impact
             assumptions, and the things it deliberately does not attempt.</p>
-        <p class="meta">Last revised 2026-08-20. This note is kept in step with the model specification in
+        <p class="meta">Last revised 2026-08-21. This note is kept in step with the model specification in
             <code>docs/MODEL_SPEC.md</code>; where the two disagree, the specification is authoritative and this page
             is out of date.
         </p>
@@ -422,14 +422,26 @@ V4  OSS >= 1.0                                operations cover themselves</div>
 
         <h3>The solvency gate</h3>
         <p>New lending is permitted only when the fund holds more than its operating reserve:</p>
-        <div class="formula-box">requiredReserve = 3 months of current fixed operating cost
+        <div class="formula-box">requiredReserve = 3 months of FULL fixed operating cost (never the hibernation-cut figure)
+                  + the next 3 months of scheduled investor principal
 solvent         = loanCash >= requiredReserve  AND  grantCash >= 0
 lendable        = solvent ? max(0, loanCash - requiredReserve) : 0</div>
 
         <p>One consequence worth knowing before you read too much into a healthy-looking cash line: <strong>the fund
-                lends down to exactly this floor</strong>, so minimum cash across a run converges on three months of
-            operating cost almost regardless of how well the fund is doing. Thin headroom is a property of the lending
-            rule, not necessarily a sign of distress.</p>
+                lends down to exactly this floor</strong>, so minimum cash across a run converges on roughly three
+            months of operating cost plus near-term debt service, almost regardless of how well the fund is doing.
+            Thin headroom is a property of the lending rule, not necessarily a sign of distress.</p>
+
+        <div class="alert-box green">
+            <h3>The debt-service lookahead now exists</h3>
+            <p>Until 2026-08-21 the reserve was <code>3 &times; opsCost</code> only &mdash; using the ops figure
+                <em>after</em> it had already been cut to 30% during hibernation, so the buffer shrank by 70% exactly
+                when the fund was most fragile, and it ignored investor principal due the next quarter entirely,
+                despite the tool's own documentation claiming that lookahead existed. Both are fixed. On the shipped
+                default scenario, reach fell from 133,469 to 121,358 toilets (&minus;9%) as a direct, predicted
+                consequence: the fund now holds back cash it already knows it owes, instead of lending it away.
+                Minimum cash improved. See <code>docs/adr/0027-debt-service-lookahead-reserve.md</code>.</p>
+        </div>
 
         <!-- ================================================================ -->
         <h2 id="ledgers">4. The dual ledger</h2>
@@ -665,12 +677,12 @@ capitalPreservation = netAssets   / capitalInvested</div>
                 taken out, and the hourly value was re-derived.</p>
         </div>
 
-        <div class="alert-box blue">
-            <p><strong>A known inconsistency, stated rather than hidden.</strong> Service life currently stops carbon
-                crediting but <em>not</em> health or time benefits &mdash; a retired toilet keeps averting DALYs
-                indefinitely. The coherent position is to apply service life to all three, but that would move headline
-                impact substantially and is a decision for the model owner rather than a side-effect of a carbon fix.
-                See <a href="#open">Q13</a>.</p>
+        <div class="alert-box green">
+            <p><strong>Resolved 2026-08-21.</strong> Service life now stops DALYs and time-saved credit, the same way
+                it already stopped carbon &mdash; a retired toilet no longer averts disease or saves time in the model.
+                At the shipped 5-year default duration this changes nothing, because no toilet reaches 5 years of age
+                within a 5-year run. On a longer run, headline DALY and time-saved figures fall accordingly &mdash;
+                that is the fix working as intended, not a regression. See <a href="#open">Q13</a>.</p>
         </div>
 
         <!-- ================================================================ -->
@@ -844,10 +856,12 @@ capitalPreservation = netAssets   / capitalInvested</div>
                         5% base, 7% below the 50th percentile, 10% below the 25th.</td>
                 </tr>
                 <tr>
-                    <td>Max Ops Reserve Cap</td>
+                    <td>Starting Capacity Throttle</td>
                     <td>%</td>
                     <td>Sizes the opening enterprise cohort. <strong>Applies in month zero only</strong>, but because it
-                        determines the starting network it drives the entire growth path.</td>
+                        determines the starting network it drives the entire growth path. Renamed from "Max Ops Reserve
+                        Cap" 2026-08-21 &mdash; it is not the fund's ongoing solvency reserve (&sect;3), which is
+                        computed fresh every month regardless of this setting.</td>
                 </tr>
                 <tr>
                     <td colspan="3"><span class="tag">Impact</span></td>
@@ -865,8 +879,8 @@ capitalPreservation = netAssets   / capitalInvested</div>
                 <tr>
                     <td>Toilet Service Life</td>
                     <td>years</td>
-                    <td>Carbon crediting stops after this. Health and time benefits currently do not &mdash; see <a
-                            href="#open">Q13</a>.</td>
+                    <td>Carbon crediting, DALYs and time-saved credit all stop after this (resolved 2026-08-20/21 &mdash;
+                        see <a href="#open">Q13</a>). No effect at the shipped 5-year default duration.</td>
                 </tr>
                 <tr>
                     <td>Hours Saved / Person / Day</td>
@@ -998,37 +1012,22 @@ capitalPreservation = netAssets   / capitalInvested</div>
                     <th>Question</th>
                 </tr>
                 <tr>
-                    <td><strong>Q13</strong></td>
-                    <td>Service life stops carbon crediting but not health or time benefits. Should a retired toilet
-                        stop averting DALYs too? The coherent answer is yes; it would move headline impact
-                        substantially.</td>
-                </tr>
-                <tr>
                     <td><strong>Q2</strong></td>
-                    <td>Is 30% the right share of the wage at which to value saved household time, against current
-                        published guidance?</td>
-                </tr>
-                <tr>
-                    <td><strong>Q3</strong></td>
-                    <td>Should grant support be means-tested against household income rather than applied as a flat
-                        share of production?</td>
-                </tr>
-                <tr>
-                    <td><strong>Q6</strong></td>
-                    <td>May the ledgers cross-lend &mdash; can idle grant capital be on-lent once the subsidy quota is
-                        met?</td>
-                </tr>
-                <tr>
-                    <td><strong>Q7</strong></td>
-                    <td>Is a household limited to one toilet forever, or should repeat and upgrade demand exist?</td>
-                </tr>
-                <tr>
-                    <td><strong>Q9</strong></td>
-                    <td>Should the collections floor taper as the portfolio runs off, rather than stopping abruptly at
-                        wind-up?</td>
+                    <td><strong>Still open.</strong> Is 30% the right share of the wage at which to value saved
+                        household time, against current published guidance? The method is settled (&sect;9); only the
+                        specific factor needs confirming, against whichever cost&ndash;benefit guidance your programme
+                        already reports against.</td>
                 </tr>
             </table>
         </div>
+
+        <p>Resolved 2026-08-21, each as its own decision record: <strong>Q13</strong> &mdash; service life now stops
+            DALYs and time-saved credit, not just carbon (&sect;9). <strong>Q3</strong> &mdash; Grant Support % stays a
+            flat share of production; means-testing would need a household-level income distribution the model doesn't
+            have. <strong>Q6</strong> &mdash; the grant and loan ledgers stay strictly separate; no cross-lending.
+            <strong>Q7</strong> &mdash; one household, one toilet, once; no repeat or upgrade demand modelled.
+            <strong>Q9</strong> &mdash; the collections floor stops abruptly at wind-up rather than tapering, because a
+            taper rate would be an invented number. See <code>docs/adr/</code> for each decision's reasoning.</p>
 
         <div class="alert-box green">
             <h3>How to check any of this yourself</h3>

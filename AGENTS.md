@@ -124,7 +124,7 @@ That last one is the real gate. A fix with no test is a fix that will be undone 
 
 | File | What it is |
 |---|---|
-| `app.js` | The whole application — model, KPIs, solvers, UI, controller. 3,667 lines. Split in stage S5. |
+| `app.js` | The whole application — model, KPIs, solvers, UI, controller. 3,935 lines — grown then shrunk as fixes land, from 3,667 at audit time (a broken duplicate CSV export alone cost -128 lines, F-36). Split in stage S5. |
 | `index.html` | The form and the dashboard. Input `id`s here must match `UI.getInputs()` — a test enforces it. |
 | `methodology.html` | User-facing explainer. Keep in sync with `MODEL_SPEC.md`. |
 | `STATUS.md` | **Read first, write last.** Current stage, what just landed, known gotchas. |
@@ -235,7 +235,7 @@ The maintainer would far rather answer a question than review a diff built on a 
 ## 8. Things not to do
 
 - **Do not run the solvers to "check" a change.** They run 22 full simulations and mutate nothing useful. Use `node tools/verify-findings.js`.
-- **Do not add a dependency.** The app is deliberately buildless and dependency-free. Adding one needs an ADR.
+- **Do not add a dependency.** The app is deliberately buildless and dependency-free. Adding one needs an ADR. (ESLint is the one exception, a devDependency that never ships to the browser — [ADR-0020](docs/adr/0020-eslint-is-a-devdependency.md). It does not reopen the door to anything that runs in `index.html`.)
 - **Do not "clean up while you're in there".** Unrelated changes in a stage diff destroy reviewability. Register it and move on.
 - **Do not fix a bug during stage S5.** S5 moves code and proves it by a byte-identical `golden.json`. A fix makes that proof impossible.
 - **Do not delete a row from the findings register.** Mark it resolved with a commit hash. The history is the point.
