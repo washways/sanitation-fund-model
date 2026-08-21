@@ -12,6 +12,21 @@ Every change that alters what the model produces, what a user sees, or how the p
 
 ---
 
+## 2026-08-21 (4) — F-14, F-30 and Q2 closed; no open findings block the model owner
+
+### Fixed
+
+- **F-14 — `computeKPIs` mutated itself on every render.** It returned `{ reach, impact: { impact, portfolio, financials, sustainability, value } }`; `UI.updateKPIs` destructured `impact` and overwrote `k.financials`/`k.sustainability`/`k.portfolio`/`k.value`/`k.impact` in place on every call, which made it non-idempotent (a second call reset everything to `{}`) and created a hidden coupling — code reading `kpis.financials.X` only worked because a render had already run. `computeKPIs` now returns the flat shape directly; the mutation is deleted. Six call sites that read the old nested form (two solvers, two advisor helpers, one controller check) updated, along with every test and tool that drives the model headlessly. ADR-0028. **No model output changed** — confirmed by `golden:diff`, and by a new smoke test that failed against the old code and passes against the new.
+- **F-30 — Grant Support % was mislabelled.** Sweeping it 5%→90% (18x) moves total grant-funded output 3.6%; it paces how fast the grant fund is spent (4 months at 90% vs 28 at 5%), not how much gets spent in total. Relabelled "Grant-Funded Pacing (% of Production)"; a new `grantExhaustedMonth` field and an inline note ("Grant capital runs out around month N at this pace") make the real behaviour visible next to the dial instead of only discoverable by reading the code. ADR-0029. UI-only; no model output changed.
+
+### Changed (modelling decision)
+
+- **Q2 — the 30% value-of-time factor is accepted, not sourced.** The model owner reviewed it and confirmed 30% is acceptable as the current default. This is recorded as an explicit decision (ADR-0030) rather than left as an indefinitely open question — but the existing "confirm before publishing" caveat in `MODEL_SPEC.md`, `methodology.html` and `PARAMETERS.md` stays exactly as it was. **No modelling question raised by the original audit remains open.**
+
+`npm test`: 65 → 67 (two new invariants: INV-16 confirmed already, INV-17 for the grant runway; one new smoke assertion for F-14's idempotency). `golden:diff`: clean throughout — both fixes are structural/UI only.
+
+---
+
 ## 2026-08-21 (3) — Model owner reviewed the open items; all recommendations implemented
 
 The model owner reviewed the eight open questions from the previous session and said: follow the recommendations. All eight are now resolved — six by decision alone (no code change), two by code change with a measured, ADR-first prediction.

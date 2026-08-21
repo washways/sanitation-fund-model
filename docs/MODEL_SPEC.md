@@ -361,7 +361,7 @@ dalys[m] = creditingToilets[m] * avgHHSize * dalyPerPerson / 12
 
 Accumulated monthly — an area-under-curve measure, so a toilet built in month 1 accrues more DALYs than one built in month 100, **while it remains in service.** `activeToilets[m]` here means `creditingToilets[m]` (R-8.5), same as R-8.2 — a retired toilet stops averting DALYs.
 
-### R-8.4 Social value and SROI **[AS-BUILT]** (was F-08; Q1 resolved 2026-08-20, Q2 still open)
+### R-8.4 Social value and SROI **[AS-BUILT]** (was F-08; Q1 resolved 2026-08-20, Q2 accepted 2026-08-21)
 ```
 socialValue = DALYs x dalyValue + hoursSaved x hourValue + carbonTonnes x co2Value
 SROI        = socialValue / capitalInvested
@@ -371,7 +371,7 @@ SROI is **social value only**. DALY value is included; ending cash is not. Finan
 
 Previously the DALY term was computed, displayed prominently, and then silently excluded — so the screen contradicted itself — while ending cash sat in a *social* numerator, letting a fund that hoards capital and builds nothing score well.
 
-**[OPEN — Q2]** The *method* for the value of an hour is settled (R-8.6, derived from local income, not the inherited uncited `$0.50`). The **0.30 factor** — the share of the wage at which non-market time is valued — is a conventional round number, not sourced against current published guidance. Confirming it needs the model owner's own source, not a code change.
+**Q2 accepted 2026-08-21, [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md).** The *method* for the value of an hour is settled (R-8.6, derived from local income, not the inherited uncited `$0.50`). The **0.30 factor** — the share of the wage at which non-market time is valued — remains a conventional round number, not sourced against current published guidance; the model owner has accepted it as the working default rather than leaving it undecided. Treat it as provisional: confirm against your programme's own guidance before publishing an SROI derived from it.
 
 ### R-8.5 Toilet service life **[AS-BUILT]** (2026-08-20)
 
@@ -385,7 +385,7 @@ Only `creditingToilets` earn carbon (R-8.1). `dataMonthlyCreditingToilets` is ex
 
 **Resolved 2026-08-21 — Q13.** Service life now stops DALYs and time saved (R-8.2, R-8.3), not just carbon — the same `creditingToilets[m]` gates all three. See [ADR-0025](adr/0025-service-life-gates-all-impact.md). At the shipped 5-year default duration this changes nothing (no toilet reaches 5 years of age within a 5-year run); it moves headline impact materially on any run longer than the service life.
 
-### R-8.6 Value of saved time **[AS-BUILT]** (2026-08-20, resolves Q2 as to method)
+### R-8.6 Value of saved time **[AS-BUILT]** (method resolved 2026-08-20; factor accepted 2026-08-21, ADR-0030)
 
 ```
 hourValue = (avgAnnualIncome / 2080) * timeValueFactor
@@ -395,7 +395,7 @@ Derived from the country's own income rather than a global constant, and discoun
 
 This replaces a hardcoded `$0.50` of unknown provenance — almost certainly Malawi's income per working hour at the full wage rate, frozen into a multi-country tool. It also closes F-25: `avgAnnualIncome` was collected and never used.
 
-**[OPEN — Q2]** The 0.30 factor is a convention, not a figure verified against current published guidance. See [ADR-0015](adr/0015-value-of-saved-time.md).
+The 0.30 factor is a convention, accepted as the working default rather than verified against current published guidance — see [ADR-0015](adr/0015-value-of-saved-time.md) (method) and [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md) (factor).
 
 ---
 
@@ -517,7 +517,7 @@ Do not resolve these by writing code. Each needs a human decision recorded as an
 | # | Question | Blocks |
 |---|---|---|
 | ~~Q1~~ | **Resolved 2026-08-20** — DALYs in, ending cash out, financial return reported separately. [ADR-0011](adr/0011-sroi-is-social-value-only.md) |
-| Q2 | Is 0.30 the right share of the wage at which to value saved household time, against current published guidance? The method is settled (R-8.6); the factor is a convention. **Still open** — needs the model owner's own published-guidance source, not a code change. | F-08 |
+| ~~Q2~~ | **Accepted 2026-08-21** — 0.30 stays the default, documented as a convention rather than a verified figure; confirm against your own programme's guidance before publishing. [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md) |
 | ~~Q3~~ | **Resolved 2026-08-21** — stays a flat % of production; means-testing needs a household-level income distribution the model doesn't have. [ADR-0021](adr/0021-grant-support-stays-flat-rate.md) |
 | ~~Q4~~ | **Resolved 2026-08-20** — closure and write-down are separate parameters. [ADR-0014](adr/0014-me-attrition-is-separate-from-write-down.md) |
 | ~~Q5~~ | **Resolved 2026-08-20** — a cost mark-up; renamed, not reimplemented. [ADR-0017](adr/0017-contingency-is-a-cost-mark-up.md) |

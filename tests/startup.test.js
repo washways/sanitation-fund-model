@@ -228,7 +228,7 @@ describe('startup — the scenario a user actually opens', () => {
   });
 
   test('the fund a user opens on is viable', () => {
-    const f = result.kpis.impact.financials;
+    const f = result.kpis.financials;
     const minCash = Math.min(...result.series.dataMonthlyCashBalance);
     assert.strictEqual(result.viability.ok, true,
       `the startup scenario must work. Issues: ` +

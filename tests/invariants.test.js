@@ -232,7 +232,7 @@ describe('ledger invariants', () => {
     assert.strictEqual(short.series.windUpMonth, long.series.windUpMonth,
       'wind-up month must not depend on the requested horizon');
 
-    const a = short.kpis.impact.financials, b = long.kpis.impact.financials;
+    const a = short.kpis.financials, b = long.kpis.financials;
     assert.ok(Math.abs(a.cashEnd - b.cashEnd) <= TOL,
       `cashEnd 5y $${a.cashEnd.toFixed(0)} vs 20y $${b.cashEnd.toFixed(0)}`);
     assert.ok(Math.abs(a.netAssets - b.netAssets) <= TOL,
@@ -288,5 +288,27 @@ describe('ledger invariants', () => {
       // lending, so reserving against it is meaningless. Use a fund that dies early.
       const dying = run({ annualFixedOpsCost: 400000, loanInterestRate: 0.05 });
       assert.ok(dying.series.windUpMonth !== null, 'this scenario should wind up for the check below to mean anything');
+    });
+
+  test('INV-17: grantExhaustedMonth reports when the grant ledger runs dry, and confirms F-30 (pacing, not volume)',
+    () => {
+      // Grant Support % should change WHEN the grant fund runs out, much more than it
+      // changes HOW MANY grant-funded toilets get built in total — that is the whole
+      // point of F-30 ("a pacing lever, not a volume lever"). If this ever stops
+      // holding, the relabelled field and its runway note (app.js updateKPIs) are
+      // describing behaviour the model no longer has.
+      const low = run({ grantSupportPct: 0.05 });
+      const high = run({ grantSupportPct: 0.90 });
+
+      assert.ok(low.kpis.sustainability.grantExhaustedMonth !== null, 'low pacing should still exhaust the fund eventually at these defaults');
+      assert.ok(high.kpis.sustainability.grantExhaustedMonth !== null, 'high pacing should exhaust the fund');
+      assert.ok(low.kpis.sustainability.grantExhaustedMonth > high.kpis.sustainability.grantExhaustedMonth,
+        `a lower pacing % should exhaust the grant fund LATER — got month ${low.kpis.sustainability.grantExhaustedMonth} ` +
+        `at 5% vs month ${high.kpis.sustainability.grantExhaustedMonth} at 90%`);
+
+      const volumeChange = Math.abs(high.kpis.reach.grantToilets - low.kpis.reach.grantToilets) / low.kpis.reach.grantToilets;
+      assert.ok(volumeChange < 0.10,
+        `total grant-funded toilets should barely move across an 18x pacing change (F-30) — ` +
+        `moved ${(volumeChange * 100).toFixed(1)}% (${low.kpis.reach.grantToilets} -> ${high.kpis.reach.grantToilets})`);
     });
 });

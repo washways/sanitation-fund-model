@@ -62,7 +62,7 @@ const r2 = n => (Number.isFinite(n) ? Math.round(n * 100) / 100 : n);
  */
 function summarise({ series: s, kpis: k }) {
   const last = s.dataMonthlyCashBalance.length - 1;
-  const f = k.impact.financials, su = k.impact.sustainability;
+  const f = k.financials, su = k.sustainability;
 
   return {
     // Shape
@@ -113,11 +113,11 @@ function summarise({ series: s, kpis: k }) {
     costPerLatrine: r2(su.costPerLatrine),
 
     // Impact
-    dalys: r2(k.impact.impact.dalys),
-    carbonTonnes: r2(k.impact.impact.carbon),
-    sroi: r2(k.impact.value.sroi),
-    hourValueUsd: r2(k.impact.impact.hourValueUsd),
-    capitalPreservation: r2(k.impact.value.capitalPreservation),
+    dalys: r2(k.impact.dalys),
+    carbonTonnes: r2(k.impact.carbon),
+    sroi: r2(k.value.sroi),
+    hourValueUsd: r2(k.impact.hourValueUsd),
+    capitalPreservation: r2(k.value.capitalPreservation),
   };
 }
 

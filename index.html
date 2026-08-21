@@ -232,9 +232,9 @@
                     <input type="number" id="avgHHSize" value="5">
                 </div>
                 <div class="input-group">
-                    <label>Grant Support (% of Households)
+                    <label>Grant-Funded Pacing (% of Production)
                         <span class="info-icon"
-                            title="API Derived: Based on poverty headcount ($2.15/day). Represents the % of toilet cost covered by grant. Higher poverty = Higher grant need.">i</span>
+                            title="API Derived: Based on poverty headcount ($2.15/day). Target share of monthly production that is grant-funded, capped by however much grant capital remains — see the runway note below. Total subsidy is set by Initial Grant Capital, not by this dial (F-30).">i</span>
                     </label>
                     <div class="input-wrapper has-suffix">
                         <div class="input-wrapper has-suffix">
@@ -242,6 +242,7 @@
                             <span class="input-suffix">%</span>
                         </div>
                     </div>
+                    <small id="grant-runway-help" class="help-text"></small>
 
                     <small id="affordability-help"
                         style="display:block; margin-top:4px; font-size:0.75rem; color:#64748b; line-height:1.4;">

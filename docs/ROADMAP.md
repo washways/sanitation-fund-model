@@ -19,9 +19,9 @@ Progress is tracked in [STATUS.md](../STATUS.md), which is the first file to rea
 |---|---|---|---|---|
 | ✅ **S0** | Scaffolding and safety net | F-19 ✅, F-22 ✅, F-18 ✅, F-24 ✅ | Very low | — |
 | ✅ **S1** | Silent-wrongness fixes | F-29 ✅, F-01 ✅, F-02 ✅, F-33 ✅, F-03 ✅, F-11 ✅, F-12 ✅, F-16 ✅, F-17 ✅ | Low | S0 |
-| ✅ **S2** | Give the user back control | F-04 ✅, F-05 ✅, F-30 (partial — solver behaviour fixed, relabel/runway deferred), F-13 ✅, F-14 (deferred), F-15 ✅, F-23 ✅, F-36 ✅ | Medium | S1 |
-| 🔄 **S3** | Model correctness | F-06 ✅, F-07 ✅, F-09 ✅, F-31 ✅, F-32 ✅, F-28 ✅, F-20 ✅, F-25 ✅, F-08 ✅, F-26 ✅, F-10 ✅, F-14, F-21 (half), F-30 | **High** | S2 |
-| **S4** | Decision support | F-27, Q2 (factor), Q3, Q6, Q7, Q9, Q13 | Medium | S3 |
+| ✅ **S2** | Give the user back control | F-04 ✅, F-05 ✅, F-30 ✅, F-13 ✅, F-14 ✅, F-15 ✅, F-23 ✅, F-36 ✅ | Medium | S1 |
+| 🔄 **S3** | Model correctness | F-06 ✅, F-07 ✅, F-09 ✅, F-31 ✅, F-32 ✅, F-28 ✅, F-20 ✅, F-25 ✅, F-08 ✅, F-26 ✅, F-10 ✅, F-21 (half) | **High** | S2 |
+| **S4** | Decision support | F-27 | Medium | S3 |
 | **S5** | Structure | — (enables everything after) | Medium | S3 |
 | **S6** | Presentation and reach | — | Low | S5 |
 
@@ -123,10 +123,10 @@ npm test    # 0 failures; INV-8 no longer todo
 | # | Task | Finding |
 |---|---|---|
 | 1 | **Make the auto-solver advisory.** Compute the recommendation without mutating any DOM input; present as "grant support would need to fall from 20% to 13% — [Apply]". Delete the recursion entirely. | **F-04** |
-| 2 | **Delete the grant-support auto-adjust strategy**, or replace it. Measurement shows it cannot close a repayment shortfall (grant % is a pacing lever — the shortfall is in the loan ledger). | **F-30** |
+| 2 | ✅ **Delete the grant-support auto-adjust strategy**, or replace it. Measurement shows it cannot close a repayment shortfall (grant % is a pacing lever — the shortfall is in the loan ledger). | **F-30** |
 | 3 | **Make `updateSmartRates` a suggestion.** Honour `dataset.manual`; show the smart rate as a hint with an [Apply] control; never dispatch a synthetic `input` event. | **F-05** |
-| 4 | **Relabel grant support** to reflect what it does, and show grant-fund runway ("grant fund exhausted at month 16") beside it. | **F-30** |
-| 5 | **Flatten `computeKPIs`** to one flat, documented object. Stop mutating it in `updateKPIs`. | F-14 |
+| 4 | ✅ **Relabel grant support** to reflect what it does, and show grant-fund runway beside it. [ADR-0029](adr/0029-grant-support-relabel-and-runway.md). | **F-30** |
+| 5 | ✅ **Flatten `computeKPIs`** to one flat, documented object. Stop mutating it in `updateKPIs`. [ADR-0028](adr/0028-flatten-computekpis.md). | F-14 |
 | 6 | **Fix `inputs.loanFund` -> `investLoan`**; add a test that the idle-cash hint fires on an over-capitalised scenario. | F-13 |
 | 7 | **Delete `applyWizardSettings`, `showWizardStep`, `wizTech`** and the dead ids. | F-15 |
 | 8 | **Replace `alert()` with an in-page panel**; fix the `$${fmt()}` double dollar sign. | F-23 |
@@ -168,7 +168,7 @@ npm test    # 0 failures
 
 **Order matters:** do **1 and 2 first**. They interact — arrears only make sense once the fund has a defined end — and together they change what every other task is measured against. Task 10 must be **last**: the advisor can only be grounded in a model that is already correct.
 
-**Status:** 10 of 11 tasks done (1–6, 8–11). **Remaining: 7 (F-21, half — R-6.1's `meCapitalRequirement` unification, a behaviour-changing fix that needs its own ADR).** Also carried forward: F-14 and F-30 (from S2).
+**Status:** 10 of 11 tasks done (1–6, 8–11). **Remaining: 7 (F-21, half — R-6.1's `meCapitalRequirement` unification, a behaviour-changing fix that needs its own ADR).** F-14 and F-30, carried forward from S2, are both done too.
 
 **Exit gate:**
 
@@ -193,10 +193,10 @@ npm test    # 0 failures; INV-13 and INV-14 no longer todo
 |---|---|---|
 | 1 | **Robust solvers.** Coarse grid to bracket a sign change, then bisect; return `{ ok, value, reason }`; never report failure as a value. | **F-27** |
 | 2 | **Cache/debounce solvers.** 22 full simulations per recalculation is wasteful and will not survive a bigger model. | F-27 |
-| 3 | ~~Resolve SROI (Q1, Q2-method)~~ — done. SROI is social-value-only (ADR-0011); the value of saved time is derived from local income (ADR-0015). What remains is confirming the **0.30 factor** against published guidance (Q2), which does not block anything else. | — |
+| 3 | ~~Resolve SROI (Q1, Q2)~~ — done. SROI is social-value-only (ADR-0011); the value of saved time is derived from local income (ADR-0015); the 0.30 factor is accepted as the working default, documented as provisional ([ADR-0030](adr/0030-accept-30-percent-time-value-factor.md)). | — |
 | 4 | **Sensitivity analysis.** One-at-a-time tornado over the top 8 parameters. The `opsReserveCap` table in F-10 shows why: the master growth throttle was mislabelled as a liquidity buffer, and nobody noticed. | — |
 | 5 | **Scenario save/load/compare** as JSON. Reproducibility for board papers. |  — |
-| 6 | **Answer the open questions** Q2 (factor), Q3, Q6, Q7, Q9, Q13 in [MODEL_SPEC.md](MODEL_SPEC.md) §13, each as an ADR. (Q1, Q4, Q5, Q8, Q10, Q11, Q12 are already resolved — see [STATUS.md](../STATUS.md).) | — |
+| 6 | ~~Answer the open questions~~ — done. All of Q1–Q13 are resolved; see [STATUS.md](../STATUS.md) for the ADR list. No open modelling questions remain. | — |
 
 **Exit gate:** solvers return typed results and are tested against a known-non-monotonic scenario (`capital constrained`, which has 14 downward steps — see F-27). Sensitivity output is reproducible from the CLI.
 

@@ -55,7 +55,7 @@ It still contains four concerns with no boundary between them:
         ▼
   { series, kpis }
         │
-        ├─▶ UI.updateKPIs()      ← ⚠️ still mutates the KPI object in place (F-14, open)
+        ├─▶ UI.updateKPIs()      ← reads a flat, already-idempotent KPI object (F-14 fixed)
         ├─▶ UI.renderCharts()
         └─▶ UI.renderDataTable()
         │
@@ -63,7 +63,7 @@ It still contains four concerns with no boundary between them:
   runCalculation(isAutoAdjust)      ← advisory only; does not write back into the form (F-04, F-05 fixed)
 ```
 
-**The write-back cycle described here at audit time is gone.** `runCalculation` used to rewrite the inputs it had just read and re-enter itself, up to five times, without telling the user — that broke reproducibility, A/B comparison and the meaning of an exported CSV. Stage S2 made the advisor advisory-only; `tests/smoke.test.js` asserts directly that `runCalculation` does not mutate any input. The remaining live defect in this diagram is `UI.updateKPIs()` mutating the KPI object it is handed (F-14) — not yet fixed, tracked for S3.
+**The write-back cycle described here at audit time is gone.** `runCalculation` used to rewrite the inputs it had just read and re-enter itself, up to five times, without telling the user — that broke reproducibility, A/B comparison and the meaning of an exported CSV. Stage S2 made the advisor advisory-only; `tests/smoke.test.js` asserts directly that `runCalculation` does not mutate any input. `UI.updateKPIs()` mutating the KPI object it was handed (F-14) is fixed too, 2026-08-21 — `computeKPIs` now returns the flat shape directly, so there is nothing left to mutate. [ADR-0028](adr/0028-flatten-computekpis.md).
 
 ---
 
@@ -112,12 +112,12 @@ Write-offs reduce cohort balances but are **never** cash outflows — INV-11 ver
 | One flag controlled solvers *and* verification | Disabling one silently disabled the other (F-11) | S1 |
 | Magnitude-guessing unit heuristics | Two of them, contradictory (F-17) | S1, [ADR-0012](adr/0012-percentage-entry-convention.md) |
 | Unpinned CDN dependency | Non-reproducible; blank charts offline (F-22) | S0 |
+| Renderer mutated the model's output | Non-idempotent; hidden coupling (F-14) | S3, [ADR-0028](adr/0028-flatten-computekpis.md) |
 
 ## Design decisions still to reverse
 
 | Decision | Problem | Stage |
 |---|---|---|
-| Renderer mutates the model's output | Non-idempotent; hidden coupling (F-14) | S3 (carried from S2) |
 | Everything in one file | 3,935 lines, six globals, no boundaries — the lint/CI half of F-19 is done; this structural half is S5's whole job | S5 |
 
 ---

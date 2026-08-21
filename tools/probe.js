@@ -16,7 +16,7 @@ for (const g of [0.05, 0.25, 0.50, 0.90]) {
   const r = run({ grantSupportPct: g });
   const grantOut = sum(r.series.dataMonthlyGrantDisbursed);
   console.log(`  grantSupport ${(g * 100).toFixed(0).padStart(3)}%: grants disbursed ${money(grantOut).padStart(12)}` +
-    `  toilets ${r.kpis.reach.toilets.toLocaleString().padStart(9)}  netAssets ${money(r.kpis.impact.financials.netAssets)}`);
+    `  toilets ${r.kpis.reach.toilets.toLocaleString().padStart(9)}  netAssets ${money(r.kpis.financials.netAssets)}`);
 }
 
 console.log('\n--- INV-9: can repaid principal exceed the loan? -----------------------');
@@ -53,7 +53,7 @@ for (const scen of [
   ['high default', { hhDefaultRate: 0.30 }],
 ]) {
   const pts = [];
-  for (let r = 0.02; r <= 1.5; r += 0.02) pts.push([r, run({ ...scen[1], loanInterestRate: r }).kpis.impact.financials.netAssets]);
+  for (let r = 0.02; r <= 1.5; r += 0.02) pts.push([r, run({ ...scen[1], loanInterestRate: r }).kpis.financials.netAssets]);
   let inv = 0;
   for (let i = 1; i < pts.length; i++) if (pts[i][1] < pts[i - 1][1] - 1) inv++;
   console.log(`  ${scen[0].padEnd(28)} ${inv} downward steps of ${pts.length - 1}`);
@@ -63,14 +63,14 @@ console.log('\n--- opsReserveCap sensitivity (one-shot month-0 gate) -----------
 for (const c of [0, 5, 10, 15, 20, 30, 50, 90]) {
   const r = run({ opsReserveCap: c });
   console.log(`  cap ${String(c).padStart(2)}%: startMEs ${String(r.series.startMEs).padStart(4)}` +
-    `  toilets ${r.kpis.reach.toilets.toLocaleString().padStart(9)}  netAssets ${money(r.kpis.impact.financials.netAssets)}`);
+    `  toilets ${r.kpis.reach.toilets.toLocaleString().padStart(9)}  netAssets ${money(r.kpis.financials.netAssets)}`);
 }
 
 console.log('\n--- Duration sensitivity ----------------------------------------------');
 for (const d of [3, 5, 10, 20]) {
   const r = run({ duration: d });
   console.log(`  ${String(d).padStart(2)}y: toilets ${r.kpis.reach.toilets.toLocaleString().padStart(9)}` +
-    `  cashEnd ${money(r.kpis.impact.financials.cashEnd).padStart(13)}` +
-    `  repaid ${(r.kpis.impact.financials.investorRepaidPct * 100).toFixed(0)}%` +
-    `  depletion ${r.kpis.impact.sustainability.depletionYear}`);
+    `  cashEnd ${money(r.kpis.financials.cashEnd).padStart(13)}` +
+    `  repaid ${(r.kpis.financials.investorRepaidPct * 100).toFixed(0)}%` +
+    `  depletion ${r.kpis.sustainability.depletionYear}`);
 }

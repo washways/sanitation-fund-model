@@ -256,6 +256,12 @@ const ModelModule = {
         const monthlyProduction = [];
         let retiredToiletsCumulative = 0;
 
+        // Grant-fund runway (F-30). The month the grant ledger can no longer afford even
+        // one more fully-burdened unit — reset to null if a later month affords one again
+        // (carbon revenue can top the ledger back up), so this only holds once the fund is
+        // truly, contiguously exhausted through to the end of the run.
+        let grantExhaustedMonth = null;
+
         // Micro-enterprise attrition (R-6.3). Business closure and loan write-down are
         // DIFFERENT events — a business can close having repaid, and a loan can be
         // written down by a business that trades on — so they get separate parameters.
@@ -295,6 +301,7 @@ const ModelModule = {
         const dataMonthlyNewLoansHhVal = [];
         const dataMonthlyNewLoansMeVal = [];
         const dataMonthlyGrantDisbursed = [];
+        const dataMonthlyGrantCash = []; // F-30: the grant ledger's own running balance
         const dataMonthlyCarbonRevenue = [];
         const dataToiletsMonthlyLoan = [];
         const dataToiletsMonthlyGrant = [];
@@ -600,6 +607,13 @@ const ModelModule = {
             // Grant Cost = GrossUnitCost (Fully Burdened)
             const maxGrants = Math.floor(grantCash / grossUnitCost);
 
+            // F-30: grant-fund runway. See the declaration above for why this resets.
+            if (maxGrants === 0) {
+                if (grantExhaustedMonth === null) grantExhaustedMonth = m;
+            } else {
+                grantExhaustedMonth = null;
+            }
+
             const demand = backlogToilets;
             production = Math.min(capacity, demand); // Tentative
 
@@ -704,6 +718,7 @@ const ModelModule = {
             dataMonthlyCashBalance.push(loanCash + grantCash);
 
             dataMonthlyGrantDisbursed.push(outflows.grants);
+            dataMonthlyGrantCash.push(grantCash);
             dataMonthlyCarbonRevenue.push(inflows.carbon);
             dataMonthlyNewLoansHhVal.push(outflows.loansHh);
             dataMonthlyNewLoansMeVal.push(outflows.loansMe);
@@ -842,7 +857,11 @@ const ModelModule = {
             accruedInvestorPrin,
             capitalisedInterest,
             investorLiabilityEnd: loanFundLiability,
-            windUpMonth
+            windUpMonth,
+
+            // Grant-fund runway (F-30)
+            dataMonthlyGrantCash,
+            grantExhaustedMonth
         };
 
         const kpis = ModelModule.computeKPIs(series, inputs);
@@ -1053,6 +1072,15 @@ const ModelModule = {
         else if (goal > people && minCash > 0) dominantConstraint = "Supply Chain (ME Capacity)";
         else if (goal > people) dominantConstraint = "Capital Limited";
 
+        // F-14 / ADR-0028: a single flat, documented object. Six named groups, each a
+        // direct property of the return value — never nested inside one another, never
+        // mutated by a renderer. `UI.updateKPIs` used to destructure-and-reassign this
+        // exact shape on every render; that made it non-idempotent (a second call
+        // destructured an already-overwritten `impact`, so financials/sustainability/
+        // portfolio/value all reset to `{}`) and created a hidden coupling — code that
+        // read `kpis.financials.X` only worked because a render had already run and
+        // mutated the object. Returning this shape directly means nothing downstream
+        // needs to know that history.
         return {
             reach: {
                 toilets: totalToilets,
@@ -1065,58 +1093,59 @@ const ModelModule = {
                 dominantConstraint: dominantConstraint
             },
             impact: {
-                impact: {
-                    dalys: totalDalys,
-                    valDalys: totalValDalys,
-                    carbon: totalCarbon,
-                    valCarbon: totalValCarbon,
-                    valHours: totalValHours,
-                    hourValueUsd: hourValueUsd
-                },
-                portfolio: {
-                    disbursed: totalLoansDisbursed,
-                    outstanding: portfolioOutstanding,
-                    defaults: totalDefaults
-                },
-                financials: {
-                    cashEnd: cashEnd,
-                    netAssets: netAssetsEnd,
-                    grantEquityMultiple: grantEquityMultiple, // Replaces capitalPreserved
-                    investorRepaid: totalRepaidPrincipal,
-                    investorRepaidPct: inputs.investLoan > 0 ? (totalRepaidPrincipal / inputs.investLoan) : 0,
-                    grantsDisbursed: totalGrantsVal,
-                    leverage: inputs.investGrant > 0 ? (totalLoansDisbursed / inputs.investGrant) : 0,
-                    // Fund Health = (Ending Balance + Repaid Principal) / Initial Loan
-                    fundHealth: inputs.investLoan > 0 ? ((cashEnd + totalRepaidPrincipal) / inputs.investLoan) : 0
-                },
-                sustainability: {
-                    oss: ossRatio,
-                    fss: fssRatio,
-                    selfSufficiency: fssRatio, // Map FSS to Self-Sufficiency for UI
-                    // null means "not applicable", not "99 years" (F-28).
-                    opsRunway: (inputs.annualFixedOpsCost > 0) ? (cashEnd / inputs.annualFixedOpsCost) : null,
-                    depletionMonth: depletionMonth,
-                    isSustainable: isSustainable,
-                    depletionYear: depletionYear, // display string; prefer depletionMonth
-                    windUpMonth: s.windUpMonth !== undefined ? s.windUpMonth : null,
-                    arrearsInterest: s.accruedInvestorInt || 0,
-                    arrearsPrincipal: s.accruedInvestorPrin || 0,
-                    capitalisedInterest: s.capitalisedInterest || 0,
-                    investorLiabilityEnd: investorLiabilityEnd,
-                    monthsInsolvent: monthsInsolvent,
-                    costPerLatrine: costPerLatrine,
-                    effectiveCostPerLatrine: effectiveCostPerLatrine
-                },
-                // Value Metrics
-                value: {
-                    socialValue: totalSocialValue,          // DALYs + time + carbon
-                    capitalPreservation: capitalPreservation, // netAssets / capital invested
-                    economicValue: totalSocialValue,        // social only — see ADR-0011
-                    subsidyPerLatrine,
-                    economicCostPerLatrine,
-                    depletionYear,
-                    sroi: sroi
-                }
+                dalys: totalDalys,
+                valDalys: totalValDalys,
+                carbon: totalCarbon,
+                valCarbon: totalValCarbon,
+                valHours: totalValHours,
+                hourValueUsd: hourValueUsd
+            },
+            portfolio: {
+                disbursed: totalLoansDisbursed,
+                outstanding: portfolioOutstanding,
+                defaults: totalDefaults
+            },
+            financials: {
+                cashEnd: cashEnd,
+                netAssets: netAssetsEnd,
+                grantEquityMultiple: grantEquityMultiple, // Replaces capitalPreserved
+                investorRepaid: totalRepaidPrincipal,
+                investorRepaidPct: inputs.investLoan > 0 ? (totalRepaidPrincipal / inputs.investLoan) : 0,
+                grantsDisbursed: totalGrantsVal,
+                leverage: inputs.investGrant > 0 ? (totalLoansDisbursed / inputs.investGrant) : 0,
+                // Fund Health = (Ending Balance + Repaid Principal) / Initial Loan
+                fundHealth: inputs.investLoan > 0 ? ((cashEnd + totalRepaidPrincipal) / inputs.investLoan) : 0
+            },
+            sustainability: {
+                oss: ossRatio,
+                fss: fssRatio,
+                selfSufficiency: fssRatio, // Map FSS to Self-Sufficiency for UI
+                // null means "not applicable", not "99 years" (F-28).
+                opsRunway: (inputs.annualFixedOpsCost > 0) ? (cashEnd / inputs.annualFixedOpsCost) : null,
+                depletionMonth: depletionMonth,
+                isSustainable: isSustainable,
+                depletionYear: depletionYear, // display string; prefer depletionMonth
+                windUpMonth: s.windUpMonth !== undefined ? s.windUpMonth : null,
+                arrearsInterest: s.accruedInvestorInt || 0,
+                arrearsPrincipal: s.accruedInvestorPrin || 0,
+                capitalisedInterest: s.capitalisedInterest || 0,
+                investorLiabilityEnd: investorLiabilityEnd,
+                monthsInsolvent: monthsInsolvent,
+                costPerLatrine: costPerLatrine,
+                effectiveCostPerLatrine: effectiveCostPerLatrine,
+                // F-30: the month the grant ledger can no longer fund a full unit, or
+                // null if it never runs out within the horizon.
+                grantExhaustedMonth: s.grantExhaustedMonth !== undefined ? s.grantExhaustedMonth : null
+            },
+            // Value Metrics
+            value: {
+                socialValue: totalSocialValue,          // DALYs + time + carbon
+                capitalPreservation: capitalPreservation, // netAssets / capital invested
+                economicValue: totalSocialValue,        // social only — see ADR-0011
+                subsidyPerLatrine,
+                economicCostPerLatrine,
+                depletionYear,
+                sroi: sroi
             }
         };
     },
@@ -1148,14 +1177,14 @@ const ModelModule = {
             // Objective: Net Assets >= 0 
             // Note: If Net Assets > 0, we can lower the interest rate?
             // Yes, we want the LOWEST rate that sustains the fund.
-            if (kpi.impact.financials.netAssets >= targetNetAssets) {
+            if (kpi.financials.netAssets >= targetNetAssets) {
                 bestRate = mid;
                 high = mid; // Try lower
             } else {
                 low = mid; // Need higher
             }
         }
-        if (this.calculate({ ...simInputs, loanInterestRate: bestRate }).kpis.impact.financials.netAssets >= targetNetAssets) {
+        if (this.calculate({ ...simInputs, loanInterestRate: bestRate }).kpis.financials.netAssets >= targetNetAssets) {
             return bestRate;
         } else {
             console.warn("Solver failed: No break-even rate found.");
@@ -1183,7 +1212,7 @@ const ModelModule = {
             const kpi = res.kpis;
 
             // Objective: Maximize Grant while solving NetAssets >= 0
-            if (kpi.impact.financials.netAssets >= targetNetAssets) {
+            if (kpi.financials.netAssets >= targetNetAssets) {
                 bestPct = mid;
                 low = mid; // Try higher
             } else {
@@ -1339,7 +1368,7 @@ const ModelModule = {
         // V1 — never insolvent
         const minCash = Math.min(...s.dataMonthlyCashBalance);
         if (minCash < 0) {
-            const k = kpis && kpis.impact ? kpis.impact.sustainability : null;
+            const k = kpis && kpis.sustainability ? kpis.sustainability : null;
             const when = k && k.depletionMonth ? `from month ${k.depletionMonth}` : '';
             issues.push({
                 code: 'INSOLVENT',
@@ -1376,7 +1405,7 @@ const ModelModule = {
         }
 
         // V4 — operations cover themselves
-        const oss = kpis && kpis.impact ? kpis.impact.sustainability.oss : null;
+        const oss = kpis && kpis.sustainability ? kpis.sustainability.oss : null;
         if (oss !== null && oss < 1.0) {
             issues.push({
                 code: 'OSS_BELOW_1',
@@ -1576,15 +1605,9 @@ const UI = {
         const k = results.kpis;
         if (!k) return;
 
-        // kpis structure: { reach, impact: { impact, portfolio, financials, sustainability, value } }
-        // Destructure impact sub-keys so existing k.financials / k.sustainability etc. still work
-        const { financials, sustainability, portfolio, value, impact: impactMetrics } = k.impact || {};
-        // Override k with flat access (safe local shadow)
-        k.financials = financials || {};
-        k.sustainability = sustainability || {};
-        k.portfolio = portfolio || {};
-        k.value = value || {};
-        k.impact = impactMetrics || {};
+        // kpis structure (F-14 / ADR-0028): { reach, impact, portfolio, financials,
+        // sustainability, value } — six flat, documented groups. computeKPIs returns
+        // this shape directly; nothing here mutates it any more.
 
         // Helpers
         const setText = (id, val) => {
@@ -1606,6 +1629,18 @@ const UI = {
         if (hourHelp && k.impact && k.impact.hourValueUsd !== undefined) {
             hourHelp.innerText = `= $${k.impact.hourValueUsd.toFixed(3)}/hour, from ` +
                 `$${(inputs.avgAnnualIncome || 0).toLocaleString('en-US')} income over a 2,080-hour year.`;
+        }
+
+        // Grant-fund runway (F-30). Grant Support % paces subsidy; it does not set the
+        // total. This makes the actual constraint — how long the grant capital lasts —
+        // visible next to the dial, instead of only discoverable by reading the code.
+        const runwayHelp = document.getElementById('grant-runway-help');
+        if (runwayHelp && k.sustainability) {
+            const exhaustedMonth = k.sustainability.grantExhaustedMonth;
+            runwayHelp.innerText = exhaustedMonth
+                ? `Grant capital runs out around month ${exhaustedMonth} at this pace — total subsidy is set by ` +
+                  `Initial Grant Capital, not by this %.`
+                : `Grant capital lasts the full run at this pace.`;
         }
 
         try {
@@ -3869,7 +3904,7 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
         // We compute what WOULD close the gap and offer it. We do not apply it.
         results.advice = null;
         if (isAutoAdjust && inputs.investLoan > 0) {
-            const repaid = results.kpis.impact.financials.investorRepaid || 0;
+            const repaid = results.kpis.financials.investorRepaid || 0;
             const shortfall = inputs.investLoan - repaid;
             if (shortfall > 1000) {
                 results.advice = ModelModule.suggestSolvencyFix(inputs, shortfall);

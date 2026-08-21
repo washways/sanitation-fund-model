@@ -12,7 +12,7 @@ It answers three questions:
 
 ## Status: mid-repair, and honest about it
 
-An audit on 2026-08-20 found 34 defects; adding a linter on 2026-08-21 found two more (F-35, a spec-documentation error; F-36, a live crash in CSV export). Of **36 known defects, 32 are fixed** (see [docs/ANALYSIS.md](docs/ANALYSIS.md)); `node tools/verify-findings.js` re-measures 19 of them programmatically against the live model. The rest are listed in [STATUS.md](STATUS.md) with what is blocking each.
+An audit on 2026-08-20 found 34 defects; adding a linter on 2026-08-21 found two more (F-35, a spec-documentation error; F-36, a live crash in CSV export). Of **36 known defects, 34 are fixed** (see [docs/ANALYSIS.md](docs/ANALYSIS.md)); `node tools/verify-findings.js` re-measures 19 of them programmatically against the live model. The two left — F-21's ME-capital-requirement unification and F-27's solver robustness — are listed in [STATUS.md](STATUS.md); neither is blocked on anything.
 
 What changed that a returning user will notice:
 
@@ -26,8 +26,9 @@ What changed that a returning user will notice:
 | **Carbon revenue was ~250,000x too small.** | Divided by 1000 as if kilograms, share divided by 100 twice, credited once instead of annually. Now correct — which flips carbon-financed scenarios from capital-constrained to capacity-constrained. ([F-33](docs/ANALYSIS.md#f-33--the-carbon-input-is-labelled-tonnes-per-year-and-used-as-kilograms-once)) |
 | **The fund now actually reserves against debt it owes.** | The solvency gate held back 3 months of ops cost but ignored investor principal due next quarter, despite the README's long-standing claim that it didn't. It does now — baseline reach fell a further ~9% as a direct result. ([F-10](docs/ANALYSIS.md#f-10--reserves-are-enforced-once-and-the-documented-debt-reserve-does-not-exist), [ADR-0027](docs/adr/0027-debt-service-lookahead-reserve.md)) |
 | **CSV export works.** | It was defined twice; the copy that ran threw a `TypeError` on every click, and the copy that didn't run would also have thrown if it had. Nothing tested it before. ([F-36](docs/ANALYSIS.md#f-36--csv-export-is-completely-broken-both-copies), [ADR-0026](docs/adr/0026-restore-the-detailed-csv-export.md)) |
+| **Grant Support % now tells you what it does.** | Relabelled "Grant-Funded Pacing (% of Production)", with a note beside it showing when the grant fund runs out at the current pace — sweeping this field 5%→90% barely changes total grant-funded reach, it just changes how fast the fund is spent. ([F-30](docs/ANALYSIS.md#f-30--grant-support--is-a-pacing-lever-not-a-volume-lever), [ADR-0029](docs/adr/0029-grant-support-relabel-and-runway.md)) |
 
-**Numbers produced before 2026-08-21 should be re-run, and rate inputs re-entered** (percentages, not decimals). Everything found is listed with evidence, severity and a fix in the [audit](docs/ANALYSIS.md); nothing is hidden. One modelling question still needs the model owner's judgement (Q2, the value-of-time factor) — see [STATUS.md](STATUS.md).
+**Numbers produced before 2026-08-21 should be re-run, and rate inputs re-entered** (percentages, not decimals). Everything found is listed with evidence, severity and a fix in the [audit](docs/ANALYSIS.md); nothing is hidden. Every modelling question the audit raised has been decided and recorded as an ADR — see [STATUS.md](STATUS.md).
 
 [methodology.html](methodology.html) has been rewritten to match the current model; see [STATUS.md](STATUS.md) for what is still open.
 
@@ -63,7 +64,7 @@ Opening `index.html` directly via `file://` also works, but the browser will blo
 npm test
 ```
 
-65 tests in about 1 second (Node's built-in runner, Node ≥ 20; ESLint is the one devDependency — `npm ci` once to install it). Currently **65 pass, 0 todo, 0 fail**. Seven suites: golden (did any of 21 recorded scenarios move), invariants (16 ledger checks — is the ledger self-consistent), smoke (does the whole app actually run), startup (what does a user opening the page in a browser actually get, once the country fetch has run), wiring (does each input reach the model, and does it actually move the model's output), write-down (does realised loss on a written-down loan behave the way `MODEL_SPEC.md` says it does), and export (does clicking "Export CSV" actually produce a CSV instead of throwing — F-36).
+67 tests in about 1 second (Node's built-in runner, Node ≥ 20; ESLint is the one devDependency — `npm ci` once to install it). Currently **67 pass, 0 todo, 0 fail**. Seven suites: golden (did any of 21 recorded scenarios move), invariants (16 ledger checks — is the ledger self-consistent), smoke (does the whole app actually run), startup (what does a user opening the page in a browser actually get, once the country fetch has run), wiring (does each input reach the model, and does it actually move the model's output), write-down (does realised loss on a written-down loan behave the way `MODEL_SPEC.md` says it does), and export (does clicking "Export CSV" actually produce a CSV instead of throwing — F-36).
 
 ```bash
 npm run golden:diff   # would any model output change?

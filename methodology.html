@@ -1002,23 +1002,18 @@ capitalPreservation = netAssets   / capitalInvested</div>
         <!-- ================================================================ -->
         <h2 id="open">13. Open questions</h2>
 
-        <p>These are modelling decisions awaiting the model owner's judgement. They are listed here rather than settled
+        <p>These were modelling decisions that needed the model owner's judgement. As of 2026-08-21, <strong>none are
+                open</strong> — every one has been decided and recorded as its own ADR, listed here rather than settled
             quietly, because each changes what the outputs mean.</p>
 
-        <div class="table-scroll">
-            <table class="param-table">
-                <tr>
-                    <th style="width:10%">Ref</th>
-                    <th>Question</th>
-                </tr>
-                <tr>
-                    <td><strong>Q2</strong></td>
-                    <td><strong>Still open.</strong> Is 30% the right share of the wage at which to value saved
-                        household time, against current published guidance? The method is settled (&sect;9); only the
-                        specific factor needs confirming, against whichever cost&ndash;benefit guidance your programme
-                        already reports against.</td>
-                </tr>
-            </table>
+        <div class="alert-box">
+            <h3>Q2 is accepted, not verified</h3>
+            <p>One of these is worth flagging even though it's resolved: the 30% factor for the value of saved
+                household time is an <strong>accepted working default, not a sourced figure</strong>
+                (<a href="#parameters">&sect;10</a>, &sect;9). The model owner has confirmed it is acceptable for now.
+                If you are publishing an SROI figure from this tool, confirm 30% against your own programme's
+                cost&ndash;benefit guidance first &mdash; the method is sound, the number is a convention.
+                <code>docs/adr/0030-accept-30-percent-time-value-factor.md</code>.</p>
         </div>
 
         <p>Resolved 2026-08-21, each as its own decision record: <strong>Q13</strong> &mdash; service life now stops
@@ -1027,7 +1022,8 @@ capitalPreservation = netAssets   / capitalInvested</div>
             have. <strong>Q6</strong> &mdash; the grant and loan ledgers stay strictly separate; no cross-lending.
             <strong>Q7</strong> &mdash; one household, one toilet, once; no repeat or upgrade demand modelled.
             <strong>Q9</strong> &mdash; the collections floor stops abruptly at wind-up rather than tapering, because a
-            taper rate would be an invented number. See <code>docs/adr/</code> for each decision's reasoning.</p>
+            taper rate would be an invented number. <strong>Q2</strong> &mdash; see above. See <code>docs/adr/</code>
+            for each decision's reasoning.</p>
 
         <div class="alert-box green">
             <h3>How to check any of this yourself</h3>

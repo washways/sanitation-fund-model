@@ -56,7 +56,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | ✅ [F-35](#f-35--r-34s-always-less-than-headline-claim-is-wrong-past-about-18-months) | Low | Docs | `MODEL_SPEC.md`'s "realised loss is always less than headline" claim is wrong past ~18 months | doc | S3 |
 | ✅ [F-36](#f-36--csv-export-is-completely-broken-both-copies) | **Critical** | UI | `UI.downloadCSV()` is defined twice; the copy that runs throws, and the copy that doesn't run also throws | src | S2 |
 | ✅ [F-29](#f-29--the-integrity-check-passes-a-run-that-went-insolvent-and-defaulted) | **Critical** | Guards | "Model Integrity Verified" is printed for an insolvent run that defaulted on $750k | run | S1 |
-| [F-30](#f-30--grant-support--is-a-pacing-lever-not-a-volume-lever) | **High** | Core | Grant Support % barely changes output; the auto-solver's only strategy is inert | run | S2 |
+| ✅ [F-30](#f-30--grant-support--is-a-pacing-lever-not-a-volume-lever) | **High** | Core | Grant Support % barely changes output; the auto-solver's only strategy is inert | run | S2 |
 | ✅ [F-31](#f-31--the-simulation-does-not-stop-when-the-fund-dies) | **High** | Core | After production ceases the model burns $1.09M of ops against zero income | run | S3 |
 | ✅ [F-32](#f-32--extending-the-repayment-term-reduces-repayment) | Medium | Core | Longer investor terms repay *less*; the advisor recommends the wrong direction | run | S3 |
 | ✅ [F-33](#f-33--the-carbon-input-is-labelled-tonnes-per-year-and-used-as-kilograms-once) | **High** | Impact | `co2PerToilet` is labelled tonnes/year, treated as kilograms, and applied once | run | S1 |
@@ -73,7 +73,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | ✅ [F-11](#f-11--ledger-verification-is-switched-off-by-an-unrelated-flag) | Medium | Guards | Ledger verification is disabled by the break-even-solver flag | run | S1 |
 | ✅ [F-12](#f-12--the-opening-balance-is-never-reconciled) | Medium | Guards | Opening capital is never reconciled, so month 1 is unchecked | run | S1 |
 | ✅ [F-13](#f-13--a-dead-advisor-branch-guarded-by-an-undefined-property) | Medium | UI | `inputs.loanFund` is undefined, so a whole advisor branch is dead | src | S2 |
-| [F-14](#f-14--the-kpi-object-is-destructively-mutated-by-the-renderer) | Medium | UI | KPI object is mutated in place by the renderer; callers depend on the mutation | src | S2 |
+| ✅ [F-14](#f-14--the-kpi-object-is-destructively-mutated-by-the-renderer) | Medium | UI | KPI object is mutated in place by the renderer; callers depend on the mutation | src | S2 |
 | ✅ [F-15](#f-15--wizard-functions-reference-dom-ids-that-were-deleted) | Medium | UI | Wizard functions reference DOM ids that no longer exist | src | S2 |
 | ✅ [F-16](#f-16--duplicate-object-keys-silently-discard-values) | Low | Core | Duplicate object keys silently discard the first value | src | S1 |
 | ✅ [F-17](#f-17--two-opposing-percent-heuristics-hyperinflation-becomes-2) | High | Inputs | Two opposing percent heuristics; >100% inflation becomes 2% | run | S1 |
@@ -417,6 +417,8 @@ k.impact         = impactMetrics  || {};        // <-- k.impact is REPLACED
 Note also the nested `impact.impact` and the duplicated `netAssets` key at [app.js:874-875](../app.js#L874-L875) — the shape is accidental, not designed.
 
 **Fix:** flatten `computeKPIs` to return a single flat object with documented keys. Never mutate results in a renderer.
+
+**Fixed 2026-08-21.** `computeKPIs` now returns `{ reach, impact, portfolio, financials, sustainability, value }` directly — six flat, documented groups, none of them nested inside another. `UI.updateKPIs`'s destructure-and-reassign block is deleted; there was nothing left for it to do. [ADR-0028](adr/0028-flatten-computekpis.md). No model output changed — confirmed by `golden:diff` before and after.
 
 ---
 
@@ -833,6 +835,8 @@ That is a legitimate model behaviour, but two things follow that are not:
 2. **The auto-solver's only strategy is to cut this parameter** (**F-04**). Faced with a $749,981 repayment shortfall, it silently reduces Grant Support % up to five times per click — pulling a lever that cannot close the gap, because the shortfall sits in the *loan* ledger and grant spending barely touches it. The user's headline policy input is rewritten to no effect.
 
 **Fix:** rename the field to reflect what it does ("Grant deployment rate"), show grant-fund runway next to it, and delete the auto-solver strategy that depends on it (**F-04**). If a genuine depth-of-subsidy control is wanted, it needs to be a per-unit subsidy percentage that draws proportionally from both ledgers — a spec change, not a rename.
+
+**Fully fixed 2026-08-21.** The auto-solver strategy that depended on this field was already deleted with F-04 (ADR-0009). Now relabelled "Grant-Funded Pacing (% of Production)" with a tooltip stating plainly that total subsidy is set by Initial Grant Capital, not this dial; a new `grantExhaustedMonth` reads out next to the field as "grant capital runs out around month N at this pace". [ADR-0029](adr/0029-grant-support-relabel-and-runway.md). No model output changed — the fix is UI-only, confirmed by `golden:diff`.
 
 ---
 
