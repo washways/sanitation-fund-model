@@ -297,7 +297,11 @@ describe('ledger invariants', () => {
       // point of F-30 ("a pacing lever, not a volume lever"). If this ever stops
       // holding, the relabelled field and its runway note (app.js updateKPIs) are
       // describing behaviour the model no longer has.
-      const low = run({ grantSupportPct: 0.05 });
+      // 0.10, not 0.05: at 5% pacing post-ADR-0031 the (now more capital-constrained)
+      // fund produces slowly enough that the grant ledger no longer exhausts within
+      // the 5-year default horizon — a real, legitimate consequence of F-21, not a
+      // bug in this property. 10% (the shipped default) still exhausts reliably.
+      const low = run({ grantSupportPct: 0.10 });
       const high = run({ grantSupportPct: 0.90 });
 
       assert.ok(low.kpis.sustainability.grantExhaustedMonth !== null, 'low pacing should still exhaust the fund eventually at these defaults');
@@ -310,5 +314,34 @@ describe('ledger invariants', () => {
       assert.ok(volumeChange < 0.10,
         `total grant-funded toilets should barely move across an 18x pacing change (F-30) — ` +
         `moved ${(volumeChange * 100).toFixed(1)}% (${low.kpis.reach.grantToilets} -> ${high.kpis.reach.grantToilets})`);
+    });
+
+  test('INV-18: micro-enterprise capital requirement is one number everywhere, not three (F-21, ADR-0031)',
+    () => {
+      // R-6.1 had three disagreeing notions of what one ME costs: the affordability
+      // check (setup + working capital) decided how many the fund could afford, but
+      // the loan actually booked — at month 0 and on every in-loop expansion — used
+      // setup cost alone. meCapitalRequirement(inputs) is now the single source.
+      const expected = ModelModule.meCapitalRequirement(BASE);
+      assert.ok(expected > BASE.meSetupCost,
+        'the capital requirement must include working capital, not just be the setup cost');
+
+      // Month 0: cost per ME actually booked at startup.
+      const r0 = run({});
+      assert.ok(r0.series.startMEs > 0, 'this scenario should start with some MEs for the check below to mean anything');
+      const perMe0 = r0.series.startupCost / r0.series.startMEs;
+      assert.ok(Math.abs(perMe0 - expected) < 1,
+        `month-0 cost/ME ($${perMe0.toFixed(2)}) should equal meCapitalRequirement ($${expected.toFixed(2)})`);
+
+      // In-loop expansion: disable exit so every ME added after month 0 shows up as a
+      // clean difference in the continuous count, uncomplicated by attrition.
+      const rLoop = run({ meExitRate: 0 });
+      const s = rLoop.series;
+      const mesAddedInLoop = s.dataMonthlyMes[s.dataMonthlyMes.length - 1] - s.startMEs;
+      assert.ok(mesAddedInLoop > 1, 'this scenario should expand via the in-loop path for the check below to mean anything');
+      const totalExpansionLoans = sum(s.dataMonthlyNewLoansMeVal);
+      const perMeLoop = totalExpansionLoans / mesAddedInLoop;
+      assert.ok(Math.abs(perMeLoop - expected) < 5,
+        `in-loop expansion cost/ME ($${perMeLoop.toFixed(2)}) should equal meCapitalRequirement ($${expected.toFixed(2)})`);
     });
 });

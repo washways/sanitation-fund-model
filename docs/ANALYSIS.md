@@ -80,7 +80,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | ✅ [F-18](#f-18--serverjs-serves-arbitrary-files-and-lies-about-404s) | Medium | Infra | `server.js` serves any path from disk; 404 returns HTTP 200 | src | S0 |
 | ✅ [F-19](#f-19--no-manifest-no-tests-no-lint-no-ci-all-state-is-global) | High | Infra | No manifest, no tests, no lint, no CI; all state is global | src | S0 |
 | ✅ [F-20](#f-20--micro-enterprises-are-immortal) | Medium | Core | Micro-enterprises never fail, so ME defaults do not reduce capacity | run | S3 |
-| [F-21](#f-21--me-growth-magic-numbers-and-inconsistent-startup-capital) | Medium | Core | ME growth uses undocumented magic numbers; startup capital is inconsistent | src | S3 |
+| ✅ [F-21](#f-21--me-growth-magic-numbers-and-inconsistent-startup-capital) | Medium | Core | ME growth uses undocumented magic numbers; startup capital is inconsistent | src | S3 |
 | ✅ [F-22](#f-22--chartjs-is-loaded-unpinned-from-a-cdn) | Medium | Infra | Chart.js loaded unpinned from a CDN, no SRI, breaks offline | src | S0 |
 | ✅ [F-23](#f-23--alert-for-analysis-output-doubled-currency-symbol) | Low | UI | `alert()` used for analysis output; `$${fmt()}` renders `$$1,234` | src | S2 |
 | ✅ [F-24](#f-24--the-readme-documents-behaviour-that-is-not-implemented) | Medium | Docs | README documents behaviour that is not in the code | src | S0 |
@@ -546,6 +546,8 @@ const startupCostPerMe    = inputs.meSetupCost + oneMeWorkingCapital;
 …but then books a loan for the setup cost **only** ([app.js:294](../app.js#L294), `startLoanVolume = startMEs * inputs.meSetupCost`). In-loop expansion ([app.js:423](../app.js#L423)) uses bare `meSetup` with no working-capital allowance at all. Three different notions of what an ME costs.
 
 **Fix:** one `meCapitalRequirement()` function; expose the growth cap as an input; document both in the spec.
+
+**Fully fixed 2026-08-21.** `ModelModule.meCapitalRequirement(inputs)` is now the single source, used by the month-0 loan, the in-loop expansion loan, and the affordability check that was already correct. [ADR-0031](adr/0031-unify-me-capital-requirement.md). Measured: baseline reach fell 121,358 → 97,744 toilets (-19.5%), MEs 801 → 254 (-68.3%) — enterprises previously ran on roughly a seventh of the capital the model's own affordability logic said they needed. **One golden scenario's viability verdict flips**: `with cost of capital (8%)` goes from viable to insolvent — evidence the model was overstating viability in cost-of-capital-sensitive scenarios before this fix. `golden.json` re-recorded; `tests/invariants.test.js` INV-18 pins all three call sites to agree.
 
 ---
 

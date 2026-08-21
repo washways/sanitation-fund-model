@@ -220,31 +220,30 @@ requiredReserves = windUpMonth !== null
 
 ## 6. Micro-enterprises
 
-### R-6.1 Startup cohort (month 0) **[AS-BUILT, inconsistent — F-21, Stage 3]**
+### R-6.1 Startup cohort (month 0) **[AS-BUILT]** (unified 2026-08-21, [ADR-0031](adr/0031-unify-me-capital-requirement.md), resolves F-21)
 
 ```
-maxTotalMEs        = districts * mePerDistrict
-oneMeWorkingCapital = toiletsPerMeMonth * avgToiletCost * max(6, termHh)
-startupCostPerMe    = meSetupCost + oneMeWorkingCapital
-affordableStartMEs  = floor(max(0, loanCash - currentReserve) / startupCostPerMe)
-startMEs            = min(maxTotalMEs, affordableStartMEs)
-startLoanVolume     = startMEs * meSetupCost          // <-- note: setup cost ONLY
+maxTotalMEs         = districts * mePerDistrict
+meCapitalRequirement = meSetupCost + (toiletsPerMeMonth * avgToiletCost * max(6, termHh))
+affordableStartMEs   = floor(max(0, loanCash - currentReserve) / meCapitalRequirement)
+startMEs             = min(maxTotalMEs, affordableStartMEs)
+startLoanVolume      = startMEs * meCapitalRequirement   // was meSetupCost alone
 ```
 
-The inconsistency: affordability is priced *including* working capital, but the loan booked is the setup cost alone. In-loop expansion (R-6.2) uses neither. **[TARGET]** Define one `meCapitalRequirement(inputs)` and use it in all three places.
+`meCapitalRequirement(inputs)` is now a single function (`ModelModule.meCapitalRequirement`), used here, in R-6.2's expansion budget, and in the loan R-6.2 books — the same number decides how many MEs the fund can afford and how much it lends them. Before this, the loan booked used setup cost alone — 7.3x less than the affordability check's own number at the shipped defaults — so the fund decided how many enterprises it could afford using the realistic figure, then only lent them a seventh of it.
 
-### R-6.2 In-loop expansion **[AS-BUILT]** (constants exposed 2026-08-21, [ADR-0019](adr/0019-expose-me-growth-constants.md))
+### R-6.2 In-loop expansion **[AS-BUILT]** (constants exposed 2026-08-21, [ADR-0019](adr/0019-expose-me-growth-constants.md); cost unified same day, [ADR-0031](adr/0031-unify-me-capital-requirement.md))
 
 ```
 expansionBudget = lendable * meExpansionBudgetShare
-newMEs = min(floor(expansionBudget / meSetupCost),
+newMEs = min(floor(expansionBudget / meCapitalRequirement),
              ceil(currentMEs * meMaxMonthlyGrowthRate),
              maxTotalMEs - currentMEs)
 ```
 
-Both shares are user inputs, both defaulting to 10% — the values that were previously hardcoded, so no scenario's output moved when this landed. `meMaxMonthlyGrowthRate` is the dominant driver of the growth curve (10%/month compounds to about 3.1x/year); it was previously invisible to the user.
+Both shares are user inputs, both defaulting to 10% — the values that were previously hardcoded, so no scenario's output moved when *that* landed. `meMaxMonthlyGrowthRate` is the dominant driver of the growth curve (10%/month compounds to about 3.1x/year); it was previously invisible to the user. The divisor was `meSetupCost` until 2026-08-21 — the same under-pricing as R-6.1, fixed in the same change.
 
-The other half of **F-21** is still open: R-6.1's `startLoanVolume` (setup cost only) and this rule's `meSetupCost` (also setup cost only) both under-price the true capital requirement relative to the *affordability* check in R-6.1, which correctly includes working capital. Unifying the three into one `meCapitalRequirement(inputs)` **[TARGET]** is a behaviour-changing fix — it would raise ME lending and needs its own ADR and predicted golden diff.
+**Measured effect of unifying the cost** (ADR-0031): baseline reach fell 121,358 → 97,744 toilets (-19.5%), MEs 801 → 254 (-68.3%) — enterprises are far more expensive to establish once working capital is included, so fewer of them fit inside the same lendable capital. One golden scenario's viability verdict flips: `with cost of capital (8%)` goes from viable to insolvent, evidence the model was previously overstating viability in cost-of-capital-sensitive scenarios by under-capitalising enterprises.
 
 ### R-6.3 ME attrition **[AS-BUILT]** (was F-20, fixed 2026-08-20)
 Business closure and loan write-down are **separate events with separate parameters**:
@@ -505,6 +504,9 @@ These must hold for **every** run. They are the contract that makes the model au
 | **INV-13** | No ops cost is posted in a month that *opens* with an empty portfolio and zero production | AS-BUILT |
 | **INV-14** | Extending `duration` alone must not change `cashEnd`, `netAssets` or `investorRepaidPct` | AS-BUILT — 5y and 20y now both give -$6,717 |
 | **INV-15** | `dalys[m]` and `hoursSaved[m]` are computed from `creditingToilets[m]`, the same in-service count carbon uses — a toilet past its service life must not keep averting DALYs or saving time | AS-BUILT — [ADR-0025](adr/0025-service-life-gates-all-impact.md), resolves Q13 |
+| **INV-16** | `requiredReserves` includes the next 3 months of scheduled investor principal, not just ops cost | AS-BUILT — [ADR-0027](adr/0027-debt-service-lookahead-reserve.md), resolves F-10 |
+| **INV-17** | `grantExhaustedMonth` responds to `grantSupportPct` (pacing) far more than `reach.grantToilets` does (volume) | AS-BUILT — [ADR-0029](adr/0029-grant-support-relabel-and-runway.md), resolves F-30 |
+| **INV-18** | The month-0 loan, the in-loop expansion loan, and the affordability check all price one ME identically via `meCapitalRequirement(inputs)` | AS-BUILT — [ADR-0031](adr/0031-unify-me-capital-requirement.md), resolves F-21 |
 
 **INV-8 deserves special emphasis.** A `NaN` slips past every other check in this list, because `NaN != NaN` and `Math.abs(NaN) > 1` is `false`. It is checked explicitly and first, and short-circuits the rest — everything downstream is meaningless once `NaN` is loose.
 

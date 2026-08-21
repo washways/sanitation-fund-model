@@ -43,9 +43,7 @@ Columns:
 | `districts` | Administrative Units | 50 | count | count | `countriesnow.space` states, else pop/500k | With `mePerDistrict`, sets the hard ME cap. |
 | `mePerDistrict` | Micro-enterprises / Unit | 20 | count | count | derived from the sanitation gap | Cap is `districts x mePerDistrict` = 1,000 by default, and the baseline reaches it. |
 | `toiletsPerMeMonth` | Toilets / ME / Month | 7 | count/month | count/month | user | No learning curve, no seasonality. |
-| `meSetupCost` | ME Setup Cost ($ USD) | 2,000 | USD | USD | user | ⚠️ Three different notions of ME capital coexist — see [F-21](ANALYSIS.md#f-21--me-growth-magic-numbers-and-inconsistent-startup-capital). |
-| — | ME expansion budget share | **0.10, hardcoded** | — | decimal | — | ⚠️ Not exposed. [F-21](ANALYSIS.md#f-21--me-growth-magic-numbers-and-inconsistent-startup-capital). |
-| — | ME max monthly growth | **0.10, hardcoded** | — | decimal | — | ⚠️ Not exposed, and it is the dominant driver of the growth curve (~3.1x/year). [F-21](ANALYSIS.md#f-21--me-growth-magic-numbers-and-inconsistent-startup-capital). |
+| `meSetupCost` | ME Setup Cost ($ USD) | 2,000 | USD | USD | user | ✅ One of two components of `meCapitalRequirement` (the other is working capital); no longer three disagreeing notions of ME capital. [ADR-0031](adr/0031-unify-me-capital-requirement.md), [F-21](ANALYSIS.md#f-21--me-growth-magic-numbers-and-inconsistent-startup-capital). |
 
 ## Lending terms
 

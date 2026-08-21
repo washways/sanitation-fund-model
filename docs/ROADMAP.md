@@ -20,7 +20,7 @@ Progress is tracked in [STATUS.md](../STATUS.md), which is the first file to rea
 | ✅ **S0** | Scaffolding and safety net | F-19 ✅, F-22 ✅, F-18 ✅, F-24 ✅ | Very low | — |
 | ✅ **S1** | Silent-wrongness fixes | F-29 ✅, F-01 ✅, F-02 ✅, F-33 ✅, F-03 ✅, F-11 ✅, F-12 ✅, F-16 ✅, F-17 ✅ | Low | S0 |
 | ✅ **S2** | Give the user back control | F-04 ✅, F-05 ✅, F-30 ✅, F-13 ✅, F-14 ✅, F-15 ✅, F-23 ✅, F-36 ✅ | Medium | S1 |
-| 🔄 **S3** | Model correctness | F-06 ✅, F-07 ✅, F-09 ✅, F-31 ✅, F-32 ✅, F-28 ✅, F-20 ✅, F-25 ✅, F-08 ✅, F-26 ✅, F-10 ✅, F-21 (half) | **High** | S2 |
+| ✅ **S3** | Model correctness | F-06 ✅, F-07 ✅, F-09 ✅, F-31 ✅, F-32 ✅, F-28 ✅, F-20 ✅, F-25 ✅, F-08 ✅, F-26 ✅, F-10 ✅, F-21 ✅ | **High** | S2 |
 | **S4** | Decision support | F-27 | Medium | S3 |
 | **S5** | Structure | — (enables everything after) | Medium | S3 |
 | **S6** | Presentation and reach | — | Low | S5 |
@@ -160,7 +160,7 @@ npm test    # 0 failures
 | 4 | ✅ **Population growth** in the demand backlog. | F-09 | R-7.1 |
 | 5 | ✅ **Reserves.** Debt-service lookahead now exists (3mo full ops + next 3mo scheduled investor principal); `opsReserveCap` relabelled "Starting Capacity Throttle (%)" rather than enforced-or-removed — it does a genuinely separate job (R-6.1). [ADR-0027](adr/0027-debt-service-lookahead-reserve.md). Baseline reach fell ~9%; no scenario's viability verdict changed. | F-10 | R-5.4 |
 | 6 | ✅ **ME attrition** on write-down. | F-20 | R-6.3 |
-| 7 | ✅ *(half)* Expose the two hardcoded `0.1` growth constants as inputs — done, [ADR-0019](adr/0019-expose-me-growth-constants.md), zero behaviour change. **Still open:** one `meCapitalRequirement` shared by the startup cohort, in-loop expansion and affordability check (R-6.1) — this half changes ME lending and needs its own ADR. | F-21 | R-6.1, R-6.2 |
+| 7 | ✅ Expose the two hardcoded `0.1` growth constants as inputs ([ADR-0019](adr/0019-expose-me-growth-constants.md), zero behaviour change), then unify the three disagreeing ME-capital-requirement formulas into one `meCapitalRequirement(inputs)` ([ADR-0031](adr/0031-unify-me-capital-requirement.md)) — baseline reach -19.5%, one viability verdict flips (`with cost of capital (8%)`). | F-21 | R-6.1, R-6.2 |
 | 8 | ✅ Labels changed to "annual portfolio write-down rate"; `tests/writedown.test.js` (`T-DEF-1`) pins realised loss to disbursed at several terms. Writing it surfaced [F-35](ANALYSIS.md#f-35--r-34s-always-less-than-headline-claim-is-wrong-past-about-18-months) — `MODEL_SPEC.md`'s "always less than headline" claim was wrong past ~18 months; corrected the same day. | F-26 | R-3.4 |
 | 9 | ✅ **Fix KPI types**: `depletionMonth: number\|null`, `opsRunway: number\|null`. | F-28 | R-11 |
 | 10 | ✅ **Ground the advisor in the model** — every recommendation re-runs the simulation and confirms it improves the objective before showing it. | **F-32** | — |
@@ -168,7 +168,7 @@ npm test    # 0 failures
 
 **Order matters:** do **1 and 2 first**. They interact — arrears only make sense once the fund has a defined end — and together they change what every other task is measured against. Task 10 must be **last**: the advisor can only be grounded in a model that is already correct.
 
-**Status:** 10 of 11 tasks done (1–6, 8–11). **Remaining: 7 (F-21, half — R-6.1's `meCapitalRequirement` unification, a behaviour-changing fix that needs its own ADR).** F-14 and F-30, carried forward from S2, are both done too.
+**Status:** ✅ All 11 tasks done. F-14 and F-30, carried forward from S2, are both done too. **S3 is complete.**
 
 **Exit gate:**
 

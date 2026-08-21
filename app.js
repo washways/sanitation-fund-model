@@ -148,6 +148,23 @@ const ModelModule = {
         return (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -termMonths));
     },
 
+    // Helper: true capital requirement to establish one micro-enterprise (R-6.1).
+    // Setup cost alone is not enough to start production — a business also needs
+    // working capital to bridge the gap between disbursing and building (it isn't
+    // paid for the toilets it builds until the loan or grant that funds them clears).
+    // Sized on the BASE unit cost, not the inflated current one, matching the
+    // original month-0 affordability formula this generalises (ADR-0031, F-21).
+    //
+    // Until 2026-08-21 the month-0 loan actually booked, and every in-loop expansion
+    // loan, used setup cost alone — 7.3x less than this at the shipped defaults — so
+    // the fund decided how many enterprises it could afford using this number, then
+    // only lent them a seventh of it.
+    meCapitalRequirement(inputs) {
+        const reserveMonths = Math.max(6, inputs.termHh || 0);
+        const workingCapital = (inputs.toiletsPerMeMonth || 0) * (inputs.avgToiletCost || 0) * reserveMonths;
+        return (inputs.meSetupCost || 0) + workingCapital;
+    },
+
     // Helper: Investor Repayment Schedule (MODEL_SPEC R-4.1)
     // Principal only. Interest is computed in the loop against the live liability,
     // which may have grown through capitalised arrears (R-4.5). Returning an
@@ -350,9 +367,12 @@ const ModelModule = {
         let startMEs = 0;
 
         const maxTotalMEs = inputs.districts * (inputs.mePerDistrict || 20); // Cap
-        const reserveMonthsStart = Math.max(6, termHh);
-        const oneMeWorkingCapital = inputs.toiletsPerMeMonth * inputs.avgToiletCost * reserveMonthsStart;
-        const startupCostPerMe = inputs.meSetupCost + oneMeWorkingCapital;
+        // R-6.1, ADR-0031: the SAME capital requirement decides both how many MEs the
+        // fund can afford to start AND how big the loan it books for them is. Until
+        // 2026-08-21 these were two different numbers (F-21) — the loan booked used
+        // setup cost alone, 7.3x less than what this affordability check already knew
+        // one ME actually costs.
+        const startupCostPerMe = this.meCapitalRequirement(inputs);
 
         const lendableStart = Math.max(0, loanCash - currentReserve);
         const affordableStartMEs = Math.floor(lendableStart / startupCostPerMe);
@@ -360,7 +380,7 @@ const ModelModule = {
         startMEs = Math.min(maxTotalMEs, affordableStartMEs); // Use Max Cap
 
         if (startMEs > 0) {
-            startLoanVolume = startMEs * inputs.meSetupCost;
+            startLoanVolume = startMEs * startupCostPerMe;
             loanCash -= startLoanVolume;
             currentMEs += startMEs;
 
@@ -550,7 +570,9 @@ const ModelModule = {
                 // Basic growth logic (R-6.2). Both shares were hardcoded at 0.1 until
                 // ADR-0019 exposed them as inputs, defaults unchanged.
                 const expansionBudget = lendable * inputs.meExpansionBudgetShare;
-                const meSetup = inputs.meSetupCost;
+                // R-6.1, ADR-0031: same capital requirement as month 0, not setup cost
+                // alone — see meCapitalRequirement's own comment for why (F-21).
+                const meSetup = ModelModule.meCapitalRequirement(inputs);
                 if (expansionBudget > meSetup) {
                     const potentialNew = Math.min(Math.floor(expansionBudget / meSetup), Math.ceil(currentMEs * inputs.meMaxMonthlyGrowthRate));
                     // Check against Max Cap

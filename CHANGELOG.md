@@ -12,6 +12,28 @@ Every change that alters what the model produces, what a user sees, or how the p
 
 ---
 
+## 2026-08-21 (5) — F-21 fixed: micro-enterprises financed for what they actually cost
+
+**The largest single-scenario reach reduction of any fix in this project.** Measured in a scratch copy against all 21 golden scenarios before touching any code, per the same process as F-10.
+
+### Fixed
+
+- **F-21 — micro-enterprise capital was priced three different, disagreeing ways.** The affordability check that decides how many enterprises the fund can afford to start correctly includes working capital (setup cost + toilets/month × unit cost × loan term = $14,600/ME at the shipped defaults). The loan actually booked — at month 0, and on every in-loop expansion for the life of the run — used setup cost alone: $2,000/ME, 7.3x less. The fund decided how many enterprises it could afford using the realistic number, then only lent them a seventh of it.
+
+  Fixed with one function, `ModelModule.meCapitalRequirement(inputs)`, used everywhere an ME's cost matters. No more three numbers.
+
+  **Effect, measured before implementing and confirmed exact after:** baseline toilets 121,358 → 97,744 (**-19.5%**), MEs 801 → 254 (**-68.3%**), net assets $1,174,828 → $914,174 (-22.2%). **One golden scenario's viability verdict flips**: `with cost of capital (8%)` goes from viable to insolvent (net assets $146,724 → -$18,701) — evidence the model was overstating viability in cost-of-capital-sensitive scenarios by under-capitalising enterprises. No other scenario's verdict changes. [ADR-0031](docs/adr/0031-unify-me-capital-requirement.md).
+
+  Test-first: `tests/invariants.test.js` INV-18 checks all three call sites price one ME identically; it referenced `ModelModule.meCapitalRequirement` before that function existed, confirmed failing, then made to pass.
+
+  One knock-on test adjustment: INV-17 (F-30, written earlier the same day) compared grant-fund exhaustion at 5% vs 90% pacing, assuming 5% would still exhaust the fund within the 5-year default horizon. It no longer does — overall production slowed enough from this fix that the grant ledger now outlasts the run at 5%. Changed the comparator to 10% (the shipped default), which still exhausts reliably; the underlying "pacing not volume" property F-30 tests for is unaffected.
+
+**Findings register: 34 of 36 → 35 of 36 resolved. F-27 (solver robustness, S4) is the only finding left in the entire register.** `npm test`: 67 → 68. `golden.json` re-recorded, matching ADR-0031's prediction exactly.
+
+**Numbers produced before 2026-08-21 should be re-run**, same guidance as after every other correctness fix this project has made. The ADR-0013 default-scenario grid search predates this fix (and ADR-0027); the shipped defaults remain confirmed viable, but the search that chose them has not been re-run against the now-stricter model.
+
+---
+
 ## 2026-08-21 (4) — F-14, F-30 and Q2 closed; no open findings block the model owner
 
 ### Fixed
