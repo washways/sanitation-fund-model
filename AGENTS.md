@@ -13,10 +13,10 @@ cat STATUS.md                 # where the work is right now
 npm test                      # must be green before you touch anything
 ```
 
-53 tests, about half a second, zero dependencies. If you change anything a user
-touches — a default, a form control, the country fetch — the suite that matters most is
-`tests/startup.test.js`, because it is the only one that exercises the state the browser
-actually ends up in.
+68 tests, about a second. `npm ci` first if `node_modules/` doesn't exist yet — ESLint
+is the one devDependency. If you change anything a user touches — a default, a form
+control, the country fetch — the suite that matters most is `tests/startup.test.js`,
+because it is the only one that exercises the state the browser actually ends up in.
 
 If `npm test` is **not** green when you arrive, **stop and report it**. Do not start your task on top of a broken tree; you will not be able to tell your breakage from the one you inherited.
 
@@ -44,7 +44,7 @@ Rules are tagged:
 
 ### Rule 2 — Behaviour changes only when you meant them to
 
-`tests/golden.json` records what the model produces today across 18 scenarios. A golden test failure means behaviour moved.
+`tests/golden.json` records what the model produces today across 21 scenarios. A golden test failure means behaviour moved.
 
 - **Did not mean to move it?** You broke something. Fix the code.
 - **Meant to move it?** Your ADR must **already** predict the direction and rough size. Compare, then re-record:
@@ -124,42 +124,40 @@ That last one is the real gate. A fix with no test is a fix that will be undone 
 
 | File | What it is |
 |---|---|
-| `app.js` | The whole application — model, KPIs, solvers, UI, controller. 3,935 lines — grown then shrunk as fixes land, from 3,667 at audit time (a broken duplicate CSV export alone cost -128 lines, F-36). Split in stage S5. |
+| `app.js` | The whole application — model, KPIs, solvers, UI, controller. One file, ~3,900 lines and shifting as fixes land — don't trust a cited line number, re-grep. Split is stage S5, not yet started. |
 | `index.html` | The form and the dashboard. Input `id`s here must match `UI.getInputs()` — a test enforces it. |
 | `methodology.html` | User-facing explainer. Keep in sync with `MODEL_SPEC.md`. |
-| `STATUS.md` | **Read first, write last.** Current stage, what just landed, known gotchas. |
-| `CHANGELOG.md` | User-facing record of every behaviour change. One entry per session, in the same commit. |
-| `docs/ANALYSIS.md` | 33 findings with evidence. Stable IDs — never renumber. |
-| `docs/MODEL_SPEC.md` | The maths. Normative. |
-| `docs/ROADMAP.md` | Stages S0–S6 with gates. |
+| `STATUS.md` | **Read first, write last.** Current stage, what's actually unresolved, known gotchas — a snapshot, not a history. |
+| `CHANGELOG.md` | Dated, versioned record of every behaviour change. One entry per working session, in the same commit as the change. |
+| `docs/ANALYSIS.md` | The original audit register — findings with evidence. Historical; stable IDs, never renumbered, never deleted. For current behaviour, use `MODEL_SPEC.md` instead. |
+| `docs/MODEL_SPEC.md` | The maths. Normative — the current, authoritative description of what the model does. |
+| `docs/ROADMAP.md` | Remaining stages with entry/exit gates. |
 | `docs/PARAMETERS.md` | Every input: unit, range, source, meaning. |
 | `docs/TESTING.md` | How the suite is built and how to add to it. |
-| `docs/ARCHITECTURE.md` | Current shape and target shape. |
-| `docs/adr/` | Decision records. One per behaviour change. |
-| `tests/` | The safety net. |
+| `docs/ARCHITECTURE.md` | Current code shape and the target shape. |
+| `docs/adr/` | Decision records. One per behaviour change or modelling decision — the *why* behind a changelog entry. Never edit an old one; write a new one that supersedes it. |
+| `tests/` | The safety net — 7 suites. |
 | `tools/load-model.js` | Loads the model headlessly. Keep the DOM stub minimal — if it has to *do* something, the model grew a hidden DOM dependency and that is the bug. |
 | `tests/fixtures/` | Recorded World Bank and administrative-unit responses. **Never fetch live in a test.** Re-record deliberately and treat the resulting move like a golden diff. |
-| `CHANGELOG.md` | User-facing record of every behaviour change. |
 
 ---
 
-## 4. Landmines
+## 4. Lessons already paid for
 
-Things that have already caused real damage here. Check for each before you assume your change is safe.
+Every one of these was a real defect, found and fixed, with a test now guarding it. They're listed as **principles to not re-break**, not as current bugs — check `docs/ANALYSIS.md` if you want the original evidence for any of them.
 
-| Landmine | Why it bites |
+| Principle | Why it matters |
 |---|---|
-| **`NaN` passes every check** | `Math.abs(NaN - NaN) > 1` is `false`, so the cash-identity check reports success on a fully corrupted ledger. Always test `Number.isFinite` **first**. This is F-03, and a 0% interest rate triggers it today. |
-| **A missing DOM id fails silently** | `getRaw` returns its default when `getElementById` returns null. That is how the fund's cost of capital was 0 for the project's entire life (F-01). `tests/wiring.test.js` now catches it — keep it passing. |
-| **Percentages are entered inconsistently** | Two heuristics in the codebase disagree about the same DOM node by a factor of 100 (F-17). Check [docs/PARAMETERS.md](docs/PARAMETERS.md) for the canonical unit of any field you touch. |
-| **The UI writes back into the inputs** | Until S2 lands, `runCalculation` rewrites `grantSupportPct` and `updateSmartRates` overwrites both interest rates. **Any A/B comparison you do through the browser before S2 is invalid.** Compare through `ModelModule.calculate()` directly. |
-| **The model does not stop when the fund dies** | Ending cash depends on how long you ran the simulation, not on fund performance (F-31). Never compare runs of different `duration` until S3 task 1 lands. |
-| **"Model Integrity Verified" means nothing about viability** | It is printed for a run that goes insolvent and defaults on $750k (F-29). It checks arithmetic, not solvency. |
-| **`grantSupportPct` barely does anything** | It is a pacing lever; total subsidy is capped by the grant ledger (F-30). Do not use it as a tuning knob and do not conclude a change "worked" because it moved. |
-| **The defaults in `index.html` are not what runs** | See Rule 2b. `tools/baseline-inputs.js` mirrors the *static* defaults; `tests/startup.test.js` covers what a user gets. Tuning a default without running the startup test is how F-34 shipped. |
-| **The DOM stubs must stay faithful** | `tests/smoke.test.js` and `tests/startup.test.js` build element stubs by parsing `index.html`. They report real `tagName`s and coerce `value` to a string, because the app branches on both. A stub that quietly differs from a browser produces green tests for code the browser never runs — which is the same failure as F-34, one layer down. If a stub needs to *do* something rather than merely exist, ask why the app needs it. |
-| **Percentages, not decimals** | Every rate field holds a percentage and is divided by 100 exactly once, in `getInputs`. Never re-introduce a magnitude heuristic (F-17). |
-| **Duplicate object keys** | Several exist (F-16). JavaScript silently keeps the last. Run the linter once S0 finishes. |
+| **Test `Number.isFinite` before anything else** | `Math.abs(NaN - NaN) > 1` is `false`, so a naive cash-identity check reports success on a fully corrupted ledger. `NaN` must be caught first, or it silently defeats every check after it. |
+| **A missing DOM id must fail loudly, not silently** | `getRaw` returns its default when `getElementById` returns null — a renamed or deleted input becomes a hardcoded constant with no error. `tests/wiring.test.js` catches this; keep it passing when you touch `index.html` or `getInputs()`. |
+| **One unit convention, enforced at the boundary** | Every rate field is a percentage, converted to a decimal exactly once, in `getInputs`. Never infer a field's unit by inspecting its value — two heuristics doing that once disagreed with each other by a factor of 100 on the same field. |
+| **Nothing writes back into the user's inputs** | The controller reads inputs, computes, renders. Suggestions are offered with an explicit control to apply them, never applied automatically. If you're comparing two scenarios through the browser, confirm nothing changed under you — or better, compare through `ModelModule.calculate()` directly, which is pure. |
+| **A dead fund must stop costing money** | Ending cash must depend on fund performance, not on how long you happened to simulate. Never compare runs of different `duration` without checking `windUpMonth` first — a fund that's already wound up should report identically regardless of horizon (INV-14 checks this). |
+| **Two different verdicts, never merged** | "The arithmetic is internally consistent" (integrity) and "the fund actually works" (viability) are different claims. Never let a screen imply the first proves the second. |
+| **The defaults in `index.html` are not what a user sees** | The app auto-fetches country data ~500ms after load and overwrites most of the form. `tools/baseline-inputs.js` mirrors the *static* defaults; `tests/startup.test.js` covers what a user actually gets. If you touch a default, a form control, or the fetch handler, run the startup test — the static defaults passing every other test proved nothing, once. |
+| **The fetch fills observed data, never negotiated terms or policy choices** | A market lending rate is not a term sheet; a poverty headcount is not a subsidy policy. Evidence informs the user; it does not move the dials. |
+| **DOM stubs must stay faithful to a real browser** | `tests/smoke.test.js` and `tests/startup.test.js` build element stubs by parsing `index.html` — real tag names, `value` coerced to a string, because the app branches on both. A stub that quietly differs from a browser produces green tests for code the browser never runs. If a stub needs to *do* something rather than merely exist, ask why the app needs it — don't just make the stub smarter. |
+| **Duplicate object keys are silent** | JavaScript keeps the last, discards the first, with no warning. `no-dupe-keys` (ESLint) catches this now — one such duplicate was hiding a completely broken feature behind a working-looking one. |
 
 ---
 

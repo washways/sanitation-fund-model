@@ -1,11 +1,13 @@
 # Code and Model Audit — Sanitation Revolving Fund Model
 
+> **This is a historical record, not current documentation.** It's the audit that started the correction work in this repository, frozen as of the date below — findings are never deleted or renumbered once assigned, even after they're fixed. **For what the model does today, read [`docs/MODEL_SPEC.md`](MODEL_SPEC.md). For what changed and when, read [`CHANGELOG.md`](../CHANGELOG.md) and [`docs/adr/`](adr/). For what's still actually unresolved, read [`STATUS.md`](../STATUS.md).** Come here for evidence and reasoning behind a specific finding, not for the current state of the model.
+
 | | |
 |---|---|
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | **28 of 35 findings resolved** (see [STATUS.md](../STATUS.md) for the current count and date; this row is not maintained live). Rows below marked ✅ are closed; the finding text is preserved as the historical record and must not be deleted. |
+| **Fix status** | 35 of 36 findings resolved as of 2026-08-21. Rows below marked ✅ are closed; the finding text is preserved as the historical record and must not be deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---

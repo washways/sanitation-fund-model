@@ -6,7 +6,7 @@ A **buildless, dependency-free, single-page browser application**. Open `index.h
 
 That is a deliberate and correct choice for the context: the tool is used in workshops and field offices in low-income countries, needs to run from a laptop or a USB stick, and must stay maintainable by a small team without a build pipeline. **Do not add a build step, a framework or a backend without an ADR.**
 
-The one exception is Chart.js, loaded from a CDN — which is also [F-22](ANALYSIS.md#f-22--chartjs-is-loaded-unpinned-from-a-cdn), because it is unpinned, has no SRI, and makes the charts silently blank offline.
+The one exception is Chart.js, loaded from a CDN — pinned to an exact version with an integrity hash, and vendored locally as a fallback, so it still works with no network.
 
 ---
 
@@ -14,24 +14,24 @@ The one exception is Chart.js, loaded from a CDN — which is also [F-22](ANALYS
 
 ```
 index.html ──▶ style.css
-           ──▶ https://cdn.jsdelivr.net/npm/chart.js@4.4.1   pinned, SRI-hashed (F-22 fixed)
+           ──▶ https://cdn.jsdelivr.net/npm/chart.js@4.4.1   pinned, SRI-hashed
            │                                                  falls back to vendor/chart.umd.min.js offline
-           ──▶ app.js  ─────────── 3,935 lines, six globals
+           ──▶ app.js  ─────────── one file, ~4,000 lines, six globals
 methodology.html         user-facing explainer, standalone
-server.js                dev static server, hardened (F-18 fixed)
+server.js                dev static server
 favicon.png
 ```
 
-`app.js` grew from 3,667 lines at audit time (commit `2d81863`) to 3,935 as fixes landed and, on 2026-08-21, a 128-line broken duplicate CSV export was deleted (F-36) — mostly new inputs, ADR-cited behaviour, and the two-verdict reporting. Re-run `grep -n "^const ApiModule\|^const ModelModule\|^const UI\|^const LDC_COUNTRIES" app.js` before trusting these line numbers; they shift with every fix.
+`app.js` still contains four concerns with no boundary between them, in this order top to bottom:
 
-It still contains four concerns with no boundary between them:
+| Module | Concern | Pure? |
+|---|---|---|
+| `ApiModule` | World Bank + country-states fetching | no — network |
+| `ModelModule` | **The simulation, KPIs, solvers, invariant checks** — the largest single block | **yes** |
+| `UI` | Input reading, KPI rendering, charts, tables, CSV, advisor | no — DOM |
+| controller | `LDC_COUNTRIES`, event wiring, `runCalculation` | no — DOM |
 
-| Lines | Module | Concern | Pure? |
-|---|---|---|---|
-| 60–133 | `ApiModule` | World Bank + country-states fetching | no — network |
-| 134–1471 | `ModelModule` | **The simulation, KPIs, solvers, invariant checks** | **yes** |
-| 1472–3261 | `UI` | Input reading, KPI rendering, charts, tables, CSV, advisor | no — DOM |
-| 3262–3935 | controller | `LDC_COUNTRIES`, event wiring, `runCalculation` | no — DOM |
+Line numbers shift with every fix, so they're not reproduced here — `grep -n "^const ApiModule\|^const ModelModule\|^const UI\|^const LDC_COUNTRIES" app.js` finds the current boundaries in seconds.
 
 **`ModelModule` is already pure.** INV-12 verifies it: `calculate()` is deterministic and does not mutate its input. That is why `tools/load-model.js` can test it headlessly, and why stage S5's split is a low-risk move rather than a rewrite.
 
@@ -41,8 +41,8 @@ It still contains four concerns with no boundary between them:
   index.html form
         │
         ▼
-  UI.getInputs()                    ← still fails silently on a missing DOM id
-        │                             (returns getRaw's default; tests/wiring.test.js is the guard, F-01)
+  UI.getInputs()                    ← a missing DOM id fails silently, falling back to
+        │                              getRaw's default — tests/wiring.test.js guards this
         ▼
   ModelModule.calculate(inputs)     ← pure, deterministic
         │
@@ -118,7 +118,7 @@ Write-offs reduce cohort balances but are **never** cash outflows — INV-11 ver
 
 | Decision | Problem | Stage |
 |---|---|---|
-| Everything in one file | 3,935 lines, six globals, no boundaries — the lint/CI half of F-19 is done; this structural half is S5's whole job | S5 |
+| Everything in one file | ~4,000 lines, six globals, no boundaries between concerns | S5 |
 
 ---
 
@@ -156,7 +156,7 @@ Rules:
 | Constraint | Consequence |
 |---|---|
 | **No backend** | All computation is client-side. Scenario sharing must be a file or a URL fragment, never a server. |
-| **Offline capable** | Field use in LDCs. Every asset must be local or cached (F-22 is a live failure here). |
+| **Offline capable** | Field use in LDCs. Every asset must be local or cached — Chart.js is vendored for this reason. |
 | **No build step** | ES modules only; no JSX, no TypeScript syntax, no transpilation. JSDoc types are fine. |
 | **Auditable output** | Every headline number must be traceable to inputs through the CSV export. This is why the audit arrays in `series` exist. |
 | **Numbers feed real decisions** | Silent wrongness is the primary risk, not crashes. Guards, invariants and unit discipline outrank features. |

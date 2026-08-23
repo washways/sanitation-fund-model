@@ -243,7 +243,7 @@ newMEs = min(floor(expansionBudget / meCapitalRequirement),
 
 Both shares are user inputs, both defaulting to 10% — the values that were previously hardcoded, so no scenario's output moved when *that* landed. `meMaxMonthlyGrowthRate` is the dominant driver of the growth curve (10%/month compounds to about 3.1x/year); it was previously invisible to the user. The divisor was `meSetupCost` until 2026-08-21 — the same under-pricing as R-6.1, fixed in the same change.
 
-**Measured effect of unifying the cost** (ADR-0031): baseline reach fell 121,358 → 97,744 toilets (-19.5%), MEs 801 → 254 (-68.3%) — enterprises are far more expensive to establish once working capital is included, so fewer of them fit inside the same lendable capital. One golden scenario's viability verdict flips: `with cost of capital (8%)` goes from viable to insolvent, evidence the model was previously overstating viability in cost-of-capital-sensitive scenarios by under-capitalising enterprises.
+See [CHANGELOG.md](../CHANGELOG.md) for the measured effect this had when it was corrected — enterprises became substantially more expensive to establish once working capital was included consistently.
 
 ### R-6.3 ME attrition **[AS-BUILT]** (was F-20, fixed 2026-08-20)
 Business closure and loan write-down are **separate events with separate parameters**:
@@ -512,25 +512,25 @@ These must hold for **every** run. They are the contract that makes the model au
 
 ---
 
-## 13. Open questions for the model owner
+## 13. Modelling decisions
 
-Do not resolve these by writing code. Each needs a human decision recorded as an ADR.
+Every modelling question this specification has raised has been decided by the model owner and recorded as an ADR. **None are currently open.** If a new one comes up, it gets the next free `Qn` and goes in this table — do not resolve one by writing code; it needs a human decision, recorded as an ADR, first.
 
-| # | Question | Blocks |
+| # | Question | Decision |
 |---|---|---|
-| ~~Q1~~ | **Resolved 2026-08-20** — DALYs in, ending cash out, financial return reported separately. [ADR-0011](adr/0011-sroi-is-social-value-only.md) |
-| ~~Q2~~ | **Accepted 2026-08-21** — 0.30 stays the default, documented as a convention rather than a verified figure; confirm against your own programme's guidance before publishing. [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md) |
-| ~~Q3~~ | **Resolved 2026-08-21** — stays a flat % of production; means-testing needs a household-level income distribution the model doesn't have. [ADR-0021](adr/0021-grant-support-stays-flat-rate.md) |
-| ~~Q4~~ | **Resolved 2026-08-20** — closure and write-down are separate parameters. [ADR-0014](adr/0014-me-attrition-is-separate-from-write-down.md) |
-| ~~Q5~~ | **Resolved 2026-08-20** — a cost mark-up; renamed, not reimplemented. [ADR-0017](adr/0017-contingency-is-a-cost-mark-up.md) |
-| ~~Q6~~ | **Resolved 2026-08-21** — ledgers stay strictly separate; no cross-lending. [ADR-0022](adr/0022-ledgers-stay-separate.md) |
-| ~~Q7~~ | **Resolved 2026-08-21** — one household, one toilet, once; no repeat/upgrade demand. [ADR-0023](adr/0023-no-repeat-or-upgrade-demand.md) |
-| ~~Q8~~ | **Resolved 2026-08-20** — replaced with a viable default scenario. [ADR-0013](adr/0013-viable-default-scenario.md) |
-| ~~Q9~~ | **Resolved 2026-08-21** — collections floor stops abruptly at wind-up; no taper (a taper rate would be an invented number). [ADR-0024](adr/0024-collections-floor-stays-abrupt.md) |
-| ~~Q10~~ | **Resolved 2026-08-20** — percentages. [ADR-0012](adr/0012-percentage-entry-convention.md) |
-| ~~Q11~~ | **Resolved 2026-08-20** — 5-year service life, configurable. [ADR-0016](adr/0016-toilet-service-life.md) |
-| ~~Q13~~ | **Resolved 2026-08-21** — yes, service life now stops DALYs and time-saved credit too, not just carbon. [ADR-0025](adr/0025-service-life-gates-all-impact.md) |
-| ~~Q12~~ | **Resolved 2026-08-20** — 2% concessional. [ADR-0013](adr/0013-viable-default-scenario.md) |
+| Q1 | Does SROI include financial return, or social value only? | Social value only — DALYs in, ending cash out, financial return reported separately. [ADR-0011](adr/0011-sroi-is-social-value-only.md) |
+| Q2 | Is 0.30 the right share of the wage at which to value saved household time? | Accepted as the working default; method is sourced, the factor is a documented convention — confirm against your own programme's guidance before publishing. [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md) |
+| Q3 | Should grant support be means-tested, or a flat share of production? | Stays flat — means-testing would need a household-level income distribution the model doesn't have. [ADR-0021](adr/0021-grant-support-stays-flat-rate.md) |
+| Q4 | Should ME closure and loan write-down be the same parameter? | No — separate parameters, separate events. [ADR-0014](adr/0014-me-attrition-is-separate-from-write-down.md) |
+| Q5 | Is cost contingency a mark-up or a drawable reserve? | A mark-up. [ADR-0017](adr/0017-contingency-is-a-cost-mark-up.md) |
+| Q6 | May the grant and loan ledgers cross-lend? | No — stay strictly separate. [ADR-0022](adr/0022-ledgers-stay-separate.md) |
+| Q7 | Should repeat or upgrade demand exist? | No — one household, one toilet, once. [ADR-0023](adr/0023-no-repeat-or-upgrade-demand.md) |
+| Q8 | What should the shipped demo scenario be? | A viable one, chosen by grid search. [ADR-0013](adr/0013-viable-default-scenario.md) |
+| Q9 | Should the collections floor taper at wind-up, or stop abruptly? | Stops abruptly — a taper rate would be an invented number. [ADR-0024](adr/0024-collections-floor-stays-abrupt.md) |
+| Q10 | Should rates be entered as percentages or decimals? | Percentages. [ADR-0012](adr/0012-percentage-entry-convention.md) |
+| Q11 | Should carbon crediting have a finite service life? | Yes, 5 years, configurable. [ADR-0016](adr/0016-toilet-service-life.md) |
+| Q12 | What's a reasonable default cost of capital? | 2%, concessional. [ADR-0013](adr/0013-viable-default-scenario.md) |
+| Q13 | Should service life gate DALYs and time-saved too, not just carbon? | Yes. [ADR-0025](adr/0025-service-life-gates-all-impact.md) |
 
 ---
 
