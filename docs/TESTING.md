@@ -39,7 +39,7 @@ The failure mode: `getRaw()` returns its default when `document.getElementById()
 Four checks:
 
 1. Every id read by `UI.getInputs()` exists in `index.html`.
-2. Every id touched anywhere in `app.js` exists in `index.html`.
+2. Every id touched anywhere in the app (`src/`, see `tools/app-source.js`) exists in `index.html`.
 3. No parameter is collected from the user and then never read by `ModelModule`.
 4. `tools/baseline-inputs.js` still mirrors the `value=""` attributes in `index.html`.
 
@@ -138,7 +138,7 @@ Add scenarios that exercise a distinct **path**, not merely a different number. 
 
 The model suites cannot catch a crash in the render path, because in those crashes the model was fine and the UI reading it was not. That is what eight of this project's first fifteen commits were.
 
-This suite builds a DOM stub from the **actual ids and default values parsed out of `index.html`**, loads `app.js` into it, and drives the real `runCalculation`. It asserts nothing about what appears on screen — it is not a rendering test — but it proves that clicking Recalculate on a fresh page does not throw.
+This suite builds a DOM stub from the **actual ids and default values parsed out of `index.html`**, loads the concatenated app (`tools/app-source.js`, `src/`) into it, and drives the real `runCalculation`. It asserts nothing about what appears on screen — it is not a rendering test — but it proves that clicking Recalculate on a fresh page does not throw.
 
 Two of its tests earn their place beyond crash-catching:
 
@@ -177,9 +177,9 @@ To re-record, fetch the indicators listed in the fixture and write them back in 
 
 ## The headless harness
 
-`tools/load-model.js` evaluates `app.js` in a Node VM with the smallest DOM stub that lets it finish loading, then exports `ModelModule`.
+`tools/load-model.js` evaluates the app's `src/` files (concatenated in load order by `tools/app-source.js`) in a Node VM with the smallest DOM stub that lets it finish loading, then exports `ModelModule`.
 
-**If a stub ever has to *do* something rather than merely exist, that is the bug** — the model has grown a hidden DOM dependency and it belongs in `src/model/` with no such dependency. After stage S5, this harness should become unnecessary.
+**If a stub ever has to *do* something rather than merely exist, that is the bug** — the model has grown a hidden DOM dependency. Stage S5 ([ADR-0033](adr/0033-s5-structural-split.md)) confirmed `src/model/` has none: `tests/purity.test.js` loads it with **no DOM stub at all**, not even this file's minimal one. `tools/load-model.js` itself was kept rather than deleted — every test that needs `ModelModule` in Node still goes through it, since replacing it would mean rewriting each of those tests' loading mechanism, a larger change than the rule asked for.
 
 The stub's `fetch` rejects. Tests must never touch the network: the World Bank API would make the suite slow, flaky, and dependent on an external service's uptime.
 

@@ -32,7 +32,7 @@ export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"
 
 ### Rule 1 — The specification outranks the code
 
-[docs/MODEL_SPEC.md](docs/MODEL_SPEC.md) is the source of truth for the maths, not `app.js`. If they disagree, the code is wrong — **unless** the spec rule is tagged `[AS-BUILT]`, in which case the code is right and the spec describes it.
+[docs/MODEL_SPEC.md](docs/MODEL_SPEC.md) is the source of truth for the maths, not the code (`src/model/`, since the S5 split — [ADR-0033](docs/adr/0033-s5-structural-split.md)). If they disagree, the code is wrong — **unless** the spec rule is tagged `[AS-BUILT]`, in which case the code is right and the spec describes it.
 
 Rules are tagged:
 
@@ -124,7 +124,7 @@ That last one is the real gate. A fix with no test is a fix that will be undone 
 
 | File | What it is |
 |---|---|
-| `app.js` | The whole application — model, KPIs, solvers, UI, controller. One file, ~3,900 lines and shifting as fixes land — don't trust a cited line number, re-grep. Split is stage S5, not yet started. |
+| `src/` | The whole application, split S5 ([ADR-0033](docs/adr/0033-s5-structural-split.md)): `src/model/` (pure, no DOM — engine, KPIs, solvers, invariants), `src/ui/`, `src/data/`, `src/app.js` (controller). Line numbers shift as fixes land — don't trust a cited one, re-grep. `tools/app-source.js` is the load-order source of truth; `index.html`'s `<script>` tags must match it by hand. |
 | `index.html` | The form and the dashboard. Input `id`s here must match `UI.getInputs()` — a test enforces it. |
 | `methodology.html` | User-facing explainer. Keep in sync with `MODEL_SPEC.md`. |
 | `STATUS.md` | **Read first, write last.** Current stage, what's actually unresolved, known gotchas — a snapshot, not a history. |

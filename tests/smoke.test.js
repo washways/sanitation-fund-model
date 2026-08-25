@@ -16,12 +16,13 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { concatenated } = require('../tools/app-source');
 
 const ROOT = path.join(__dirname, '..');
 
 /** Build a DOM stub whose ids and default values mirror index.html exactly. */
 function makeApp() {
-  const src = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+  const src = concatenated();
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
   const ids = new Set([...html.matchAll(/id="([A-Za-z0-9_-]+)"/g)].map(m => m[1]));
@@ -81,7 +82,7 @@ function makeApp() {
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(src + '\n;globalThis.__x = { UI, ModelModule, runCalculation };', sandbox, { filename: 'app.js' });
+  vm.runInContext(src + '\n;globalThis.__x = { UI, ModelModule, runCalculation };', sandbox, { filename: 'app-bundle.js' });
 
   return { ...sandbox.__x, alerts, el, ids };
 }

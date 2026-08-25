@@ -821,7 +821,27 @@
             </div>
         </main>
     </div>
-    <script src="app.js"></script>
+    <!--
+      S5 structural split (ADR-0033): app.js became these 14 files. Classic (non-module)
+      scripts share one global Script Environment Record, so this is functionally
+      identical to the old single <script src="app.js">, just spread out — order matters,
+      and it must match tools/app-source.js's FILES list exactly (that file is what the
+      test suite loads from; nothing here can automatically stay in sync with it).
+    -->
+    <script src="src/data/worldbank.js"></script>
+    <script src="src/data/countries.js"></script>
+    <script src="src/data/stakeholders.js"></script>
+    <script src="src/model/engine.js"></script>
+    <script src="src/model/kpis.js"></script>
+    <script src="src/model/solvers.js"></script>
+    <script src="src/model/invariants.js"></script>
+    <script src="src/ui/inputs.js"></script>
+    <script src="src/ui/kpis.js"></script>
+    <script src="src/ui/charts.js"></script>
+    <script src="src/ui/tables.js"></script>
+    <script src="src/ui/export.js"></script>
+    <script src="src/ui/advisor.js"></script>
+    <script src="src/app.js"></script>
 </body>
 
 </html>

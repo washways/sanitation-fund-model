@@ -17,11 +17,12 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { concatenated } = require('../tools/app-source');
 
 const ROOT = path.join(__dirname, '..');
 
 function makeApp() {
-  const src = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+  const src = concatenated();
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
   const ids = new Set([...html.matchAll(/id="([A-Za-z0-9_-]+)"/g)].map(m => m[1]));
@@ -85,7 +86,7 @@ function makeApp() {
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(src + '\n;globalThis.__x = { UI, ModelModule, runCalculation };', sandbox, { filename: 'app.js' });
+  vm.runInContext(src + '\n;globalThis.__x = { UI, ModelModule, runCalculation };', sandbox, { filename: 'app-bundle.js' });
 
   return { ...sandbox.__x, alerts, createdLinks };
 }
@@ -129,9 +130,8 @@ describe('CSV export (F-36)', () => {
     // an object literal, where JavaScript silently keeps the second and no test ever
     // called either one. `no-dupe-keys` (F-19) catches this statically; this asserts
     // it dynamically too, so a static-analysis regression here also fails `npm test`.
-    const src = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
-    const matches = src.match(/^\s{4}downloadCSV\(\)\s*\{/gm) || [];
+    const matches = concatenated().match(/^\s{4}downloadCSV\(\)\s*\{/gm) || [];
     assert.strictEqual(matches.length, 1,
-      `downloadCSV() is defined ${matches.length} times in app.js — should be exactly 1`);
+      `downloadCSV() is defined ${matches.length} times across src/ — should be exactly 1`);
   });
 });

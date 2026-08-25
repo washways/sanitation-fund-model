@@ -17,9 +17,16 @@ const { test, describe } = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
+const { concatenated } = require('../tools/app-source');
 
 const ROOT = path.join(__dirname, '..');
-const appSrc = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+// The app's src/ files, concatenated in load order — this is what a browser's
+// classic-script scope sees, and what these regex checks were written against
+// before the S5 split (ADR-0033). The markers used below to slice out
+// "the body of getInputs()" and "the body of ModelModule" still work unchanged,
+// because the split kept the same section-header comments at the same relative
+// positions in the load order.
+const appSrc = concatenated();
 const htmlSrc = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
 /** Every id present in index.html. */
@@ -28,7 +35,7 @@ const htmlIds = new Set([...htmlSrc.matchAll(/id="([A-Za-z0-9_-]+)"/g)].map(m =>
 /** The body of UI.getInputs(), where the model's inputs are assembled. */
 function getInputsBody() {
   const start = appSrc.indexOf('getInputs()');
-  assert.ok(start > 0, 'UI.getInputs() not found in app.js');
+  assert.ok(start > 0, 'UI.getInputs() not found in the concatenated src/');
   const end = appSrc.indexOf('// --- Initialization ---', start);
   assert.ok(end > start, 'end of getInputs() not found');
   return appSrc.slice(start, end);
@@ -60,7 +67,7 @@ describe('input wiring', () => {
       `${fixed.join(', ')} is now wired up — remove it from KNOWN_MISSING in this test.`);
   });
 
-  test('every id touched anywhere in app.js exists in index.html', () => {
+  test('every id touched anywhere in src/ exists in index.html', () => {
     const used = new Set(
       [...appSrc.matchAll(/getElementById\('([A-Za-z0-9_-]+)'\)/g)].map(m => m[1])
     );
@@ -77,7 +84,7 @@ describe('input wiring', () => {
 
     const unexpected = missing.filter(id => !KNOWN_MISSING.includes(id));
     assert.deepStrictEqual(unexpected, [],
-      `app.js reaches for DOM ids that do not exist: ${unexpected.join(', ')}`);
+      `src/ reaches for DOM ids that do not exist: ${unexpected.join(', ')}`);
   });
 
   test('no parameter is collected and then never used by the model (F-09, F-25)', () => {

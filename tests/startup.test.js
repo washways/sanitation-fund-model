@@ -24,6 +24,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { concatenated } = require('../tools/app-source');
 
 const ROOT = path.join(__dirname, '..');
 const FIXTURE = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'worldbank-malawi.json'), 'utf8'));
@@ -34,7 +35,7 @@ const FIXTURE = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'wor
  * performs: fire DOMContentLoaded, run the deferred timers, await the fetch.
  */
 function bootApp() {
-  const src = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+  const src = concatenated();
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
   const ids = new Set([...html.matchAll(/id="([A-Za-z0-9_-]+)"/g)].map(m => m[1]));
@@ -136,7 +137,7 @@ function bootApp() {
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(src + '\n;globalThis.__x = { UI, ModelModule, runCalculation };', sandbox, { filename: 'app.js' });
+  vm.runInContext(src + '\n;globalThis.__x = { UI, ModelModule, runCalculation };', sandbox, { filename: 'app-bundle.js' });
 
   /**
    * Reproduce the browser's load sequence: fire DOMContentLoaded, then drain the

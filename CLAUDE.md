@@ -12,7 +12,7 @@ npm test           # must be green before you touch anything
 
 The five rules you will get wrong if you skip AGENTS.md:
 
-1. **[docs/MODEL_SPEC.md](docs/MODEL_SPEC.md) outranks `app.js`.** Where they disagree, the code is wrong — unless the rule is tagged `[AS-BUILT]`.
+1. **[docs/MODEL_SPEC.md](docs/MODEL_SPEC.md) outranks the code (`src/`).** Where they disagree, the code is wrong — unless the rule is tagged `[AS-BUILT]`.
 2. **Never re-record `tests/golden.json` to turn a red build green.** Behaviour moves only when an ADR predicted it. This is the most damaging thing you can do here.
 3. **One roadmap stage at a time.** Found something else broken? Register it in [docs/ANALYSIS.md](docs/ANALYSIS.md) and carry on — do not fix it.
 4. **Never invent a number.** Every constant is an input, a World Bank indicator, or a documented assumption in [docs/PARAMETERS.md](docs/PARAMETERS.md). If it is none of those, stop and ask.

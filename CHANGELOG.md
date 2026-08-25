@@ -11,6 +11,22 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.5.0] — 2026-08-25 — Stage S5: app.js split into src/
+
+`app.js` (4,028 lines) split into 14 files under `src/` — `src/model/` (pure, no DOM), `src/ui/`, `src/data/`, `src/app.js` (controller). Zero behaviour change: `golden.json` byte-identical. See [ADR-0033](docs/adr/0033-s5-structural-split.md) for the full reasoning and three deliberate deviations from the original plan in `docs/ARCHITECTURE.md`/`docs/ROADMAP.md` (classic scripts instead of ES modules, for test-harness compatibility; two files — the month loop and the DOMContentLoaded handler — stay over 500 lines because each is a single function; `tools/load-model.js` was kept, not deleted).
+
+### Added
+
+- `tests/purity.test.js` — proves `src/model/*.js` loads and runs a full calculation with **zero** DOM stub (not even the minimal one other tests use), enforcing `docs/ARCHITECTURE.md`'s S5 rule 1.
+- `tools/app-source.js` — the single source of truth for the app's file list and load order, read by `tools/load-model.js`, `tools/verify-findings.js`, and every test that used to read `app.js` directly. `index.html`'s `<script>` tags must be kept in sync with it by hand.
+
+### Changed
+
+- `eslint.config.js` now targets `src/**/*.js` (was `app.js`), with the app's own top-level bindings (`ModelModule`, `UI`, `ApiModule`, `LDC_COUNTRIES`, `stakeholdersData`, `chartInstances`, `runCalculation`) declared as cross-file globals — exactly what the config's original comment anticipated. The split surfaced 3 new `no-unused-vars` findings, all suppressed with an explanation (2 are declarations only used from another file, invisible to per-file analysis; 1, `stakeholdersData`, was already dead code).
+- `index.html` now loads 14 `<script>` tags instead of one.
+
+---
+
 ## [0.4.0] — 2026-08-25 — Findings register closed: 37 of 37 resolved
 
 The last item in the findings register (F-27) is fixed, which surfaced one new, unrelated finding (F-37) — fixed in the same change. Nothing remains open in `docs/ANALYSIS.md`. Also fixed the CI matrix, which broke on the previous push.

@@ -23,14 +23,15 @@
  * the wrong thing to pin a single relationship against — the aggregate ratio would
  * mix terms, timing and horizon effects together. Instead this test replicates the
  * R-3.3 cohort recurrence directly (write-off, then interest, then principal, exactly
- * as app.js orders it), using the model's own public `annuityPayment` and
+ * as src/model/engine.js orders it), using the model's own public `annuityPayment` and
  * `getMonthlyRate` helpers for the payment schedule, so the amortisation math is the
  * real thing and only the write-off/interest/principal loop is reimplemented from the
  * four-line spec in R-3.3.
  *
- * If the loop in app.js and the loop here ever disagree, that is exactly the kind of
- * drift this test exists to catch — MODEL_SPEC.md is normative, so a mismatch means
- * app.js moved away from the spec, not that this test needs updating to match app.js.
+ * If the loop in src/model/engine.js and the loop here ever disagree, that is exactly
+ * the kind of drift this test exists to catch — MODEL_SPEC.md is normative, so a
+ * mismatch means the model moved away from the spec, not that this test needs
+ * updating to match the model.
  */
 const { test, describe } = require('node:test');
 const assert = require('node:assert');

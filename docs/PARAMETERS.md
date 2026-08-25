@@ -39,7 +39,7 @@ Columns:
 | `districts` | Administrative Units | 50 | count | count | `countriesnow.space` states, else pop/500k | With `mePerDistrict`, sets the hard ME cap. |
 | `mePerDistrict` | Micro-enterprises / Unit | 20 | count | count | derived from the sanitation gap | Cap is `districts x mePerDistrict` = 1,000 by default, and the baseline reaches it. |
 | `toiletsPerMeMonth` | Toilets / ME / Month | 7 | count/month | count/month | user | No learning curve, no seasonality. |
-| `meSetupCost` | ME Setup Cost ($ USD) | 2,000 | USD | USD | user | One of two components of `meCapitalRequirement(inputs)` — the other is working capital. Used consistently everywhere an ME's cost matters (`app.js`). |
+| `meSetupCost` | ME Setup Cost ($ USD) | 2,000 | USD | USD | user | One of two components of `meCapitalRequirement(inputs)` — the other is working capital. Used consistently everywhere an ME's cost matters (`src/model/engine.js`). |
 
 ## Lending terms
 
@@ -76,7 +76,7 @@ Columns:
 | `dalyValue` | Value per DALY ($) | 500 | USD/DALY | same | user | ✅ Now **included** in SROI ([ADR-0011](adr/0011-sroi-is-social-value-only.md)); it previously dominated the impact card while being excluded from the ratio. |
 | `co2PerToilet` | CO2e / Toilet (Tonnes/Yr) | 0.2 in HTML, overridden to 0.0 on load | tonnes/toilet/year | tonnes/toilet/year, accrued monthly against toilets in service | user | Carbon is switched off by default on the shipped demo — set it above 0 to see the carbon path. Accrual stops after `toiletLifespanYears`. |
 | `co2Value` | Value per Tonne CO2e ($) | 15 | USD/tonne | USD/tonne | user | |
-| `carbonCreditShare` | Fund Carbon Share (%) | 100 in HTML, overridden to 50 on load | percent | decimal | user | `co2PerToilet` and `carbonCreditShare` are deliberately overridden to a documented demo scenario by `setCarbonDefault` on page load, regardless of what `index.html` ships — see `app.js`'s `DOMContentLoaded` handler. |
+| `carbonCreditShare` | Fund Carbon Share (%) | 100 in HTML, overridden to 50 on load | percent | decimal | user | `co2PerToilet` and `carbonCreditShare` are deliberately overridden to a documented demo scenario by `setCarbonDefault` on page load, regardless of what `index.html` ships — see `src/app.js`'s `DOMContentLoaded` handler. |
 | `timeValueFactor` | Value of Saved Time (% of wage) | 30 | percent | decimal | user | ✅ Replaces the hardcoded, uncited `$0.50`/hour. The hourly value is now `avgAnnualIncome / 2080 × factor` — $0.147 at the shipped defaults, shown beneath the input. The 0.30 factor is an accepted convention, not a verified figure — confirm against your programme's guidance before publishing. [ADR-0015](adr/0015-value-of-saved-time.md), [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md) |
 | `toiletLifespanYears` | Toilet Service Life (Years) | 5 | years | years | user | ✅ Carbon crediting, DALYs and time-saved all stop after this ([ADR-0016](adr/0016-toilet-service-life.md), [ADR-0025](adr/0025-service-life-gates-all-impact.md)). No effect at the shipped 5-year default duration; on longer runs, all three impact channels stop for a retired toilet. |
 | `hoursPerPersonPerDay` | Hours Saved / Person / Day | 0.25 | hours | hours | user assumption | One definition, computed in the loop (R-8.2). |

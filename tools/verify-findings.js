@@ -14,6 +14,7 @@
  */
 const { ModelModule } = require('./load-model');
 const BASE = require('./baseline-inputs');
+const APP_SRC = require('./app-source').concatenated(); // src/, concatenated (S5, ADR-0033)
 
 const sum = a => a.reduce((x, y) => x + y, 0);
 const money = n => (n < 0 ? '-' : '') + '$' + Math.abs(Math.round(n)).toLocaleString('en-US');
@@ -156,7 +157,7 @@ console.log('='.repeat(80));
 {
   const bad = { ...BASE, verify: true };
   const r = ModelModule.calculate(bad);
-  const hasInv2 = require('fs').readFileSync(require('path').join(__dirname, '..', 'app.js'), 'utf8').includes('INV-2:');
+  const hasInv2 = APP_SRC.includes('INV-2:');
   check('F-12', 'the opening balance is now an enforced invariant',
     hasInv2 && r.integrity.ok,
     `INV-2 checks cash[0] against initial capital minus startup cost. The identity loop starts at i=1, ` +
@@ -165,7 +166,7 @@ console.log('='.repeat(80));
 
 // F-13 — the idle-cash branch can fire.
 {
-  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app.js'), 'utf8');
+  const src = APP_SRC;
   check('F-13', 'the "high idle cash" advisor branch is reachable again',
     !/inputs\.loanFund/.test(src.replace(/^\s*(\/\/|\*).*$/gm, '')),
     `compared against inputs.investLoan, not the non-existent inputs.loanFund. ` +
@@ -174,7 +175,7 @@ console.log('='.repeat(80));
 
 // F-15 — dead wizard code removed.
 {
-  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app.js'), 'utf8');
+  const src = APP_SRC;
   check('F-15', 'dead wizard handlers and their phantom DOM ids are gone',
     !/^\s*applyWizardSettings\(\)/m.test(src) && !src.includes("getElementById('wiz-tech')"),
     `applyWizardSettings and showWizardStep referenced ids deleted long ago and were called from nowhere.`);
@@ -182,7 +183,7 @@ console.log('='.repeat(80));
 
 // F-16 — duplicate keys.
 {
-  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app.js'), 'utf8');
+  const src = APP_SRC;
   const dupNet = /netAssets: netAssetsEnd,\s*\n\s*netAssets: netAssetsEnd,/.test(src);
   const dupMes = /dataMonthlyMes,\s*\n\s*dataMonthlyMes,/.test(src);
   check('F-16', 'duplicate object keys removed',
@@ -209,7 +210,7 @@ console.log('='.repeat(80));
 
 // F-23 — doubled currency symbol.
 {
-  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app.js'), 'utf8');
+  const src = APP_SRC;
   check('F-23', 'the doubled currency symbol is gone',
     !src.includes('$${fmt('),
     `fmt() already returns "$1,234" via Intl.NumberFormat; callers wrapped it in another "$".`);
@@ -217,7 +218,7 @@ console.log('='.repeat(80));
 
 // F-17 — one unit convention, no magnitude guessing.
 {
-  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app.js'), 'utf8');
+  const src = APP_SRC;
   const noHeuristics = !src.includes('val = val / 100')
     && !src.includes('if (val > 0 && val < 1.0) val = val * 100');
   const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8');

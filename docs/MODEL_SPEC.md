@@ -1,6 +1,6 @@
 # Model Specification
 
-**Status:** Normative. This document, not `app.js`, is the source of truth for the financial mathematics.
+**Status:** Normative. This document, not the code (`src/model/`), is the source of truth for the financial mathematics.
 **Version:** 1.0 (2026-08-20) — describes commit `2d81863` and the agreed target behaviour.
 
 ---
@@ -433,7 +433,7 @@ The model conflates two claims that must be kept separate, and reports the weake
 | **Ledger integrity** | Is the arithmetic self-consistent? | Checked by `verifyLedger`; reports `✅ Model Integrity Verified` |
 | **Fund viability** | Does the fund actually work? | **Not reported at all** — solvency failures and investor defaults are `console.warn` only |
 
-On the shipped defaults the model prints `✅ Model Integrity Verified` for a run that goes insolvent in year 4.1 and defaults on **$749,981** of senior principal. The line that would have failed it is commented out at [app.js:1049](../app.js#L1049) and labelled "optional strictness".
+This describes the pre-fix state, historical since 2026-08-20 (F-29). On the shipped defaults at the time, the model printed `✅ Model Integrity Verified` for a run that went insolvent in year 4.1 and defaulted on **$749,981** of senior principal — the line that would have failed it was commented out and labelled "optional strictness". See [docs/ANALYSIS.md#f-29](ANALYSIS.md#f-29--the-integrity-check-passes-a-run-that-went-insolvent-and-defaulted) for the original citation; the file it pointed to (`app.js`) no longer exists post-S5 ([ADR-0033](adr/0033-s5-structural-split.md)).
 
 ### R-10.1 Two verdicts **[AS-BUILT]**
 `calculate` returns two independent results:

@@ -98,7 +98,7 @@ Start with **[STATUS.md](STATUS.md)** — it's the one-page current snapshot, an
 | **[docs/PARAMETERS.md](docs/PARAMETERS.md)** | Every input: unit, range, source, meaning. Check before touching a field. |
 | **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | Current code shape, the target shape, and the constraints that keep it buildless. |
 | **[docs/TESTING.md](docs/TESTING.md)** | How the test suite is built and how to extend it. |
-| **[docs/ROADMAP.md](docs/ROADMAP.md)** | Remaining stages (S4, S5), each with an entry and exit gate. |
+| **[docs/ROADMAP.md](docs/ROADMAP.md)** | Remaining stages (S4 items 2-4, S6), each with an entry and exit gate. |
 | **[docs/adr/](docs/adr/README.md)** | One decision record per behaviour change or modelling choice — the *why* behind the changelog's *what*. Indexed. |
 | **[docs/ANALYSIS.md](docs/ANALYSIS.md)** | The original audit that started this work: 36 findings, evidence, fixes. Historical record — for current behaviour, use `MODEL_SPEC.md`. |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | Mechanics of making a change: branch, test, commit. |
@@ -108,16 +108,20 @@ Start with **[STATUS.md](STATUS.md)** — it's the one-page current snapshot, an
 ## Repository layout
 
 ```
-index.html          the form and dashboard
-app.js               model + KPIs + solvers + UI + controller — one file, ~3,900 lines
+index.html          the form and dashboard — loads src/ as 14 classic <script> tags
+src/                 model + KPIs + solvers + UI + controller, split S5 (ADR-0033)
+  model/               pure — no DOM. engine.js, kpis.js, solvers.js, invariants.js
+  ui/                  inputs.js, kpis.js, charts.js, tables.js, export.js, advisor.js
+  data/                worldbank.js, countries.js, stakeholders.js
+  app.js               controller and wiring only
 style.css
 methodology.html     user-facing methodology note
 server.js             dev static server
 eslint.config.js      3 rules: no-dupe-keys, no-undef, no-unused-vars
 
-tests/                7 suites, 21 recorded golden scenarios
+tests/                9 suites, 21 recorded golden scenarios
 vendor/                pinned Chart.js, for offline use
-tools/                 headless model loader, audit-finding verification, diagnostics
+tools/                 headless model loader, app-source file list, audit verification
 docs/                  spec, parameters, architecture, testing, roadmap, ADRs, audit
 .github/workflows/    CI — tests + lint + golden diff on every push and PR
 ```

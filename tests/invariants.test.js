@@ -295,7 +295,7 @@ describe('ledger invariants', () => {
       // Grant Support % should change WHEN the grant fund runs out, much more than it
       // changes HOW MANY grant-funded toilets get built in total — that is the whole
       // point of F-30 ("a pacing lever, not a volume lever"). If this ever stops
-      // holding, the relabelled field and its runway note (app.js updateKPIs) are
+      // holding, the relabelled field and its runway note (src/ui/kpis.js updateKPIs) are
       // describing behaviour the model no longer has.
       // 0.10, not 0.05: at 5% pacing post-ADR-0031 the (now more capital-constrained)
       // fund produces slowly enough that the grant ledger no longer exhausts within

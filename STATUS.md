@@ -8,9 +8,9 @@
 
 | | |
 |---|---|
-| **Stages complete** | S0, S1, S2, S3 — all four, fully. S4 item 1 (solver robustness, F-27) done; the rest of S4 and all of S5 not started. |
-| **Not started** | S4 items 2–4 (solver caching, sensitivity analysis, scenario save/load) and S5 (structural split of `app.js`) — see [docs/ROADMAP.md](docs/ROADMAP.md). |
-| **Tests** | ✅ 75 pass, 0 todo, 0 fail (`npm test`, ~1s) |
+| **Stages complete** | S0, S1, S2, S3, S5 — five of seven. S4 item 1 (solver robustness, F-27) done; items 2-4 and all of S6 not started. |
+| **Not started** | S4 items 2–4 (solver caching, sensitivity analysis, scenario save/load) and S6 (presentation and reach) — see [docs/ROADMAP.md](docs/ROADMAP.md). |
+| **Tests** | ✅ 77 pass, 0 todo, 0 fail (`npm test`, ~1s) |
 | **Lint** | ✅ `npm run lint` — ESLint, 3 rules. CI runs it on every push/PR (`.github/workflows/ci.yml`). |
 | **Goldens** | ✅ 21 scenarios, current (`npm run golden:diff` → "No behaviour change") |
 | **Findings register** | 37 of 37 resolved — see [docs/ANALYSIS.md](docs/ANALYSIS.md). Nothing outstanding in the register. |
@@ -57,7 +57,7 @@ Node is **not** on `PATH` on the maintainer's machine:
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"
 node --version                    # v25.8.1 — anything >= 20 works
 npm ci                             # installs ESLint, the one devDependency
-npm test                           # 75 pass, 0 fail
+npm test                           # 77 pass, 0 fail
 npm run lint
 node tools/verify-findings.js      # re-measures the audit's findings against the live model
 ```
@@ -68,4 +68,4 @@ Run the app: `python -m http.server 8080`, or `npm run serve`. Works offline (Ch
 
 ## Recent activity
 
-See [CHANGELOG.md](CHANGELOG.md) for the full, dated record. In short: an initial audit (2026-08-20) found 34 defects and fixed most of them across three stages; a follow-up session (2026-08-21) closed everything that remained in S0-S3, including a debt-service reserve fix and a micro-enterprise capital-pricing fix, and every open modelling question. A third session (2026-08-25) started S4 with the last item in the findings register, F-27 (solver robustness) — fixing it surfaced a second, unrelated display bug (F-37), fixed in the same change. The register is now 37 of 37 resolved. `docs/adr/` holds one decision record per change, each with its prediction and its measured result.
+See [CHANGELOG.md](CHANGELOG.md) for the full, dated record. In short: an initial audit (2026-08-20) found 34 defects and fixed most of them across three stages; a follow-up session (2026-08-21) closed everything that remained in S0-S3, including a debt-service reserve fix and a micro-enterprise capital-pricing fix, and every open modelling question. A third session (2026-08-25) closed the findings register (F-27, solver robustness — fixing it surfaced and fixed a second, unrelated display bug, F-37; register now 37 of 37) and then completed S5, splitting the 4,028-line `app.js` into 14 files under `src/` with a byte-identical `golden.json` ([ADR-0033](docs/adr/0033-s5-structural-split.md)). `docs/adr/` holds one decision record per change, each with its prediction and its measured result.

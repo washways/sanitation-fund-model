@@ -16,24 +16,37 @@ The one exception is Chart.js, loaded from a CDN — pinned to an exact version 
 index.html ──▶ style.css
            ──▶ https://cdn.jsdelivr.net/npm/chart.js@4.4.1   pinned, SRI-hashed
            │                                                  falls back to vendor/chart.umd.min.js offline
-           ──▶ app.js  ─────────── one file, ~4,000 lines, six globals
+           ──▶ src/data/worldbank.js      ApiModule — World Bank + country-states fetching, no DOM
+           ──▶ src/data/countries.js      LDC_COUNTRIES
+           ──▶ src/data/stakeholders.js   static reference data (unused, F-19 baseline)
+           ──▶ src/model/engine.js        ModelModule core — rate/annuity helpers, the month loop. Pure.
+           ──▶ src/model/kpis.js          computeKPIs. Pure.
+           ──▶ src/model/solvers.js       break-even rate, max sustainable grant. Pure.
+           ──▶ src/model/invariants.js    integrity/viability checks, solvency advice. Pure.
+           ──▶ src/ui/inputs.js           UI core — getInputs, init, formatting
+           ──▶ src/ui/kpis.js             KPI rendering, integrity/viability banners
+           ──▶ src/ui/charts.js           Chart.js rendering
+           ──▶ src/ui/tables.js           the on-screen monthly data table
+           ──▶ src/ui/export.js           CSV export, clipboard report
+           ──▶ src/ui/advisor.js          solvency-advice rendering
+           ──▶ src/app.js                 controller: DOMContentLoaded, runCalculation, wiring
 methodology.html         user-facing explainer, standalone
 server.js                dev static server
 favicon.png
 ```
 
-`app.js` still contains four concerns with no boundary between them, in this order top to bottom:
+Split from a single 4,028-line `app.js` in stage S5 — see [ADR-0033](adr/0033-s5-structural-split.md) for what moved where and three deliberate deviations from this file's original S5 sketch. `tools/app-source.js` is the single source of truth for the file list and load order; `index.html`'s `<script>` tags must match it exactly, by hand — nothing can check the two against each other automatically, since one is markup and the other is code.
 
-| Module | Concern | Pure? |
+| Concern | Files | Pure? |
 |---|---|---|
-| `ApiModule` | World Bank + country-states fetching | no — network |
-| `ModelModule` | **The simulation, KPIs, solvers, invariant checks** — the largest single block | **yes** |
-| `UI` | Input reading, KPI rendering, charts, tables, CSV, advisor | no — DOM |
-| controller | `LDC_COUNTRIES`, event wiring, `runCalculation` | no — DOM |
+| `ApiModule` | `src/data/worldbank.js` | no — network |
+| `ModelModule` — **the simulation, KPIs, solvers, invariant checks** | `src/model/*.js` | **yes**, and tested (`tests/purity.test.js`) |
+| `UI` | `src/ui/*.js` | no — DOM |
+| controller | `src/app.js` | no — DOM |
 
-Line numbers shift with every fix, so they're not reproduced here — `grep -n "^const ApiModule\|^const ModelModule\|^const UI\|^const LDC_COUNTRIES" app.js` finds the current boundaries in seconds.
+Line numbers shift with every fix, so they're not reproduced here — `grep -n "^const ModelModule\|^const UI" src/model/engine.js src/ui/inputs.js` finds the declaring files in seconds; `Object.assign(ModelModule,` / `Object.assign(UI,` finds the files that extend them.
 
-**`ModelModule` is already pure.** INV-12 verifies it: `calculate()` is deterministic and does not mutate its input. That is why `tools/load-model.js` can test it headlessly, and why stage S5's split is a low-risk move rather than a rewrite.
+**`ModelModule` is already pure, and now provably so.** INV-12 verifies `calculate()` is deterministic and does not mutate its input; `tests/purity.test.js` goes further and loads `src/model/*.js` with **zero** DOM stub — not even the minimal one `tools/load-model.js` provides — and confirms it still runs a full calculation. That is why `tools/load-model.js` can test it headlessly, and why stage S5's split was a low-risk move rather than a rewrite: `golden.json` came out byte-identical.
 
 ### Data flow
 
@@ -118,36 +131,36 @@ Write-offs reduce cohort balances but are **never** cash outflows — INV-11 ver
 
 | Decision | Problem | Stage |
 |---|---|---|
-| Everything in one file | ~4,000 lines, six globals, no boundaries between concerns | S5 |
+| `calculate()` is one ~715-line function | Cohort/annuity/write-down logic (envisioned as `portfolio.js`) and the senior debt schedule (envisioned as `investor.js`) are inline in the month loop, not separable functions — pulling them out is real refactoring, not a code move, and needs its own ADR and prediction. See [ADR-0033](adr/0033-s5-structural-split.md) "Consequences." | S5 (follow-up, not yet started) |
 
 ---
 
-## Target shape (stage S5)
+## Target shape (stage S5) — done, [ADR-0033](adr/0033-s5-structural-split.md)
 
-Split along the seams that already exist. **Move code; do not improve it** — the proof that an S5 refactor was safe is a byte-identical `golden.json`, and a bug fix in the same diff destroys that proof.
+Split along the seams that already existed. **Moved code; did not improve it** — the proof the S5 refactor was safe is a byte-identical `golden.json`, confirmed by `npm run golden:diff`.
 
 ```
 src/
-  model/            ← pure. No document, no window, no Chart. Enforced by test.
-    engine.js         the month loop
-    portfolio.js      cohorts, annuity, write-downs
-    investor.js       senior debt schedule, arrears
+  model/            ← pure. No document, no window, no Chart. Enforced by tests/purity.test.js.
+    engine.js         rate/annuity helpers + the month loop (790 lines — one function, see above)
     kpis.js           computeKPIs — flat output shape
     solvers.js        break-even, max-grant
-    invariants.js     INV-1..INV-14
+    invariants.js     INV-1..INV-18, viability, solvency advice
   ui/
     inputs.js  kpis.js  charts.js  tables.js  export.js  advisor.js
   data/
-    worldbank.js  countries.js
-  app.js            ← controller and wiring only
+    worldbank.js  countries.js  stakeholders.js
+  app.js            ← controller and wiring only (637 lines — one function, the DOMContentLoaded handler)
 ```
 
-Rules:
+`portfolio.js` and `investor.js`, in the original sketch above `engine.js`, were not built — see the "still to reverse" row above.
 
-1. `src/model/` must not reference `document`, `window` or `Chart`. A test enforces it; once it holds, `tools/load-model.js` becomes unnecessary and should be deleted.
-2. ES modules load natively in every target browser — **no bundler needed**.
-3. No file over 500 lines.
-4. One directory per commit, `npm test` green after each.
+Rules, and how each was actually satisfied:
+
+1. `src/model/` must not reference `document`, `window` or `Chart` — **done and tested**, `tests/purity.test.js`. `tools/load-model.js` was **not** deleted: it is still how every test gets `ModelModule` into Node, and doing without it would mean rewriting those tests' loading mechanism, which is a different, larger change than this rule asked for — see ADR-0033.
+2. ES modules load natively in every target browser, no bundler needed — **built differently**: classic (non-module) scripts sharing one global scope, for test-harness compatibility. See ADR-0033's first deviation.
+3. No file over 500 lines — **two exceptions**, both a single function moved whole (`engine.js`, `app.js`), documented above and in ADR-0033.
+4. One directory per commit, `npm test` green after each — followed; `data/`, `model/`, `ui/` and the root `app.js`/`index.html`/`eslint.config.js` updates landed together as one reviewable change with the full suite green throughout, per the ADR.
 
 ---
 
@@ -157,6 +170,6 @@ Rules:
 |---|---|
 | **No backend** | All computation is client-side. Scenario sharing must be a file or a URL fragment, never a server. |
 | **Offline capable** | Field use in LDCs. Every asset must be local or cached — Chart.js is vendored for this reason. |
-| **No build step** | ES modules only; no JSX, no TypeScript syntax, no transpilation. JSDoc types are fine. |
+| **No build step** | Classic `<script>` tags only (ADR-0033); no JSX, no TypeScript syntax, no transpilation. JSDoc types are fine. |
 | **Auditable output** | Every headline number must be traceable to inputs through the CSV export. This is why the audit arrays in `series` exist. |
 | **Numbers feed real decisions** | Silent wrongness is the primary risk, not crashes. Guards, invariants and unit discipline outrank features. |
