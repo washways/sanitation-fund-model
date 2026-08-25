@@ -8,12 +8,12 @@
 
 | | |
 |---|---|
-| **Stages complete** | S0, S1, S2, S3 — all four, fully. |
-| **Not started** | S4 (decision support) and S5 (structural split of `app.js`) — see [docs/ROADMAP.md](docs/ROADMAP.md). |
-| **Tests** | ✅ 68 pass, 0 todo, 0 fail (`npm test`, ~1s) |
+| **Stages complete** | S0, S1, S2, S3 — all four, fully. S4 item 1 (solver robustness, F-27) done; the rest of S4 and all of S5 not started. |
+| **Not started** | S4 items 2–4 (solver caching, sensitivity analysis, scenario save/load) and S5 (structural split of `app.js`) — see [docs/ROADMAP.md](docs/ROADMAP.md). |
+| **Tests** | ✅ 75 pass, 0 todo, 0 fail (`npm test`, ~1s) |
 | **Lint** | ✅ `npm run lint` — ESLint, 3 rules. CI runs it on every push/PR (`.github/workflows/ci.yml`). |
 | **Goldens** | ✅ 21 scenarios, current (`npm run golden:diff` → "No behaviour change") |
-| **Findings register** | 35 of 36 resolved — see [docs/ANALYSIS.md](docs/ANALYSIS.md). One left, not urgent (below). |
+| **Findings register** | 37 of 37 resolved — see [docs/ANALYSIS.md](docs/ANALYSIS.md). Nothing outstanding in the register. |
 | **Open modelling questions** | **None.** |
 
 ---
@@ -22,9 +22,10 @@
 
 | What | Why it's not done | Urgency |
 |---|---|---|
-| Solver robustness in capital-tight scenarios (finding F-27) | The break-even solver assumes net assets rise monotonically with the interest rate; that fails in an already-marginal capital-tight regime. Fix is well-specified (bracket then bisect, return a typed result) but not written. | Low — only misfires in a regime a user would already recognise as marginal. |
+| Solver caching/debouncing across recalculations (S4 item 2) | ADR-0032 (2026-08-25) fixed solver *correctness* (F-27) but roughly doubled its simulation cost (22 → up to 47 per recalc when the solver panel is enabled). The existing 500ms input debounce still applies; result caching across recalcs is not written. | Low — solver panel is opt-in and off by default; measured cost is well under 100ms at the shipped 5-year horizon. Worth revisiting if it's noticeable at long horizons. |
+| Sensitivity ("tornado") analysis and scenario save/load (S4 items 3–4) | Not started. | Low — genuinely useful, not blocking anything. |
 | Browser click-through for charts and the AI advisor panel | Covered only as "does not throw" via a headless DOM stub, not against a real browser. | Low — the startup path and CSV export both have real behavioural tests now; these two don't yet. |
-| The shipped default scenario's parameter search predates two later correctness fixes (reserve sizing, ME capital pricing) | The grid search that chose the defaults (`docs/adr/0013`) hasn't been re-run against the model as it stands today. The defaults are still confirmed viable — just not re-optimised. | Low — nothing is wrong, it's just not freshly tuned. |
+| The shipped default scenario's parameter search predates three later correctness fixes (reserve sizing, ME capital pricing, solver robustness) | The grid search that chose the defaults (`docs/adr/0013`) hasn't been re-run against the model as it stands today. The defaults are still confirmed viable — just not re-optimised. | Low — nothing is wrong, it's just not freshly tuned. |
 
 That's the complete list. Nothing is blocked on a decision — the model owner has ruled on every open modelling question the original audit raised.
 
@@ -56,7 +57,7 @@ Node is **not** on `PATH` on the maintainer's machine:
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"
 node --version                    # v25.8.1 — anything >= 20 works
 npm ci                             # installs ESLint, the one devDependency
-npm test                           # 68 pass, 0 fail
+npm test                           # 75 pass, 0 fail
 npm run lint
 node tools/verify-findings.js      # re-measures the audit's findings against the live model
 ```
@@ -67,4 +68,4 @@ Run the app: `python -m http.server 8080`, or `npm run serve`. Works offline (Ch
 
 ## Recent activity
 
-See [CHANGELOG.md](CHANGELOG.md) for the full, dated record. In short: an initial audit (2026-08-20) found 34 defects and fixed most of them across three stages; a follow-up session (2026-08-21) closed everything that remained, including the last two real behaviour-changing findings (a debt-service reserve fix and a micro-enterprise capital-pricing fix) and every open modelling question. `docs/adr/` holds one decision record per change, each with its prediction and its measured result.
+See [CHANGELOG.md](CHANGELOG.md) for the full, dated record. In short: an initial audit (2026-08-20) found 34 defects and fixed most of them across three stages; a follow-up session (2026-08-21) closed everything that remained in S0-S3, including a debt-service reserve fix and a micro-enterprise capital-pricing fix, and every open modelling question. A third session (2026-08-25) started S4 with the last item in the findings register, F-27 (solver robustness) — fixing it surfaced a second, unrelated display bug (F-37), fixed in the same change. The register is now 37 of 37 resolved. `docs/adr/` holds one decision record per change, each with its prediction and its measured result.

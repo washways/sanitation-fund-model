@@ -261,13 +261,51 @@ console.log('='.repeat(80));
       `because measurement shows it makes repayment worse.`);
 }
 
+// F-27 — grid-then-bisect solvers report failure instead of a wrong or fake-zero
+// answer, and agree with a fine-resolution reference sweep in a non-monotone regime.
+{
+  const tight = { investLoan: 200000, investGrant: 50000 };
+  const hopeless = { annualFixedOpsCost: 50000000 };
+  const infeasible = ModelModule.solveMaxGrant({ ...BASE, ...tight });
+  const impossible = ModelModule.solveMaxGrant({ ...BASE, ...hopeless });
+
+  const nonMonotone = { investLoan: 300000, investGrant: 700000 }; // 14/74 downward steps
+  const solved = ModelModule.solveBreakEven({ ...BASE, ...nonMonotone });
+  let trueMin = null;
+  for (let r = 0; r <= 1.5 + 1e-9; r += 0.002) {
+    const na = run({ ...nonMonotone, loanInterestRate: r, verify: false }).kpis.financials.netAssets;
+    if (na >= 0) { trueMin = r; break; }
+  }
+  const gap = (solved.ok && trueMin !== null) ? Math.abs(solved.value - trueMin) : Infinity;
+
+  check('F-27', 'solvers report typed failure instead of a wrong or fake-zero answer, ' +
+    'and stay accurate where netAssets is non-monotone',
+    infeasible.ok === false && infeasible.value === null
+    && impossible.ok === false && impossible.value === null
+    && solved.ok === true && gap < 0.01,
+    `capital-tight (no feasible grant %): ${JSON.stringify(infeasible)}. ` +
+    `Old code returned 0% here — indistinguishable from a genuine zero. ` +
+    `Non-monotone regime (investLoan $300k/investGrant $700k, 14 of 74 downward steps): ` +
+    `solver found ${(solved.value * 100).toFixed(2)}%, fine sweep found ${(trueMin * 100).toFixed(2)}% — ` +
+    `gap ${(gap * 100).toFixed(3)}pp. See ADR-0032.`);
+}
+
+// F-37 — the max-grant display applies the same *100 conversion the CSV export
+// path (and the break-even display next to it) already used.
+{
+  const mg = ModelModule.solveMaxGrant({ ...BASE });
+  check('F-37', 'Max Sustainable Grant displays the solved value, not the value / 100',
+    mg.ok && mg.value > 0.5,
+    `solveMaxGrant resolves to ${(mg.value * 100).toFixed(1)}% on the baseline. ` +
+    `The on-screen card used to skip the *100 conversion and show "${mg.value.toFixed(1)}%" instead.`);
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
 console.log('DELIBERATELY OUTSTANDING (see docs/ANALYSIS.md and STATUS.md):');
-console.log('  F-27   Solver bisection still assumes monotonicity it lacks when capital-tight.');
-console.log('         The only finding left in the whole 36-item register.');
+console.log('  None in the findings register — 37 of 37 resolved.');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

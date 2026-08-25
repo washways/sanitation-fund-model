@@ -36,13 +36,13 @@ const beSims = sims;
 sims = 0; const mg = ModelModule.solveMaxGrant({ ...BASE });
 const mgSims = sims;
 ModelModule.calculate = realCalc;
-console.log(`  solveBreakEven -> ${be === null ? 'null (FAILED)' : (be * 100).toFixed(2) + '%'}  [${beSims} simulations]`);
-console.log(`  solveMaxGrant  -> ${(mg * 100).toFixed(2)}%  [${mgSims} simulations]`);
+console.log(`  solveBreakEven -> ${be.ok ? (be.value * 100).toFixed(2) + '%' : `FAILED (${be.reason})`}  [${beSims} simulations]`);
+console.log(`  solveMaxGrant  -> ${mg.ok ? (mg.value * 100).toFixed(2) + '%' : `FAILED (${mg.reason})`}  [${mgSims} simulations]`);
 console.log(`  total per recalculation: ${beSims + mgSims + 1} full simulations`);
 
-console.log('\n--- solveMaxGrant failure is indistinguishable from a real 0% ----------');
+console.log('\n--- solveMaxGrant on an impossible scenario now reports failure, not a fake 0% (F-27, ADR-0032) ---');
 const hopeless = ModelModule.solveMaxGrant({ ...BASE, annualFixedOpsCost: 50000000 });
-console.log(`  with impossible ops cost, solveMaxGrant returns ${(hopeless * 100).toFixed(2)}% (no error signal)`);
+console.log(`  with impossible ops cost, solveMaxGrant returns ${JSON.stringify(hopeless)}`);
 
 console.log('\n--- Monotonicity of netAssets in the interest rate ---------------------');
 for (const scen of [

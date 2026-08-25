@@ -36,3 +36,4 @@ For the short version of what each one decided, [CHANGELOG.md](../../CHANGELOG.m
 | [0029](0029-grant-support-relabel-and-runway.md) | Relabel grant support; show its actual runway |
 | [0030](0030-accept-30-percent-time-value-factor.md) | Accept 30% as the value-of-time factor for now |
 | [0031](0031-unify-me-capital-requirement.md) | One micro-enterprise capital requirement, used everywhere |
+| [0032](0032-grid-then-bisect-solvers.md) | Grid-then-bisect solvers with a typed result |

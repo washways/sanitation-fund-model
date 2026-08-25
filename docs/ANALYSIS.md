@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 35 of 36 findings resolved as of 2026-08-21. Rows below marked ✅ are closed; the finding text is preserved as the historical record and must not be deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 37 of 37 findings resolved as of 2026-08-25 (F-37 was found and fixed the same day it was added — see its entry). Rows below marked ✅ are closed; the finding text is preserved as the historical record and must not be deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -88,8 +88,9 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | ✅ [F-24](#f-24--the-readme-documents-behaviour-that-is-not-implemented) | Medium | Docs | README documents behaviour that is not in the code | src | S0 |
 | ✅ [F-25](#f-25--inputs-collected-and-never-used) | Low | Inputs | `avgAnnualIncome` and `wizTech` are collected and never used | src | S3 |
 | ✅ [F-26](#f-26--the-default-rate-definition-is-undocumented-and-counter-intuitive) | Medium | Core | The default-rate definition is undocumented and probably not what users assume | run | S3 |
-| [F-27](#f-27--the-solver-assumes-a-monotonicity-it-cannot-rely-on) | Medium | Solver | Binary search assumes a monotonicity that is not guaranteed | run* | S4 |
+| ✅ [F-27](#f-27--the-solver-assumes-a-monotonicity-it-cannot-rely-on) | Medium | Solver | Binary search assumes a monotonicity that is not guaranteed | run* | S4 |
 | ✅ [F-28](#f-28--union-typed-kpis-and-sentinel-values) | Low | KPI | Union-typed KPIs (`"Sustainable"` vs a number) and a `99` sentinel | src | S3 |
+| ✅ [F-37](#f-37--max-sustainable-grant-displays-100x-too-small) | Medium | UI | `sus-max-grant` skips a `*100` conversion CSV export already applies | run | S4 |
 
 ---
 
@@ -649,6 +650,27 @@ Confirmed alongside it:
 - The baseline break-even household rate is **50.5%** — a number worth surfacing prominently, since it is the model's own verdict on whether the demonstration scenario is viable.
 
 **Fix:** scan a coarse grid first to confirm a sign change, then bisect within the bracketed interval; return a `{ ok, value, reason }` result object; cache or debounce the solver so it does not run 22 simulations per keystroke.
+
+**Fully fixed 2026-08-25.** [ADR-0032](adr/0032-grid-then-bisect-solvers.md). Re-measuring before the fix found the original evidence above no longer reproduces — ADR-0031 (this repository's ME capital-pricing fix) changed the dynamics, and the specific capital-tight case now shows 0 of 74 downward steps. A broader re-sweep against the current model found the underlying problem alive elsewhere instead: up to 14 of 74 downward steps in nearby capital-tight/high-default/grant-heavy regimes, and pervasive non-monotonicity in `netAssets(grantSupportPct)` even at the shipped baseline (27 of 50 downward steps). Both solvers now scan a 13-point grid, take the true extremum across the whole grid (not the first sign change scanning one direction), and bisect only the one adjacent grid cell — correct regardless of monotonicity, validated to within ~0.1 percentage point against fine-resolution (0.1%-step) reference sweeps across 10 scenarios, including several with genuine feasibility gaps that now correctly report `{ ok: false }` instead of a wrong number. Cost: simulations per solver call rise from ~11 to ~13–23 (typically 22 → up to 47 per recalculation with the solver panel enabled — opt-in, `enableBreakEvenSolver: false` by default, and still covered by the existing 500ms input debounce). Caching across recalculations is deferred to roadmap S4 item 2. `tests/solver.test.js` pins the typed result and the failure-is-not-zero distinction.
+
+---
+
+### F-37 — Max Sustainable Grant displays 100x too small
+
+**Severity: Medium.** [app.js:1745-1746](../app.js#L1745-L1746) (pre-fix), in the same block that renders `sus-breakeven-rate`:
+
+```js
+const maxGrant = (results.maxGrantPct || 0);
+setText('sus-max-grant', maxGrant > 0 ? maxGrant.toFixed(1) + '%' : '0%');
+```
+
+`solveMaxGrant` returns a decimal fraction (e.g. `0.999` for 99.9%), exactly like `breakEvenRate` on the line above it — which *does* multiply by 100. This line does not. The CSV export path building the same figure from the same `results.maxGrantPct` ([app.js:2665](../app.js#L2665), pre-fix) gets the conversion right, so the two views of the same run disagreed by a factor of 100.
+
+**Measured, on the shipped baseline:** `solveMaxGrant` resolves to **99.9%**. The on-screen "Max Sustainable Grant" card showed **"1.0%"**. The exported CSV, for the same run, correctly showed **"99.9%"**.
+
+**Found while implementing [ADR-0032](adr/0032-grid-then-bisect-solvers.md) (F-27)** — unpacking the solver's new typed result required touching this exact line, which is when the missing `*100` surfaced.
+
+**Fix:** apply the same `* 100` conversion the CSV export already used. Fixed in the same edit as F-27, in ADR-0032.
 
 ---
 

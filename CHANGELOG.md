@@ -11,6 +11,28 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.4.0] — 2026-08-25 — Findings register closed: 37 of 37 resolved
+
+The last item in the findings register (F-27) is fixed, which surfaced one new, unrelated finding (F-37) — fixed in the same change. Nothing remains open in `docs/ANALYSIS.md`. Also fixed the CI matrix, which broke on the previous push.
+
+### Fixed
+
+- **Both solvers (`solveBreakEven`, `solveMaxGrant`) assumed a monotonicity the model does not guarantee.** Binary search converges on a wrong answer, silently, wherever `netAssets` isn't monotone in the swept parameter — measured across several regimes (nearby capital-tight scenarios, high default, grant-heavy/loan-light, and pervasively in the grant-support sweep even at the shipped baseline). Replaced with a grid-then-bisect approach: scan a 13-point grid for the true extremum across the whole range (not the first sign change found scanning one direction — correct regardless of monotonicity or how many feasible pockets exist), then bisect only the one adjacent grid cell. Both solvers now return `{ ok, value, reason }` instead of a bare number, so "no feasible answer exists" is distinguishable from "the answer is zero" — the old `solveMaxGrant` returned `0` for both. Validated to within ~0.1 percentage point against fine-resolution reference sweeps across 10 scenarios. Cost: up to ~47 simulations per recalculation with the solver panel enabled (was 22) — panel is opt-in and off by default, and the existing 500ms input debounce is unchanged. `tests/solver.test.js` added. ([ADR-0032](docs/adr/0032-grid-then-bisect-solvers.md))
+
+- **"Max Sustainable Grant" displayed 100x too small** (found while fixing the above — unpacking the solver's new typed result touched this exact line). It skipped the `*100` conversion the CSV export path already applied: a real 99.9% answer showed on screen as "1.0%". Fixed in the same change. (F-37, [ADR-0032](docs/adr/0032-grid-then-bisect-solvers.md))
+
+- **CI failed on the Node 20.x matrix leg.** `node --test "tests/*.test.js"`'s quoted glob only expands consistently on Node 22.x+; Node 20.x errored with "Could not find". Dropped the explicit glob — `node --test` with no arguments already discovers every `*.test.js` file by default, which is the same 7 files. No behaviour change.
+
+### Added
+
+- `tests/solver.test.js` — pins the typed solver result and the failure-is-not-zero distinction, including two scenarios with genuine non-monotonicity validated against fine-resolution reference sweeps.
+
+---
+
+**Summary:** `npm test` 68 → 75. Findings register 35/36 → 37/37 resolved (one new finding discovered and fixed along the way, same as last session). `golden.json` unchanged — no golden scenario exercises the solvers (`enableBreakEvenSolver: false` by default).
+
+---
+
 ## [0.3.0] — 2026-08-21 — Audit closed out: 35 of 36 findings resolved, no open questions
 
 Follow-up to the 2026-08-20 audit. Every remaining finding worth fixing now is fixed; every modelling question the audit raised is decided. One finding remains, deliberately (see below) — nothing is blocked on a decision.

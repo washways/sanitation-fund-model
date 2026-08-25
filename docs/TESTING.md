@@ -3,7 +3,7 @@
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # Node is not on PATH
 npm ci                 # installs ESLint, the one devDependency — needed once
-npm test              # 68 tests, ~1s
+npm test              # 75 tests, ~1s
 npm run test:watch    # re-run on change
 npm run golden:diff   # what would move, without writing
 npm run verify        # reproduce the audit findings
@@ -26,6 +26,7 @@ This codebase's git history contains eight "Fix TypeError" commits from before t
 | `startup.test.js` | A broken scenario behind the country fetch | *Does the thing a user opens actually work?* |
 | `writedown.test.js` | A write-down/default formula drifting from what the spec says it does | *Does a written-down loan behave the way `MODEL_SPEC.md` says?* |
 | `export.test.js` | A broken or untested export path | *Does clicking Export actually produce a file?* |
+| `solver.test.js` | A solver silently converging on a wrong or fake-zero answer where the model isn't monotone | *When there's no feasible answer, does the tool say so instead of guessing?* |
 
 A historical example of why this matters: an early defect made the fund's cost of capital permanently zero, yet it passed every invariant and every golden test — the model was perfectly self-consistent and perfectly stable at the wrong answer. Only a wiring-style check finds that class of bug. Equally, several of this project's early crashes were in the render path, where the model was fine and the UI reading it was not; only a smoke test finds those.
 
