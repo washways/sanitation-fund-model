@@ -2,7 +2,8 @@
 
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # Node is not on PATH
-npm test              # 53 tests, ~0.5s, zero dependencies
+npm ci                 # installs ESLint, the one devDependency — needed once
+npm test              # 68 tests, ~1s
 npm run test:watch    # re-run on change
 npm run golden:diff   # what would move, without writing
 npm run verify        # reproduce the audit findings
@@ -12,19 +13,21 @@ No test framework, no bundler, no `node_modules`. The suite uses Node's built-in
 
 ---
 
-## Why four kinds of test
+## Why seven kinds of test
 
-This codebase's git history contains eight "Fix TypeError" commits — each a defect found by a user in a browser. The suite is shaped around the four ways this particular model goes wrong.
+This codebase's git history contains eight "Fix TypeError" commits from before the suite existed — each a defect found by a user in a browser. The suite is shaped around the distinct ways this particular model goes wrong; no one suite subsumes another.
 
 | Suite | Catches | Question it answers |
 |---|---|---|
-| `wiring.test.js` | A parameter the model reads that the user cannot set | *Does the model receive what the user typed?* |
+| `wiring.test.js` | A parameter the model reads that the user cannot set, or a control that doesn't actually move the output | *Does the model receive what the user typed, and does it matter?* |
 | `invariants.test.js` | An internally inconsistent ledger | *Is the arithmetic self-consistent?* |
 | `golden.test.js` | An unintended change in any output | *Did I move something I did not mean to move?* |
 | `smoke.test.js` | A crash or a write-back in the render path | *Does the whole app actually run?* |
 | `startup.test.js` | A broken scenario behind the country fetch | *Does the thing a user opens actually work?* |
+| `writedown.test.js` | A write-down/default formula drifting from what the spec says it does | *Does a written-down loan behave the way `MODEL_SPEC.md` says?* |
+| `export.test.js` | A broken or untested export path | *Does clicking Export actually produce a file?* |
 
-None of the five subsumes the others. F-01 (cost of capital always zero) passed every invariant and every golden test — the model was perfectly self-consistent and perfectly stable at the wrong answer. Only a wiring test finds it. Equally, eight of this project's first fifteen commits were `TypeError` crashes in the render path, where the model was fine and the UI reading it was not; only a smoke test finds those.
+A historical example of why this matters: an early defect made the fund's cost of capital permanently zero, yet it passed every invariant and every golden test — the model was perfectly self-consistent and perfectly stable at the wrong answer. Only a wiring-style check finds that class of bug. Equally, several of this project's early crashes were in the render path, where the model was fine and the UI reading it was not; only a smoke test finds those.
 
 ---
 
@@ -45,7 +48,7 @@ Check 4 matters more than it looks: if the golden scenarios drift from the shipp
 
 Checks 1–3 carry an allow-list of the defects that exist today. It cuts both ways: the test fails if a **new** id goes missing, *and* it fails if a listed one is **fixed** without being removed from the list. The allow-list therefore cannot rot into a list of things nobody remembers.
 
-`KNOWN_MISSING` for check 1 is now **empty** — F-01 and F-15 closed it — and must stay that way. Check 3's `KNOWN_UNUSED` is down to `avgAnnualIncome` (F-25) plus two names that are legitimately not model parameters.
+`KNOWN_MISSING` for check 1 is **empty** and must stay that way. Check 3's `KNOWN_UNUSED` holds only `country` and `enableBreakEvenSolver` — both legitimately not model parameters (a label and a controller flag). Every other collected input reaches `ModelModule`.
 
 **Remove an entry in the same commit that fixes it. Never add one to make a build green** — that is the exact failure mode this test exists to prevent.
 
@@ -53,7 +56,7 @@ Checks 1–3 carry an allow-list of the defects that exist today. It cuts both w
 
 ## `invariants.test.js` — is the ledger self-consistent?
 
-INV-1 to INV-14, defined normatively in [MODEL_SPEC.md §12](MODEL_SPEC.md). Each runs across a **16-scenario matrix** — no capital, no debt, zero inflation, 45% inflation, zero defaults, 40% defaults, 1-year and 20-year horizons, capital-tight, demand-exhausted, carbon on, and so on — and collects every failure before reporting, so one run tells you whether a break is universal or confined to one corner.
+INV-1 to INV-18, defined normatively in [MODEL_SPEC.md §12](MODEL_SPEC.md). INV-1 through INV-14 run across a **16-scenario matrix** — no capital, no debt, zero inflation, 45% inflation, zero defaults, 40% defaults, 1-year and 20-year horizons, capital-tight, demand-exhausted, carbon on, and so on — and collects every failure before reporting, so one run tells you whether a break is universal or confined to one corner.
 
 That distinction is the whole value of the matrix. "INV-1 fails" is a puzzle; "INV-1 fails only when `investLoan` is 0" is a diagnosis.
 
@@ -187,12 +190,11 @@ Named honestly so nobody assumes coverage that does not exist.
 
 | Gap | Why it matters | Stage |
 |---|---|---|
-| **The UI layer** | Charts, CSV export and the report builder are still uncovered. `smoke.test.js` proves they do not throw; nothing asserts what they produce. | S2 |
-| **A real browser** | Everything is verified against a DOM stub. Charts, CSV export and the advisor panel are covered only as "does not throw". | now |
-| **`ApiModule`** | World Bank fetching, the LDC list, the auto-fill heuristics. Needs a fixture-based test with recorded responses. | S4 |
-| **Charts** | No rendering assertions. F-22 (unpinned CDN) means charts can vanish offline with no error. | S6 |
+| **Charts and the advisor panel** | Covered by `smoke.test.js` only as "does not throw" against a DOM stub — nothing asserts what a chart actually renders, or what the advisor actually recommends, in a real browser. CSV export no longer has this gap (`export.test.js` asserts on real output content). | now |
+| **A real browser** | Everything is verified against a DOM stub, faithful as it is. No test has ever opened this in an actual browser. | now |
 | **Accessibility** | Not assessed at all. Assume it fails. | S6 |
-| **`server.js`** | Untested, and has a path traversal (F-18). | S0 |
+
+`ApiModule` (World Bank fetching, the LDC list) has fixture-based coverage via `tests/startup.test.js` and `tests/fixtures/worldbank-malawi.json` — recorded responses, never a live call.
 
 ---
 

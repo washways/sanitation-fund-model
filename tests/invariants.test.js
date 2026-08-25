@@ -232,11 +232,116 @@ describe('ledger invariants', () => {
     assert.strictEqual(short.series.windUpMonth, long.series.windUpMonth,
       'wind-up month must not depend on the requested horizon');
 
-    const a = short.kpis.impact.financials, b = long.kpis.impact.financials;
+    const a = short.kpis.financials, b = long.kpis.financials;
     assert.ok(Math.abs(a.cashEnd - b.cashEnd) <= TOL,
       `cashEnd 5y $${a.cashEnd.toFixed(0)} vs 20y $${b.cashEnd.toFixed(0)}`);
     assert.ok(Math.abs(a.netAssets - b.netAssets) <= TOL,
       `netAssets 5y $${a.netAssets.toFixed(0)} vs 20y $${b.netAssets.toFixed(0)}`);
     assert.strictEqual(short.kpis.reach.toilets, long.kpis.reach.toilets);
   });
+
+  test('INV-15: DALYs and time-saved stop accruing for a toilet past its service life, same as carbon (Q13, ADR-0025)',
+    () => {
+      // A short lifespan against a long duration guarantees real retirement within the
+      // run, so this scenario actually exercises the fix rather than passing vacuously.
+      const r = run({ toiletLifespanYears: 2, duration: 10 });
+      const s = r.series;
+      const last = s.dataMonthlyDalysAverted.length - 1;
+
+      // The scenario must genuinely have toilets past service life by the end, or this
+      // test proves nothing — retiredToiletsCumulative would be 0 and every basis agrees.
+      assert.ok(s.dataMonthlyCreditingToilets[last] < s.dataMonthlyActiveToilets[last] * 0.9,
+        'this scenario should have retired a meaningful share of its toilets by month ' +
+        `${last + 1} (in-service ${s.dataMonthlyCreditingToilets[last]} vs all-time built ` +
+        `${s.dataMonthlyActiveToilets[last]}) — otherwise it is not testing retirement at all`);
+
+      // R-8.2/R-8.3: dalys[m] and hours[m] are keyed to the SAME in-service count carbon
+      // already uses (R-8.1), not to every toilet ever built.
+      const expectedDalys = s.dataMonthlyCreditingToilets[last] * BASE.avgHHSize * BASE.dalyPerPerson / 12;
+      assert.ok(Math.abs(s.dataMonthlyDalysAverted[last] - expectedDalys) < 1,
+        `dalys[${last}] = ${s.dataMonthlyDalysAverted[last].toFixed(2)}, expected ${expectedDalys.toFixed(2)} ` +
+        `from creditingToilets — a retired toilet must not keep averting DALYs`);
+
+      const hoursPerDay = BASE.hoursPerPersonPerDay !== undefined ? BASE.hoursPerPersonPerDay : 0.25;
+      const expectedHours = s.dataMonthlyCreditingToilets[last] * BASE.avgHHSize * hoursPerDay * 30;
+      assert.ok(Math.abs(s.dataMonthlyHoursSaved[last] - expectedHours) < 1,
+        `hoursSaved[${last}] = ${s.dataMonthlyHoursSaved[last].toFixed(2)}, expected ${expectedHours.toFixed(2)} ` +
+        `from creditingToilets — a retired toilet must not keep saving time`);
+    });
+
+  test('INV-16: the solvency gate reserves against scheduled investor principal, not just ops cost (F-10, ADR-0027)',
+    () => {
+      // Before ADR-0027, the shipped baseline built 133,469 toilets under a reserve of
+      // 3 months' (possibly hibernation-cut) ops cost only. The reserve now also holds
+      // back the next 3 months of scheduled investor principal, so a fund with real
+      // debt service must lend more conservatively — reach must fall, not because the
+      // fund performs worse, but because it no longer lends away cash it already owes.
+      const r = run({});
+      assert.ok(r.kpis.reach.toilets < 133469,
+        `expected fewer toilets than the pre-ADR-0027 baseline (133,469) now that the ` +
+        `solvency gate reserves against scheduled investor principal too — got ${r.kpis.reach.toilets}. ` +
+        `If this is failing because the number went back up to 133,469, the lookahead reserve was reverted.`);
+      assert.ok(r.viability.ok,
+        'the baseline scenario must remain viable under the new reserve — conservatism should not tip it over');
+
+      // The reserve must not apply after wind-up (R-9.2): a dead fund does no further
+      // lending, so reserving against it is meaningless. Use a fund that dies early.
+      const dying = run({ annualFixedOpsCost: 400000, loanInterestRate: 0.05 });
+      assert.ok(dying.series.windUpMonth !== null, 'this scenario should wind up for the check below to mean anything');
+    });
+
+  test('INV-17: grantExhaustedMonth reports when the grant ledger runs dry, and confirms F-30 (pacing, not volume)',
+    () => {
+      // Grant Support % should change WHEN the grant fund runs out, much more than it
+      // changes HOW MANY grant-funded toilets get built in total — that is the whole
+      // point of F-30 ("a pacing lever, not a volume lever"). If this ever stops
+      // holding, the relabelled field and its runway note (app.js updateKPIs) are
+      // describing behaviour the model no longer has.
+      // 0.10, not 0.05: at 5% pacing post-ADR-0031 the (now more capital-constrained)
+      // fund produces slowly enough that the grant ledger no longer exhausts within
+      // the 5-year default horizon — a real, legitimate consequence of F-21, not a
+      // bug in this property. 10% (the shipped default) still exhausts reliably.
+      const low = run({ grantSupportPct: 0.10 });
+      const high = run({ grantSupportPct: 0.90 });
+
+      assert.ok(low.kpis.sustainability.grantExhaustedMonth !== null, 'low pacing should still exhaust the fund eventually at these defaults');
+      assert.ok(high.kpis.sustainability.grantExhaustedMonth !== null, 'high pacing should exhaust the fund');
+      assert.ok(low.kpis.sustainability.grantExhaustedMonth > high.kpis.sustainability.grantExhaustedMonth,
+        `a lower pacing % should exhaust the grant fund LATER — got month ${low.kpis.sustainability.grantExhaustedMonth} ` +
+        `at 5% vs month ${high.kpis.sustainability.grantExhaustedMonth} at 90%`);
+
+      const volumeChange = Math.abs(high.kpis.reach.grantToilets - low.kpis.reach.grantToilets) / low.kpis.reach.grantToilets;
+      assert.ok(volumeChange < 0.10,
+        `total grant-funded toilets should barely move across an 18x pacing change (F-30) — ` +
+        `moved ${(volumeChange * 100).toFixed(1)}% (${low.kpis.reach.grantToilets} -> ${high.kpis.reach.grantToilets})`);
+    });
+
+  test('INV-18: micro-enterprise capital requirement is one number everywhere, not three (F-21, ADR-0031)',
+    () => {
+      // R-6.1 had three disagreeing notions of what one ME costs: the affordability
+      // check (setup + working capital) decided how many the fund could afford, but
+      // the loan actually booked — at month 0 and on every in-loop expansion — used
+      // setup cost alone. meCapitalRequirement(inputs) is now the single source.
+      const expected = ModelModule.meCapitalRequirement(BASE);
+      assert.ok(expected > BASE.meSetupCost,
+        'the capital requirement must include working capital, not just be the setup cost');
+
+      // Month 0: cost per ME actually booked at startup.
+      const r0 = run({});
+      assert.ok(r0.series.startMEs > 0, 'this scenario should start with some MEs for the check below to mean anything');
+      const perMe0 = r0.series.startupCost / r0.series.startMEs;
+      assert.ok(Math.abs(perMe0 - expected) < 1,
+        `month-0 cost/ME ($${perMe0.toFixed(2)}) should equal meCapitalRequirement ($${expected.toFixed(2)})`);
+
+      // In-loop expansion: disable exit so every ME added after month 0 shows up as a
+      // clean difference in the continuous count, uncomplicated by attrition.
+      const rLoop = run({ meExitRate: 0 });
+      const s = rLoop.series;
+      const mesAddedInLoop = s.dataMonthlyMes[s.dataMonthlyMes.length - 1] - s.startMEs;
+      assert.ok(mesAddedInLoop > 1, 'this scenario should expand via the in-loop path for the check below to mean anything');
+      const totalExpansionLoans = sum(s.dataMonthlyNewLoansMeVal);
+      const perMeLoop = totalExpansionLoans / mesAddedInLoop;
+      assert.ok(Math.abs(perMeLoop - expected) < 5,
+        `in-loop expansion cost/ME ($${perMeLoop.toFixed(2)}) should equal meCapitalRequirement ($${expected.toFixed(2)})`);
+    });
 });

@@ -11,7 +11,7 @@ No install. Node is needed only for tests and tooling.
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # not on PATH by default
 node --version      # v25.8.1 — anything >= 20 works
-npm test            # 53 pass, 0 todo, 0 fail
+npm test            # 68 pass, 0 todo, 0 fail
 ```
 
 To run the app: `python -m http.server 8080`, or `npm run serve`.
@@ -105,7 +105,7 @@ Match the file you are in. Beyond that:
 | **Renderers do not mutate results** | [F-14](docs/ANALYSIS.md#f-14--the-kpi-object-is-destructively-mutated-by-the-renderer). Format at the render boundary; never write back into the model's output. |
 | **The console is not a reporting channel** | If a user needs to know it, it goes on screen. [F-29](docs/ANALYSIS.md#f-29--the-integrity-check-passes-a-run-that-went-insolvent-and-defaulted) is what happens otherwise. |
 | **No new constants** | Every number is an input, a World Bank indicator, or a documented assumption in [PARAMETERS.md](docs/PARAMETERS.md). If it is none of those, stop and ask. |
-| **One definition per concept** | The codebase currently has two hours-saved formulas ([F-07](docs/ANALYSIS.md#f-07--two-incompatible-hours-saved-formulas)) and two investor-interest calculations ([F-06](docs/ANALYSIS.md#f-06--grace-period-interest-never-accrues-and-arrears-never-come-due)). Do not add a third of anything. |
+| **One definition per concept** | Two incompatible "hours saved" formulas once coexisted, disagreeing by 4.39x, and two investor-interest calculations once disagreed about whether grace-period interest accrued. Both were consolidated to one each — don't reintroduce a second definition of anything. |
 
 ---
 

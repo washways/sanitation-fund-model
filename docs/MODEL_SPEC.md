@@ -110,11 +110,11 @@ probDefault_monthly = 1 - (1 - defaultRate_annual)^(1/12)
 
 This is a *fractional continuous write-down*, not a discrete "x% of loans fail". Consequences a reader must understand:
 
-- Realised loss as a share of **disbursed principal** is always **less** than the headline rate for amortising loans, because the balance declines over the term. The gap widens as the term shortens.
+- Realised loss as a share of **disbursed principal** is **not** the headline rate, and it is **not always less than it** — see [F-35](ANALYSIS.md#f-35--r-34s-always-less-than-headline-claim-is-wrong-past-about-18-months). Below roughly a year it is well below the headline (a 5% annual hazard on a 6-month loan realises ~1.5%, because only half a year of exposure applies and the balance is amortising down throughout). Past about 18–24 months the *cumulative* exposure across multiple years overtakes the amortisation effect and realised loss **exceeds** the single-year headline rate (a 5% hazard on a 36-month loan realises ~8%). There is no term at which "headline rate" is a correct estimate of realised loss; it is always either an over- or an under-estimate, and which one flips somewhere in the 18–24 month range.
 - `monthlyPayment` is **not** re-amortised after a write-off, so the loss lands on the final payment rather than on a missed one.
 - A defaulting loan also earns less interest, because interest is charged post-write-off.
 
-**Label the UI field accordingly** — "Annual portfolio write-down rate", not "Default rate". Test `T-DEF-1` pins realised loss to disbursed for a fixed scenario so the relationship stays visible.
+**Label the UI field accordingly** — "Annual portfolio write-down rate", not "Default rate". `tests/writedown.test.js` (`T-DEF-1`) pins realised loss to disbursed principal at several terms so the crossover stays visible instead of silently drifting.
 
 ### R-3.5 Defaults are not cash **[AS-BUILT]**
 Write-offs reduce cohort balances and are reported in `dataMonthlyDefaults*`, but they are **never** a cash outflow. They must not appear in `netFlow`. (The variable lives in the `outflows` object for reporting convenience only — this naming is misleading and should be renamed to `writeOffs` in Stage 3.)
@@ -201,47 +201,49 @@ charged on grant and loan disbursements alike, and paid from whichever ledger fu
 
 > **`contingencyRate` is a per-unit cost mark-up, not a drawable reserve** — decided 2026-08-20, [ADR-0017](adr/0017-contingency-is-a-cost-mark-up.md). It is driven by the political-stability indicator, which measures delivery risk rather than treasury policy; the model has no shock process for a reserve to be drawn against; and a percentage uplift on base cost is how contingency is treated in construction budgeting anyway. The field is relabelled "Cost Contingency (% mark-up)". Resolves Q5.
 
-### R-5.4 Solvency gate **[AS-BUILT, with gaps — F-10, Stage 3]**
+### R-5.4 Solvency gate **[AS-BUILT]** (debt-service lookahead added 2026-08-21, [ADR-0027](adr/0027-debt-service-lookahead-reserve.md), resolves F-10)
 New lending is permitted only if:
 
 ```
 loanCash >= requiredReserves  AND  grantCash >= 0  AND  not windingDown
 lendable = max(0, loanCash - requiredReserves)
+requiredReserves = windUpMonth !== null
+    ? 0
+    : (fullFixedOps * 3) + sum(next 3 months of scheduled investor principal)
 ```
 
-**[AS-BUILT]** `requiredReserves = opsCost * 3` — three months of the *current* (possibly hibernation-reduced) fixed ops cost.
+`fullFixedOps` is the *current month's* fixed ops cost **before** the hibernation cut (`opsCost`) is applied — a buffer that shrinks by 70% exactly when the fund is most fragile was not a buffer. The scheduled-principal lookahead reads directly from `investorSchedule` (R-4.1), which already exists and is indexed by month, so this is a lookup, not new machinery. The README's long-standing claim of a "3-month Debt Lookahead" is now true.
 
-**[TARGET — F-10]** `requiredReserves = 3 * fullFixedOps + sum(next 3 months of scheduled principal)`. The README already claims a debt-service lookahead; it does not exist. Two problems with the current form: the buffer shrinks by 70% exactly when the fund is most fragile, and it ignores the debt that has to be paid next quarter.
-
-**[TARGET — F-10]** `opsReserveCap` currently affects only the month-0 ME sizing and nothing thereafter. Either enforce it as a floor on `loanCash` throughout, or remove the input. Do not leave it half-wired.
+`opsReserveCap` (the separate input formerly labelled "Liquidity Buffer %", now "Starting Capacity Throttle %") is **not** part of `requiredReserves` and was deliberately left that way — see R-6.1 and [ADR-0027](adr/0027-debt-service-lookahead-reserve.md)'s "Alternatives considered". It sizes the month-0 starting ME cohort only, which is its own well-defined (if narrow) job; folding it into the ongoing solvency reserve would conflate two different concepts under one input.
 
 ---
 
 ## 6. Micro-enterprises
 
-### R-6.1 Startup cohort (month 0) **[AS-BUILT, inconsistent — F-21, Stage 3]**
+### R-6.1 Startup cohort (month 0) **[AS-BUILT]** (unified 2026-08-21, [ADR-0031](adr/0031-unify-me-capital-requirement.md), resolves F-21)
 
 ```
-maxTotalMEs        = districts * mePerDistrict
-oneMeWorkingCapital = toiletsPerMeMonth * avgToiletCost * max(6, termHh)
-startupCostPerMe    = meSetupCost + oneMeWorkingCapital
-affordableStartMEs  = floor(max(0, loanCash - currentReserve) / startupCostPerMe)
-startMEs            = min(maxTotalMEs, affordableStartMEs)
-startLoanVolume     = startMEs * meSetupCost          // <-- note: setup cost ONLY
+maxTotalMEs         = districts * mePerDistrict
+meCapitalRequirement = meSetupCost + (toiletsPerMeMonth * avgToiletCost * max(6, termHh))
+affordableStartMEs   = floor(max(0, loanCash - currentReserve) / meCapitalRequirement)
+startMEs             = min(maxTotalMEs, affordableStartMEs)
+startLoanVolume      = startMEs * meCapitalRequirement   // was meSetupCost alone
 ```
 
-The inconsistency: affordability is priced *including* working capital, but the loan booked is the setup cost alone. In-loop expansion (R-6.2) uses neither. **[TARGET]** Define one `meCapitalRequirement(inputs)` and use it in all three places.
+`meCapitalRequirement(inputs)` is now a single function (`ModelModule.meCapitalRequirement`), used here, in R-6.2's expansion budget, and in the loan R-6.2 books — the same number decides how many MEs the fund can afford and how much it lends them. Before this, the loan booked used setup cost alone — 7.3x less than the affordability check's own number at the shipped defaults — so the fund decided how many enterprises it could afford using the realistic figure, then only lent them a seventh of it.
 
-### R-6.2 In-loop expansion **[AS-BUILT, undocumented magic — F-21, Stage 3]**
+### R-6.2 In-loop expansion **[AS-BUILT]** (constants exposed 2026-08-21, [ADR-0019](adr/0019-expose-me-growth-constants.md); cost unified same day, [ADR-0031](adr/0031-unify-me-capital-requirement.md))
 
 ```
-expansionBudget = lendable * 0.10
-newMEs = min(floor(expansionBudget / meSetupCost),
-             ceil(currentMEs * 0.10),
+expansionBudget = lendable * meExpansionBudgetShare
+newMEs = min(floor(expansionBudget / meCapitalRequirement),
+             ceil(currentMEs * meMaxMonthlyGrowthRate),
              maxTotalMEs - currentMEs)
 ```
 
-Both `0.10` constants are hardcoded. The second is the dominant driver of the growth curve (10%/month compounds to about 3.1x/year) and is invisible to the user. **[TARGET]** Expose both as inputs (`meExpansionBudgetShare`, `meMaxMonthlyGrowthRate`) with the current values as defaults, so existing scenarios are unchanged.
+Both shares are user inputs, both defaulting to 10% — the values that were previously hardcoded, so no scenario's output moved when *that* landed. `meMaxMonthlyGrowthRate` is the dominant driver of the growth curve (10%/month compounds to about 3.1x/year); it was previously invisible to the user. The divisor was `meSetupCost` until 2026-08-21 — the same under-pricing as R-6.1, fixed in the same change.
+
+See [CHANGELOG.md](../CHANGELOG.md) for the measured effect this had when it was corrected — enterprises became substantially more expensive to establish once working capital was included consistently.
 
 ### R-6.3 ME attrition **[AS-BUILT]** (was F-20, fixed 2026-08-20)
 Business closure and loan write-down are **separate events with separate parameters**:
@@ -340,25 +342,25 @@ Revenue accrues to `grantCash`, on the reasoning that carbon finance is concessi
 
 The path went unexercised for a long time because `co2PerToilet` is overridden to `0.0` at startup. With carbon priced correctly, the `carbon enabled` scenario flips from *Capital Depleted (Insolvent)* to *Supply Chain (ME Capacity)* — a substantive change in what the model says about carbon-financed sanitation.
 
-### R-8.2 Time saved **[AS-BUILT]** (was F-07, fixed 2026-08-20)
+### R-8.2 Time saved **[AS-BUILT]** (was F-07, fixed 2026-08-20; gated by service life 2026-08-21, [ADR-0025](adr/0025-service-life-gates-all-impact.md), resolves Q13)
 **One** definition, computed monthly in the loop:
 
 ```
-hoursSaved[m] = activeToilets[m] * avgHHSize * hoursPerPersonPerDay * 30
+hoursSaved[m] = creditingToilets[m] * avgHHSize * hoursPerPersonPerDay * 30
 totalHoursSaved = sum(hoursSaved)
 ```
 
-`hoursPerPersonPerDay` is an input (default 0.25). `computeKPIs` sums this array; the second formula, which omitted `avgHHSize` and read annual snapshots, is deleted. The two disagreed by 4.39x and the KPI used the wrong one.
+`hoursPerPersonPerDay` is an input (default 0.25). `computeKPIs` sums this array; the second formula, which omitted `avgHHSize` and read annual snapshots, is deleted. The two disagreed by 4.39x and the KPI used the wrong one. `activeToilets[m]` here means `creditingToilets[m]` (R-8.5) — the same in-service count carbon (R-8.1) uses, not every toilet ever built. A toilet past its service life no longer saves time in the model, same as it no longer earns carbon.
 
-### R-8.3 DALYs **[AS-BUILT]**
+### R-8.3 DALYs **[AS-BUILT]** (gated by service life 2026-08-21, [ADR-0025](adr/0025-service-life-gates-all-impact.md), resolves Q13)
 
 ```
-dalys[m] = activeToilets[m] * avgHHSize * dalyPerPerson / 12
+dalys[m] = creditingToilets[m] * avgHHSize * dalyPerPerson / 12
 ```
 
-Accumulated monthly — an area-under-curve measure, so a toilet built in month 1 accrues more DALYs than one built in month 100. This is correct and deliberate.
+Accumulated monthly — an area-under-curve measure, so a toilet built in month 1 accrues more DALYs than one built in month 100, **while it remains in service.** `activeToilets[m]` here means `creditingToilets[m]` (R-8.5), same as R-8.2 — a retired toilet stops averting DALYs.
 
-### R-8.4 Social value and SROI **[AS-BUILT]** (was F-08; Q1 resolved 2026-08-20, Q2 still open)
+### R-8.4 Social value and SROI **[AS-BUILT]** (was F-08; Q1 resolved 2026-08-20, Q2 accepted 2026-08-21)
 ```
 socialValue = DALYs x dalyValue + hoursSaved x hourValue + carbonTonnes x co2Value
 SROI        = socialValue / capitalInvested
@@ -368,7 +370,7 @@ SROI is **social value only**. DALY value is included; ending cash is not. Finan
 
 Previously the DALY term was computed, displayed prominently, and then silently excluded — so the screen contradicted itself — while ending cash sat in a *social* numerator, letting a fund that hoards capital and builds nothing score well.
 
-**[OPEN — Q2]** The value of an hour is still the inherited, uncited `$0.50` (`HOUR_VALUE_USD`). It needs a source or a user-facing control.
+**Q2 accepted 2026-08-21, [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md).** The *method* for the value of an hour is settled (R-8.6, derived from local income, not the inherited uncited `$0.50`). The **0.30 factor** — the share of the wage at which non-market time is valued — remains a conventional round number, not sourced against current published guidance; the model owner has accepted it as the working default rather than leaving it undecided. Treat it as provisional: confirm against your programme's own guidance before publishing an SROI derived from it.
 
 ### R-8.5 Toilet service life **[AS-BUILT]** (2026-08-20)
 
@@ -380,9 +382,9 @@ creditingToilets[m] = toiletsBuiltCumulative[m] - retiredCumulative[m]
 
 Only `creditingToilets` earn carbon (R-8.1). `dataMonthlyCreditingToilets` is exported so the gap between built and still-crediting is visible in the audit trail.
 
-**[OPEN — Q13]** Service life stops carbon crediting but **not** DALYs or time saved, so a retired toilet keeps averting disease indefinitely. Applying the lifespan to all three is the coherent position and would move headline impact substantially. See [ADR-0016](adr/0016-toilet-service-life.md).
+**Resolved 2026-08-21 — Q13.** Service life now stops DALYs and time saved (R-8.2, R-8.3), not just carbon — the same `creditingToilets[m]` gates all three. See [ADR-0025](adr/0025-service-life-gates-all-impact.md). At the shipped 5-year default duration this changes nothing (no toilet reaches 5 years of age within a 5-year run); it moves headline impact materially on any run longer than the service life.
 
-### R-8.6 Value of saved time **[AS-BUILT]** (2026-08-20, resolves Q2 as to method)
+### R-8.6 Value of saved time **[AS-BUILT]** (method resolved 2026-08-20; factor accepted 2026-08-21, ADR-0030)
 
 ```
 hourValue = (avgAnnualIncome / 2080) * timeValueFactor
@@ -392,7 +394,7 @@ Derived from the country's own income rather than a global constant, and discoun
 
 This replaces a hardcoded `$0.50` of unknown provenance — almost certainly Malawi's income per working hour at the full wage rate, frozen into a multi-country tool. It also closes F-25: `avgAnnualIncome` was collected and never used.
 
-**[OPEN — Q2]** The 0.30 factor is a convention, not a figure verified against current published guidance. See [ADR-0015](adr/0015-value-of-saved-time.md).
+The 0.30 factor is a convention, accepted as the working default rather than verified against current published guidance — see [ADR-0015](adr/0015-value-of-saved-time.md) (method) and [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md) (factor).
 
 ---
 
@@ -501,30 +503,34 @@ These must hold for **every** run. They are the contract that makes the model au
 | **INV-12** | Running `calculate(inputs)` twice with identical inputs yields identical output | AS-BUILT — and the controller no longer mutates inputs either ([ADR-0009](adr/0009-advisory-not-automatic.md)) |
 | **INV-13** | No ops cost is posted in a month that *opens* with an empty portfolio and zero production | AS-BUILT |
 | **INV-14** | Extending `duration` alone must not change `cashEnd`, `netAssets` or `investorRepaidPct` | AS-BUILT — 5y and 20y now both give -$6,717 |
+| **INV-15** | `dalys[m]` and `hoursSaved[m]` are computed from `creditingToilets[m]`, the same in-service count carbon uses — a toilet past its service life must not keep averting DALYs or saving time | AS-BUILT — [ADR-0025](adr/0025-service-life-gates-all-impact.md), resolves Q13 |
+| **INV-16** | `requiredReserves` includes the next 3 months of scheduled investor principal, not just ops cost | AS-BUILT — [ADR-0027](adr/0027-debt-service-lookahead-reserve.md), resolves F-10 |
+| **INV-17** | `grantExhaustedMonth` responds to `grantSupportPct` (pacing) far more than `reach.grantToilets` does (volume) | AS-BUILT — [ADR-0029](adr/0029-grant-support-relabel-and-runway.md), resolves F-30 |
+| **INV-18** | The month-0 loan, the in-loop expansion loan, and the affordability check all price one ME identically via `meCapitalRequirement(inputs)` | AS-BUILT — [ADR-0031](adr/0031-unify-me-capital-requirement.md), resolves F-21 |
 
 **INV-8 deserves special emphasis.** A `NaN` slips past every other check in this list, because `NaN != NaN` and `Math.abs(NaN) > 1` is `false`. It is checked explicitly and first, and short-circuits the rest — everything downstream is meaningless once `NaN` is loose.
 
 ---
 
-## 13. Open questions for the model owner
+## 13. Modelling decisions
 
-Do not resolve these by writing code. Each needs a human decision recorded as an ADR.
+Every modelling question this specification has raised has been decided by the model owner and recorded as an ADR. **None are currently open.** If a new one comes up, it gets the next free `Qn` and goes in this table — do not resolve one by writing code; it needs a human decision, recorded as an ADR, first.
 
-| # | Question | Blocks |
+| # | Question | Decision |
 |---|---|---|
-| ~~Q1~~ | **Resolved 2026-08-20** — DALYs in, ending cash out, financial return reported separately. [ADR-0011](adr/0011-sroi-is-social-value-only.md) |
-| Q2 | Is 0.30 the right share of the wage at which to value saved household time, against current published guidance? The method is settled (R-8.6); the factor is a convention. | F-08 |
-| Q3 | Should grant support be a fixed % of production, or should it be means-tested against `avgAnnualIncome` (currently collected and unused)? | F-25, Stage 4 |
-| ~~Q4~~ | **Resolved 2026-08-20** — closure and write-down are separate parameters. [ADR-0014](adr/0014-me-attrition-is-separate-from-write-down.md) |
-| ~~Q5~~ | **Resolved 2026-08-20** — a cost mark-up; renamed, not reimplemented. [ADR-0017](adr/0017-contingency-is-a-cost-mark-up.md) |
-| Q6 | Should the fund be able to on-lend grant-ledger cash once the grant quota is met, or must the ledgers stay strictly separate? | R-5.2, Stage 4 |
-| Q7 | Is a household limited to one toilet ever, or can repeat/upgrade demand exist? | R-7.1, Stage 4 |
-| ~~Q8~~ | **Resolved 2026-08-20** — replaced with a viable default scenario. [ADR-0013](adr/0013-viable-default-scenario.md) |
-| Q9 | Should the collections floor (30% of ops during hibernation) taper before wind-up rather than stopping abruptly? Ops now stop entirely at wind-up (R-9.2). | R-9, Stage 3 |
-| ~~Q10~~ | **Resolved 2026-08-20** — percentages. [ADR-0012](adr/0012-percentage-entry-convention.md) |
-| ~~Q11~~ | **Resolved 2026-08-20** — 5-year service life, configurable. [ADR-0016](adr/0016-toilet-service-life.md) |
-| **Q13** | Service life stops carbon crediting but not DALYs or time saved. Should a retired toilet stop delivering health and time benefits too? Coherent answer is yes; it moves headline impact substantially. | R-8.5 |
-| ~~Q12~~ | **Resolved 2026-08-20** — 2% concessional. [ADR-0013](adr/0013-viable-default-scenario.md) |
+| Q1 | Does SROI include financial return, or social value only? | Social value only — DALYs in, ending cash out, financial return reported separately. [ADR-0011](adr/0011-sroi-is-social-value-only.md) |
+| Q2 | Is 0.30 the right share of the wage at which to value saved household time? | Accepted as the working default; method is sourced, the factor is a documented convention — confirm against your own programme's guidance before publishing. [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md) |
+| Q3 | Should grant support be means-tested, or a flat share of production? | Stays flat — means-testing would need a household-level income distribution the model doesn't have. [ADR-0021](adr/0021-grant-support-stays-flat-rate.md) |
+| Q4 | Should ME closure and loan write-down be the same parameter? | No — separate parameters, separate events. [ADR-0014](adr/0014-me-attrition-is-separate-from-write-down.md) |
+| Q5 | Is cost contingency a mark-up or a drawable reserve? | A mark-up. [ADR-0017](adr/0017-contingency-is-a-cost-mark-up.md) |
+| Q6 | May the grant and loan ledgers cross-lend? | No — stay strictly separate. [ADR-0022](adr/0022-ledgers-stay-separate.md) |
+| Q7 | Should repeat or upgrade demand exist? | No — one household, one toilet, once. [ADR-0023](adr/0023-no-repeat-or-upgrade-demand.md) |
+| Q8 | What should the shipped demo scenario be? | A viable one, chosen by grid search. [ADR-0013](adr/0013-viable-default-scenario.md) |
+| Q9 | Should the collections floor taper at wind-up, or stop abruptly? | Stops abruptly — a taper rate would be an invented number. [ADR-0024](adr/0024-collections-floor-stays-abrupt.md) |
+| Q10 | Should rates be entered as percentages or decimals? | Percentages. [ADR-0012](adr/0012-percentage-entry-convention.md) |
+| Q11 | Should carbon crediting have a finite service life? | Yes, 5 years, configurable. [ADR-0016](adr/0016-toilet-service-life.md) |
+| Q12 | What's a reasonable default cost of capital? | 2%, concessional. [ADR-0013](adr/0013-viable-default-scenario.md) |
+| Q13 | Should service life gate DALYs and time-saved too, not just carbon? | Yes. [ADR-0025](adr/0025-service-life-gates-all-impact.md) |
 
 ---
 

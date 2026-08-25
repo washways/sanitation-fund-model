@@ -150,8 +150,35 @@ describe('application smoke', () => {
       `integrity violations on the shipped defaults: ${r.integrity.violations.join('; ')}`);
     assert.strictEqual(r.viability.ok, true,
       `the shipped defaults must be viable: ${r.viability.issues.map(i => i.code).join(', ')}`);
-    assert.ok(r.kpis.impact.financials.investorRepaidPct >= 0.999, 'senior debt must be repaid in full');
+    assert.ok(r.kpis.financials.investorRepaidPct >= 0.999, 'senior debt must be repaid in full');
     assert.ok(Math.min(...r.series.dataMonthlyCashBalance) >= 0, 'the fund must never go cash-negative');
+  });
+
+  test('computeKPIs is flat and idempotent — calling UI.updateKPIs twice does not corrupt it (F-14, ADR-0028)', () => {
+    // Before ADR-0028, updateKPIs destructured kpis.impact and overwrote k.financials /
+    // k.sustainability / k.portfolio / k.value / k.impact on every call. The second call
+    // destructured a k.impact that the FIRST call had already replaced with just the
+    // small {dalys, valHours, ...} group, so everything reset to {}. Calling the render
+    // path twice on the same result (a second recalculation, a second export) used to
+    // corrupt it silently.
+    const app = makeApp();
+    app.runCalculation(true);
+    const results = app.UI.lastResults;
+    assert.ok(results && results.kpis, 'runCalculation should have produced a result');
+
+    // The shape itself: no redundant nesting. financials/sustainability/portfolio/value
+    // are direct properties of kpis, not of kpis.impact.
+    assert.ok(results.kpis.financials, 'kpis.financials should exist directly');
+    assert.ok(results.kpis.sustainability, 'kpis.sustainability should exist directly');
+    assert.ok(!('financials' in results.kpis.impact),
+      'kpis.impact should hold only dalys/hours/carbon, not a nested financials group');
+
+    const netAssetsBefore = results.kpis.financials.netAssets;
+    app.UI.updateKPIs(results); // second call, same object
+    assert.strictEqual(results.kpis.financials.netAssets, netAssetsBefore,
+      'calling updateKPIs a second time must not corrupt kpis.financials');
+    assert.ok(Object.keys(results.kpis.financials).length > 0,
+      'kpis.financials must not have been reset to {} by a second render');
   });
 
   test('a failing scenario is reported as failing, not verified (F-29)', () => {

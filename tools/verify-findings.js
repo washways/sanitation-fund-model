@@ -32,9 +32,9 @@ console.log('='.repeat(80));
 const base = run({ verify: true });
 const k = base.kpis, s = base.series;
 console.log(`  toilets built ......... ${Math.round(k.reach.toilets).toLocaleString()}`);
-console.log(`  ending cash ........... ${money(k.impact.financials.cashEnd)}`);
-console.log(`  net assets ............ ${money(k.impact.financials.netAssets)}`);
-console.log(`  investor repaid ....... ${money(k.impact.financials.investorRepaid)} of ${money(BASE.investLoan)}`);
+console.log(`  ending cash ........... ${money(k.financials.cashEnd)}`);
+console.log(`  net assets ............ ${money(k.financials.netAssets)}`);
+console.log(`  investor repaid ....... ${money(k.financials.investorRepaid)} of ${money(BASE.investLoan)}`);
 console.log(`  wind-up month ......... ${s.windUpMonth === null ? 'still running at horizon' : 'M' + s.windUpMonth}`);
 console.log(`  integrity ............. ${base.integrity.ok ? 'OK' : 'VIOLATIONS: ' + base.integrity.violations.join('; ')}`);
 console.log(`  viability ............. ${base.viability.ok ? 'OK' : base.viability.issues.length + ' issue(s)'}`);
@@ -108,7 +108,7 @@ console.log('='.repeat(80));
 
   // Arrears only exist on a fund that cannot pay, so stress it to show them.
   const stressed = run({ fundCostOfCapital: 0.20, annualFixedOpsCost: 900000 });
-  const liab = stressed.kpis.impact.sustainability.investorLiabilityEnd;
+  const liab = stressed.kpis.sustainability.investorLiabilityEnd;
   const naive = Math.max(0, BASE.investLoan - sum(stressed.series.dataMonthlyFundPrincipal));
 
   check('F-06', 'grace defers principal only, and arrears enter the liability',
@@ -123,11 +123,11 @@ console.log('='.repeat(80));
 {
   const loopTotal = sum(s.dataMonthlyHoursSaved);
   // The hourly value is now derived from income (R-8.6), not the old 0.5 constant.
-  const kpiHours = k.impact.impact.valHours / k.impact.impact.hourValueUsd;
+  const kpiHours = k.impact.valHours / k.impact.hourValueUsd;
   check('F-07', 'the KPI layer now sums the loop array instead of recomputing it',
     Math.abs(loopTotal - kpiHours) < Math.max(1, loopTotal * 1e-9),
     `loop array and KPI agree at ${Math.round(loopTotal).toLocaleString()} hours. ` +
-    `at $${k.impact.impact.hourValueUsd.toFixed(3)}/hour. The two formulas used to disagree by 4.39x, ` +
+    `at $${k.impact.hourValueUsd.toFixed(3)}/hour. The two formulas used to disagree by 4.39x, ` +
     `and the KPI used the one that omitted household size.`);
 }
 
@@ -238,11 +238,11 @@ console.log('='.repeat(80));
   check('F-31', 'a dead fund winds up instead of billing operations forever',
     short.series.windUpMonth !== null
     && short.series.windUpMonth === long.series.windUpMonth
-    && Math.abs(short.kpis.impact.financials.cashEnd - long.kpis.impact.financials.cashEnd) < 1
-    && Math.abs(short.kpis.impact.financials.netAssets - long.kpis.impact.financials.netAssets) < 1,
+    && Math.abs(short.kpis.financials.cashEnd - long.kpis.financials.cashEnd) < 1
+    && Math.abs(short.kpis.financials.netAssets - long.kpis.financials.netAssets) < 1,
     `a fund that dies at M${short.series.windUpMonth} reports the same ending cash ` +
-    `(${money(short.kpis.impact.financials.cashEnd)}) and net assets ` +
-    `(${money(short.kpis.impact.financials.netAssets)}) whether simulated for 5 years or 20. ` +
+    `(${money(short.kpis.financials.cashEnd)}) and net assets ` +
+    `(${money(short.kpis.financials.netAssets)}) whether simulated for 5 years or 20. ` +
     `Ops, interest and the liability all freeze at wind-up. Ending cash used to differ by ` +
     `${money(992683)} between the two horizons for the same fund.`);
 }
@@ -267,19 +267,7 @@ console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
 console.log('DELIBERATELY OUTSTANDING (see docs/ANALYSIS.md and STATUS.md):');
-console.log('  F-08   SROI now includes DALYs and excludes cash (ADR-0011), but the');
-console.log('         $0.50/hour constant is still uncited — Q2 remains open.');
-console.log('  F-10   opsReserveCap is still a one-shot month-0 gate, and the debt-service');
-console.log('         lookahead reserve the README described still does not exist.');
-console.log('  F-14   computeKPIs still returns a nested shape the renderer mutates.');
-console.log('  F-19   ESLint and CI not yet added.');
-console.log('  F-20   ME attrition on write-down — blocked on Q4.');
-console.log('  F-21   ME capital requirement and the two hardcoded growth constants.');
-console.log('  F-24   methodology.html not yet reconciled with the model.');
-console.log('  F-25   avgAnnualIncome still collected and unused — the last one.');
-console.log('  F-26   Write-down convention documented and relabelled in the form,');
-console.log('         but the realised-loss test is not yet written.');
 console.log('  F-27   Solver bisection still assumes monotonicity it lacks when capital-tight.');
-console.log('  F-30   Grant Support % relabel and grant-fund runway display.');
+console.log('         The only finding left in the whole 36-item register.');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

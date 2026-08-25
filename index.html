@@ -232,9 +232,9 @@
                     <input type="number" id="avgHHSize" value="5">
                 </div>
                 <div class="input-group">
-                    <label>Grant Support (% of Households)
+                    <label>Grant-Funded Pacing (% of Production)
                         <span class="info-icon"
-                            title="API Derived: Based on poverty headcount ($2.15/day). Represents the % of toilet cost covered by grant. Higher poverty = Higher grant need.">i</span>
+                            title="API Derived: Based on poverty headcount ($2.15/day). Target share of monthly production that is grant-funded, capped by however much grant capital remains — see the runway note below. Total subsidy is set by Initial Grant Capital, not by this dial (F-30).">i</span>
                     </label>
                     <div class="input-wrapper has-suffix">
                         <div class="input-wrapper has-suffix">
@@ -242,6 +242,7 @@
                             <span class="input-suffix">%</span>
                         </div>
                     </div>
+                    <small id="grant-runway-help" class="help-text"></small>
 
                     <small id="affordability-help"
                         style="display:block; margin-top:4px; font-size:0.75rem; color:#64748b; line-height:1.4;">
@@ -339,6 +340,20 @@
                             title="Share of micro-enterprises that cease trading each year. Distinct from the write-down rate: a business can close having repaid its loan, and a loan can be written down by a business that keeps trading. Closure removes production capacity; write-down removes loan value.">i</span>
                     </label>
                     <input type="number" id="meExitRate" value="10" step="1">
+                </div>
+                <div class="input-group">
+                    <label>ME Expansion Budget Share (%)
+                        <span class="info-icon"
+                            title="Share of lendable cash committed each month to recruiting new micro-enterprises. Was a hardcoded 10% with no control; see docs/adr/0019.">i</span>
+                    </label>
+                    <input type="number" id="meExpansionBudgetShare" value="10" step="1">
+                </div>
+                <div class="input-group">
+                    <label>ME Max Monthly Growth Rate (%)
+                        <span class="info-icon"
+                            title="Ceiling on how fast the micro-enterprise network can grow in a single month, as a share of the current network. The dominant driver of the recruitment curve — 10%/month compounds to roughly 3.1x/year. Was a hardcoded 10% with no control; see docs/adr/0019.">i</span>
+                    </label>
+                    <input type="number" id="meMaxMonthlyGrowthRate" value="10" step="1">
                 </div>
                 <div class="input-group">
                     <label>Mgmt Fee Ratio (%)
@@ -444,9 +459,9 @@
                     <input type="number" id="contingencyRate" value="5" step="0.5">
                 </div>
                 <div class="input-group">
-                    <label>Max Ops Reserve Cap (%)
+                    <label>Starting Capacity Throttle (%)
                         <span class="info-icon"
-                            title="Liquidity Buffer: Maximum % of the fund allowed to be held as cash for Operational deficits. Prevents draining the loan capital.">i</span>
+                            title="Sizes the month-0 starting network only — the share of initial capital held back when deciding how many micro-enterprises to launch with. Not an ongoing liquidity reserve; the fund's actual solvency reserve (3 months of ops plus scheduled investor principal) is enforced every month regardless of this setting. See docs/adr/0027.">i</span>
                     </label>
                     <input type="number" id="opsReserveCap" value="15">
                 </div>
