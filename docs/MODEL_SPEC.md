@@ -566,6 +566,26 @@ All computed in `ModelModule.computeKPIs`, which must be **pure**: no DOM access
 | `dominantConstraint` | user-facing primary and secondary production constraints; see R-7.6 | AS-BUILT |
 | `constraintAnalysis` | machine-readable primary, ranked secondary causes, and foregone-output totals; see R-7.6 | AS-BUILT |
 
+### R-11.2 Evidence-bounded sensitivity **[AS-BUILT]**
+
+`ModelModule.runSensitivity(inputs, specification)` performs deterministic
+one-at-a-time comparisons without mutating either argument. A specification contains
+one to eight unique numeric input IDs. Every entry supplies `low`, `high`, and a
+non-empty `source`; the bounds must bracket the base value and the base, low, and high
+scenarios must all pass R-2.8 validation.
+
+The base runs once. Each distinct bound runs once with solvers and console reporting
+disabled. Every case reports net assets, ending cash, minimum cash, toilets, senior
+repayment share, SROI, and viability. Results are ranked by the absolute low-to-high
+swing in the selected supported metric. Invalid or undocumented specifications return
+typed `{ ok: false, errors }` output and run no sensitivity scenarios.
+
+No built-in low/high ranges exist. A uniform percentage shock, an unreferenced Malawi
+range, or a probability distribution would invent evidence the model does not have.
+The JSON CLI accepts project-contained files only and prints no timestamp, so identical
+inputs are reproducible byte for byte. See
+[ADR-0045](adr/0045-require-evidence-bounded-sensitivity.md).
+
 ---
 
 ## 12. Invariants

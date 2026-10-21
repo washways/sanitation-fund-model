@@ -6,9 +6,9 @@
 
 | | |
 |---|---|
-| **Release** | 0.15.0 — production constraints follow actual output |
-| **Stages complete** | S0, S1, S2, S3, S5; S4 solver correctness and constraint reporting complete, other S4 work and S6 remain |
-| **Tests** | ✅ 105 pass, 0 todo, 0 fail (`npm test`, ~4s) |
+| **Release** | 0.16.0 — evidence-bounded sensitivity analysis |
+| **Stages complete** | S0, S1, S2, S3, S5; S4 solvers, constraint reporting and sensitivity complete; caching/scenario comparison and S6 remain |
+| **Tests** | ✅ 110 pass, 0 todo, 0 fail (`npm test`, ~4s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
@@ -19,7 +19,7 @@
 
 | What | Why it matters | Recommended next action |
 |---|---|---|
-| Solver caching, sensitivity analysis, scenario save/load | S4 items 2–4 remain. | Build evidence-bounded one-at-a-time sensitivity first, then transparent JSON scenario comparison. |
+| Solver caching and scenario save/load/compare | S4 items 2 and 4 remain. | Build transparent JSON scenario comparison next; add caching when the browser exposes repeated analysis runs. |
 | Real-browser chart/advisor click-through | Headless tests cover startup, calculation, export, and wiring, but not visual chart interaction. | Add a browser smoke pass during S6 accessibility/mobile work. |
 
 ## Malawi reference run
@@ -57,6 +57,14 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 - Capacity loss plus loan-capital loss reconciles whole-toilet demand to production. Grant-capital recovery overlaps the loan-capital loss and must not be added to it.
 - The horizon headline ranks summed foregone monthly output, lists secondary causes, and uses `Mixed` when multiple causes suppress a month. It does not substitute insolvency for a production bottleneck; viability remains separate.
 - Q14 / R-7.6 is resolved by [ADR-0044](docs/adr/0044-report-actual-production-constraints.md), with three dedicated regressions.
+
+## Sensitivity contract
+
+- `ModelModule.runSensitivity()` accepts one to eight unique numeric inputs with explicit low/high values and a non-empty provenance source for each.
+- Bounds must bracket the base case and every scenario must pass the normal input validator. Invalid or undocumented specifications return typed errors and no partial sensitivity result.
+- The baseline runs once; each distinct low/high case runs once. Output is deterministic JSON with net assets, ending/minimum cash, toilets, senior repayment, SROI, and viability, ranked by the selected metric swing.
+- There are no built-in generic shocks or undocumented Malawi ranges. `tests/fixtures/sensitivity-bounds-test.json` is synthetic and test-only.
+- Run `npm run sensitivity -- <bounds.json> [inputs.json]`. The CLI reads only project-contained files and performs no network fetch. See [ADR-0045](docs/adr/0045-require-evidence-bounded-sensitivity.md).
 
 ## Investor debt contract
 
@@ -114,4 +122,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.15.0 resolved R-7.6/Q14 under [ADR-0044](docs/adr/0044-report-actual-production-constraints.md). Constraint labels now derive from actual foregone production and retain primary, secondary, and mixed causes. Twenty golden constraint strings changed exactly as predicted; every numeric result remained identical. All 14 modelling questions are now closed. The owner selected evidence-bounded sensitivity next, followed by transparent JSON scenario comparison, while retaining the disclosed long-horizon Malawi stress result and an explicitly USD-only engine. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.16.0 completed evidence-bounded one-at-a-time sensitivity under [ADR-0045](docs/adr/0045-require-evidence-bounded-sensitivity.md). The pure engine and deterministic JSON CLI refuse missing provenance, invalid or unbracketed bounds, duplicate/unknown inputs, unsupported metrics, and more than eight parameters. Direct-run regressions prove each case uses the canonical model. All 21 golden scenarios and the Malawi startup remain numerically unchanged. Transparent JSON scenario save/load/compare is next. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

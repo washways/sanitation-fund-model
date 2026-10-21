@@ -1044,8 +1044,9 @@ capitalPreservation = netAssets   / capitalInvested</div>
             <li>Enterprise expansion is capped by two editable assumptions (10% of lendable capital, 10% growth per
                 month). The second materially shapes the growth curve.</li>
             <li>Grants and loans are the only instruments. No results-based finance, no guarantees, no equity.</li>
-            <li>The model is deterministic. Its grid-then-bisect solvers identify the best feasible region but do not
-                quantify uncertainty or replace sensitivity analysis.</li>
+            <li>The model is deterministic. Its grid-then-bisect solvers identify the best feasible region. The
+                evidence-bounded sensitivity tool compares explicit low/base/high cases but does not assign
+                probabilities or quantify stochastic uncertainty.</li>
         </ul>
 
         <h3>Margin of interpretation</h3>
@@ -1060,9 +1061,11 @@ capitalPreservation = netAssets   / capitalInvested</div>
             the headline constraint now comes from actual foregone production, reports simultaneous constraints, and
             keeps grant and loan affordability visible as separate causes. No modelling question is currently open.</p>
 
-        <p>Remaining work is product development rather than an unresolved model convention: evidence-bounded
-            one-at-a-time sensitivity analysis comes first, followed by transparent JSON scenario save/load/compare.
-            The current engine remains explicitly USD-only. The adverse twenty-year Malawi result remains a disclosed
+        <p>Evidence-bounded one-at-a-time sensitivity is now available as reproducible JSON. It accepts no more than
+            eight parameters; every low/high pair must bracket the base case, pass normal model validation, and carry
+            an explicit provenance source. The tool deliberately has no built-in percentage shock or undocumented
+            Malawi range. Transparent JSON scenario save/load/compare is the next decision-support feature.</p>
+        <p>The current engine remains explicitly USD-only. The adverse twenty-year Malawi result remains a disclosed
             stress finding and will not be tuned away without new evidence.</p>
 
         <div class="alert-box">

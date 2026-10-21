@@ -11,6 +11,21 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.16.0] — 2026-10-21 — Evidence-bounded sensitivity analysis
+
+### Added
+
+- **A deterministic one-at-a-time sensitivity engine now compares up to eight explicit parameter ranges.** It runs one baseline plus each distinct low/high case, then ranks parameters by the selected outcome swing. Every case reports net assets, ending and minimum cash, toilets, senior repayment, SROI, and viability. ([ADR-0045](docs/adr/0045-require-evidence-bounded-sensitivity.md))
+- **Every range must carry provenance.** Bounds must be finite, bracket the base value, pass the normal model validator, use a unique numeric input, and include a non-empty source. Unsupported metrics, duplicate or unknown inputs, invalid cases, and a ninth range return a typed failure rather than a partial analysis.
+- **The CLI is reproducible and project-contained.** `npm run sensitivity -- <bounds.json> [inputs.json]` prints deterministic JSON, performs no network fetch, adds no timestamp, and refuses to read files outside the repository. No built-in Malawi range or generic percentage shock was invented.
+- **The browser/model load order is now tested directly.** `index.html` must load exactly the same application files, in the same order, as `tools/app-source.js`; the new model module cannot silently exist in tests but be absent in the app.
+
+### Golden movement
+
+None. Sensitivity is opt-in and delegates every case to the existing pure `calculate()` path. All 21 recorded scenarios and the Malawi startup are unchanged.
+
+---
+
 ## [0.15.0] — 2026-10-21 — Production constraints follow actual output
 
 ### Changed
