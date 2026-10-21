@@ -48,8 +48,8 @@ Every numeric input must be finite before the simulation starts. Blank or malfor
 
 | id | Label | Default | Entered / model unit | Source | Meaning |
 |---|---|---:|---|---|---|
-| `loanInterestRate_v2` | HH Loan Interest Rate | 40 | percent / decimal | programme assumption | Illustrative annual portfolio rate; never derived from CPI or commercial lending. Zero is valid. |
-| `meLoanInterestRate_v2` | ME Loan Interest Rate | 10 | percent / decimal | programme assumption | Illustrative annual portfolio rate. Zero is valid. |
+| `loanInterestRate_v2` | HH Loan Interest Rate | 40 | percent / decimal | programme assumption | Illustrative annual portfolio rate; never derived from CPI or commercial lending. Dated commercial lending appears beside it as context for product pricing. Zero is valid. |
+| `meLoanInterestRate_v2` | ME Loan Interest Rate | 10 | percent / decimal | programme assumption | Illustrative enterprise-product rate. Dated commercial lending appears beside it as context but does not replace the term sheet. Zero is valid. |
 | `termHh` | HH Loan Term | 12 | months / months | Malawi reference: UNICEF reports 3–12 months | Affects affordability and realised loss exposure. |
 | `termMe` | ME Loan Term | 12 | months / months | Malawi reference: UNICEF enterprise loans | Loan tenor for enterprise capital. |
 | `hhDefaultRate` | HH Annual Write-down Rate | 5 | percent / decimal | programme assumption | Continuous annual hazard on outstanding balance, not “share of borrowers failing.” At the 12-month default, 5% headline produces about 2.81% realised loss on disbursed principal. Zero is valid. |
@@ -63,11 +63,11 @@ Every numeric input must be finite before the simulation starts. Blank or malfor
 
 | id | Label | Default | Entered / model unit | Source | Meaning |
 |---|---|---:|---|---|---|
-| `annualFixedOpsCost` | Annual Fixed Ops Cost | 60,000 | USD/year / USD/year | programme assumption | Inflated monthly; falls to the 30% collections floor in hibernation and stops at wind-up. |
+| `annualFixedOpsCost` | Annual Fixed Ops Cost | 60,000 | USD/year / USD/year | programme assumption | Inflated monthly; falls to the 30% collections floor in hibernation and stops at wind-up. No country macro API can infer the programme staffing, office, vehicles, systems, audit, and field-service budget. |
 | `mgmtFeeRatio` | Mgmt Fee Ratio | 1 | percent / decimal | programme assumption | Variable fee charged on each disbursement. |
 | `meCostRate` | M&E Cost | 2 | percent / decimal | programme assumption | Monitoring-and-evaluation cost charged on each disbursement. |
 | `contingencyRate` | Cost Contingency | 5 | percent / decimal | programme assumption | Per-unit delivery-cost mark-up, not a reserve and not a governance-index transform. |
-| `inflationRate` | Annual Cost Escalation in Model Currency | 3.32 | percent / decimal | programme assumption | Escalates USD-labelled unit and fixed operating costs. Local-currency CPI is displayed as context but is not applied without an exchange-rate path. |
+| `inflationRate` | Annual Cost Escalation in Model Currency | 3.32 | percent / decimal | programme assumption | Escalates USD-labelled unit and fixed operating costs. Dated local-currency CPI is displayed beside the field as context but is not applied without an exchange-rate and cost-basket forecast. |
 
 ## Impact
 
@@ -95,6 +95,11 @@ The World Bank client requests the latest non-empty observation (`mrnev=1`) and 
 | sanitation DALY factor | WHO `WSH_30_SAN` lower bound divided by `SP.POP.TOTL × (1 − SH.STA.BASS.ZS/100)` for the WHO year |
 
 Safely managed sanitation, CPI inflation, commercial lending, Gini, and poverty are dated context only. Missing essential observations clear the affected field and pause automatic calculation; they never reuse the previous country’s value. Programme terms, costs, capacity, write-downs, and subsidy policy remain the user’s responsibility for every country.
+
+Household and enterprise rates, annual fixed operating cost, and model-currency cost escalation use
+an amber programme-assumption state. Country loading repeats dated commercial lending and CPI beside
+the related controls, and explains why fixed cost has no macro proxy, but does not alter any of the
+four values. See [ADR-0050](adr/0050-show-api-benchmarks-without-inventing-programme-terms.md).
 
 After a country load, the four model-driving fields share a blue outline and background. Hover
 text records whether the value is a direct observation or a derivation and names the observation

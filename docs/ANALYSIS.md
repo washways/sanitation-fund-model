@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 58 of 58 findings resolved as of 2026-10-21. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 59 of 59 findings resolved as of 2026-10-21. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,6 +54,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
+| ✅ [F-59](#f-59--api-context-is-disconnected-from-the-financial-assumptions-it-informs) | Medium | UX / Data | Dated lending and CPI context does not explain the related manual programme assumptions | src | S6 |
 | ✅ [F-58](#f-58--carbon-zero-is-presented-as-a-measured-result) | Medium | Impact | Zero carbon is presented as measured mitigation although no technology factor exists | src | S3 |
 | ✅ [F-57](#f-57--country-health-burden-is-available-but-dalys-stay-zero) | Medium | Impact | DALYs stay zero despite a conservative country derivation from WHO and World Bank data | api | S3 |
 | ✅ [F-56](#f-56--jobs-chart-reads-a-series-the-engine-never-creates) | **High** | Impact | Jobs headline uses a hidden multiplier while the chart reads an absent series | src, run | S3 |
@@ -1062,6 +1063,17 @@ The `Starting Capacity Throttle` did not state an operational target. It subtrac
 **Medium — fixed.** With `co2PerToilet = 0`, the summary and chart displayed zero carbon mitigated without saying that mitigation was not estimated. A positive factor cannot be inferred from users or toilets: IPCC wastewater accounting needs the baseline and project treatment systems and methane-conversion factors, and the sign is not assured without them.
 
 **Fix:** retain the project-specific factor and safe zero default, but label the output as not estimated until that factor is supplied. Do not invent a people-based mitigation coefficient. [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md). Resolved in `da3cd8b`.
+
+### F-59 — API context is disconnected from the financial assumptions it informs
+
+**Medium — fixed.** Country loading fetched dated commercial lending and CPI observations, but the
+related household rate, enterprise rate, fixed operating cost, and model-currency escalation
+controls do not explain why they remain manual. Users can reasonably read the missing auto-fill as
+an unfinished feature rather than a deliberate protection against mixing market benchmarks,
+programme budgets, and USD forecasts.
+
+**Fix:** mark the four controls as amber programme assumptions and show the relevant dated API
+benchmarks and limitations beside them without overwriting their values. [ADR-0050](adr/0050-show-api-benchmarks-without-inventing-programme-terms.md). Resolved in `e37ac50`.
 
 ---
 

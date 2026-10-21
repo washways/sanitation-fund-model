@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.19.0 — evidence-linked impact estimates |
+| **Release** | 0.19.1 — financial assumptions with dated API context |
 | **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance and responsive results complete; caching/scenario comparison and remaining S6 work remain |
-| **Tests** | ✅ 122 pass, 0 todo, 0 fail (`npm test`, ~2s) |
+| **Tests** | ✅ 123 pass, 0 todo, 0 fail (`npm test`, ~2s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
-| **Findings register** | ✅ 58 of 58 resolved |
+| **Findings register** | ✅ 59 of 59 resolved |
 | **Open modelling questions** | None — all 14 owner decisions are recorded |
 
 ## What remains unresolved
@@ -49,6 +49,7 @@ The 20-year stress scenario is **not viable** under the same assumptions: it win
 - Country loading writes only target population, population growth, GNI per capita (GDP fallback), and the conservative sanitation DALY derivation, using dated World Bank and WHO observations.
 - Those four fields share a blue `country-observation` state after loading; each records direct/derived provenance and observation year(s), and a real user edit removes the marker.
 - CPI, commercial lending, poverty, Gini, and sanitation coverage are context only.
+- Household and enterprise APRs, annual fixed operations, and USD cost escalation are amber programme assumptions. Dated commercial lending and local CPI appear beside the relevant controls but never overwrite them; no macro API is used to invent an operating budget.
 - Missing essential observations clear the field and pause automatic calculation; another country's value is never retained.
 - Malawi references are documented in [docs/PARAMETERS.md](docs/PARAMETERS.md): 4.4 people/household, 28 districts, $100 toilet planning cost, $3,000 enterprise capital, 12-month loan terms, 0.25 hours saved/day, and a 50% time-value factor.
 - Financing, operating, write-down, capacity, contingency, and grant-pacing defaults remain illustrative programme assumptions. They must be calibrated before an investment decision.
@@ -87,6 +88,7 @@ The 20-year stress scenario is **not viable** under the same assumptions: it win
 - The target population description names its rural-population/basic-sanitation derivation; growth and income name their direct observation year.
 - Programmatic load events retain the API marker. A trusted user edit clears it and records user provenance.
 - Programme rates, costs, losses, capacity, contingency, and subsidy settings never receive the marker. See [ADR-0046](docs/adr/0046-mark-country-derived-inputs-consistently.md).
+- `loanInterestRate_v2`, `meLoanInterestRate_v2`, `annualFixedOpsCost`, and `inflationRate` use the amber `programme-assumption` state. Country loading updates only their explanatory benchmark text, never their values. See [ADR-0050](docs/adr/0050-show-api-benchmarks-without-inventing-programme-terms.md).
 
 ## Impact-estimate contract
 
@@ -154,4 +156,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.19.0 closed the impact-display review under [ADR-0049](docs/adr/0049-derive-health-and-report-impact-honestly.md). Jobs now use one explicit assumption in the chart and headline; Malawi country loading derives a conservative 0.0096719 sanitation-burden DALY/person/year, then an explicit 21% basic-sanitation health-effect assumption produces about 2,139 physical DALYs averted; DALY value remains zero; and carbon says not estimated until a project factor exists. The live impact audit succeeds for 42 of 44 selector countries, with explicit fallbacks for Eritrea and Tuvalu. Financial outputs and all 21 golden scenarios are unchanged. The suite has 122 passing tests. The next active review is truthful API context for lending rates, fixed operating cost, and USD cost escalation. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.19.1 completed the requested API review for borrower rates, fixed operating cost, and cost escalation under [ADR-0050](docs/adr/0050-show-api-benchmarks-without-inventing-programme-terms.md). The four controls are amber programme assumptions. Malawi shows dated 37.1% commercial lending beside both borrower-rate fields and 28.4% local CPI beside USD cost escalation without applying either; fixed operations directs the user to the actual programme budget because no macro API can infer it. Model outputs and all 21 golden scenarios are unchanged. The suite has 123 passing tests and all 59 findings are closed. The next roadmap work is transparent scenario comparison or real-browser/accessibility checks. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

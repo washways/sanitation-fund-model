@@ -537,12 +537,30 @@ console.log('='.repeat(80));
     'The safe zero remains, but the summary, chart, and export require a project-specific factor.');
 }
 
+// F-59 — dated macro benchmarks inform but never masquerade as programme inputs.
+{
+  const amberInputs = ['loanInterestRate_v2', 'meLoanInterestRate_v2', 'annualFixedOpsCost', 'inflationRate']
+    .every(id => new RegExp(`id="${id}"[^>]*class="[^"]*programme-assumption`).test(HTML_SRC));
+  const localGuidance = /id="hh-rate-help"/.test(HTML_SRC)
+    && /id="me-rate-help"/.test(HTML_SRC)
+    && /id="ops-cost-help"/.test(HTML_SRC)
+    && /id="cost-escalation-help"/.test(HTML_SRC)
+    && /Commercial lending context/.test(APP_SRC)
+    && /Local-currency CPI context/.test(APP_SRC)
+    && /Cannot be derived from a country macro API/.test(APP_SRC);
+  const noApiWrites = !/fillParam\(\s*['"](?:loanInterestRate_v2|meLoanInterestRate_v2|annualFixedOpsCost|inflationRate)/.test(APP_SRC);
+  check('F-59', 'financial assumptions show dated API context without being overwritten',
+    amberInputs && localGuidance && noApiWrites,
+    'HH/ME rates, fixed operations, and USD escalation are amber programme assumptions; ' +
+    'commercial lending and CPI appear only in dated guidance.');
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 58 of 58 resolved.');
+console.log('Findings register: 59 of 59 resolved.');
 console.log('Open modelling questions: none. R-7.6/Q14 was resolved by ADR-0044.');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

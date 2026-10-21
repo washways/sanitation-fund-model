@@ -120,6 +120,10 @@
                         <span class="country-source-swatch" aria-hidden="true"></span>
                         Blue fields were loaded or transparently derived from authoritative country APIs. Editing one removes the marker.
                     </small>
+                    <small id="programme-source-key" class="country-source-key">
+                        <span class="programme-source-swatch" aria-hidden="true"></span>
+                        Amber fields are programme assumptions. Country API benchmarks may inform them but never set them.
+                    </small>
                 </div>
             </div>
 
@@ -313,14 +317,18 @@
                         <span class="info-icon"
                             title="Illustrative programme term. The country commercial lending rate is shown for context but never overwrites this field.">i</span>
                     </label>
-                    <input type="number" id="loanInterestRate_v2" value="40" step="0.5">
+                    <input type="number" id="loanInterestRate_v2" value="40" step="0.5"
+                        class="programme-assumption" aria-describedby="hh-rate-help programme-source-key">
+                    <small id="hh-rate-help" class="help-text">Set from product pricing and affordability; country commercial lending is context only.</small>
                 </div>
                 <div class="input-group">
                     <label>ME Loan Interest Rate (%)
                         <span class="info-icon"
                             title="Illustrative annual programme term for enterprise setup loans; never overwritten by country data.">i</span>
                     </label>
-                    <input type="number" id="meLoanInterestRate_v2" value="10" step="0.5">
+                    <input type="number" id="meLoanInterestRate_v2" value="10" step="0.5"
+                        class="programme-assumption" aria-describedby="me-rate-help programme-source-key">
+                    <small id="me-rate-help" class="help-text">Set from the enterprise product term sheet; country commercial lending is context only.</small>
                 </div>
                 <div class="input-group">
                     <label>HH Loan Term (Months)
@@ -386,7 +394,10 @@
                         <span class="info-icon"
                             title="Fixed Overhead: Essential costs (PMU salaries, Office, Vehicles) incurred regardless of lending volume. High fixed costs require scale to sustain.">i</span>
                     </label>
-                    <input type="text" id="annualFixedOpsCost" value="60,000" class="formatted-number">
+                    <input type="text" id="annualFixedOpsCost" value="60,000"
+                        class="formatted-number programme-assumption"
+                        aria-describedby="ops-cost-help programme-source-key">
+                    <small id="ops-cost-help" class="help-text">Cannot be derived from a country macro API; enter the programme budget for staff, offices, vehicles, systems, audit, and field service.</small>
                 </div>
 
                 <h3>Impact Assumptions</h3>
@@ -474,7 +485,9 @@
                         <span class="info-icon"
                             title="Forward cost-escalation assumption for USD model cashflows. Local CPI is shown as context but is not applied without an exchange-rate path.">i</span>
                     </label>
-                    <input type="number" id="inflationRate" value="3.32" step="0.1">
+                    <input type="number" id="inflationRate" value="3.32" step="0.1"
+                        class="programme-assumption" aria-describedby="cost-escalation-help programme-source-key">
+                    <small id="cost-escalation-help" class="help-text">Set a forward escalation rate for the programme's USD cost basket; local-currency CPI is context only.</small>
                 </div>
                 <div class="input-group">
                     <label>Cost Contingency (% mark-up)

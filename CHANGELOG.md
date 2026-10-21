@@ -11,6 +11,21 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.19.1] — 2026-10-21 — Financial assumptions show relevant API context
+
+### Changed
+
+- **Household and enterprise loan rates now show the dated country commercial-lending benchmark beside each control.** The benchmark is context for product pricing, not an auto-filled APR: an actual term also needs cost of funds, servicing cost, losses, affordability, subsidy, and margin. Malawi retains the 40% and 10% illustrative programme assumptions while showing 37.1% commercial lending for 2024. ([ADR-0050](docs/adr/0050-show-api-benchmarks-without-inventing-programme-terms.md), F-59)
+- **Annual fixed operating cost now states why it cannot be derived from a country macro API.** Users are directed to enter a real staffing, office, vehicle, systems, audit, and field-service budget instead of a fabricated per-capita or percentage-of-capital formula.
+- **USD cost escalation now shows dated local-currency CPI beside the control without applying it.** Malawi shows 28.4% local CPI for 2025, while the model retains its 3.32% USD cost-escalation assumption pending an exchange-rate and programme cost-basket forecast.
+- **The visual distinction is explicit.** Blue fields are observed or transparently derived country data; amber fields are programme assumptions that APIs may inform but never set. A startup regression pins all four unchanged values, colours, dated benchmarks, and limitations.
+
+### Golden movement
+
+None. This release changes guidance and provenance only. All financial outputs, the post-fetch Malawi scenario, and all 21 recorded scenarios are unchanged.
+
+---
+
 ## [0.19.0] — 2026-10-21 — Impact estimates are explicit and evidence-linked
 
 ### Changed

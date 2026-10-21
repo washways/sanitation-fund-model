@@ -68,7 +68,7 @@ Canonical unit for every parameter: [PARAMETERS.md](PARAMETERS.md).
 ### R-2.4 Currency **[AS-BUILT]**
 Single nominal currency, labelled USD in the UI. All values are **nominal** (inflation-inclusive), not real. There is no discounting anywhere in the model — NPV and IRR are deliberately absent. See [ADR-0003](adr/0003-nominal-cashflows-no-discounting.md).
 
-The `inflationRate` input is therefore **forward cost escalation in the model currency**, not automatically local CPI. A local-currency CPI observation cannot consistently escalate USD cashflows without an exchange-rate path. CPI is shown as dated country context only; see [ADR-0034](adr/0034-observations-only-country-data.md).
+The `inflationRate` input is therefore **forward cost escalation in the model currency**, not automatically local CPI. A local-currency CPI observation cannot consistently escalate USD cashflows without an exchange-rate path. CPI is shown as dated context beside the amber programme assumption but never written into it; see [ADR-0034](adr/0034-observations-only-country-data.md) and [ADR-0050](adr/0050-show-api-benchmarks-without-inventing-programme-terms.md).
 
 ### R-2.5 Fractional units **[AS-BUILT]**
 Toilets are integers (`Math.floor` at the point of production, R-7.5). Micro-enterprises are integers. Money, loan balances and demand backlog are continuous.
@@ -77,7 +77,7 @@ Toilets are integers (`Math.floor` at the point of production, R-7.5). Micro-ent
 Invariant checks tolerate $1.00 of floating-point drift per month. Never compare money with `===`.
 
 ### R-2.7 Country observations **[AS-BUILT]**
-The country loader requests the World Bank API's latest non-empty observation and preserves its year. It may populate observed or transparently derived model inputs: rural population without basic sanitation, population growth, GNI per capita (falling back to GDP per capita), and the conservative sanitation-attributable DALY factor specified in R-8.3. CPI, commercial lending, poverty, Gini, and sanitation coverage are dated context. They do not set financing terms, subsidy policy, write-downs, costs, or capacity.
+The country loader requests the World Bank API's latest non-empty observation and preserves its year. It may populate observed or transparently derived model inputs: rural population without basic sanitation, population growth, GNI per capita (falling back to GDP per capita), and the conservative sanitation-attributable DALY factor specified in R-8.3. CPI, commercial lending, poverty, Gini, and sanitation coverage are dated context. They do not set financing terms, subsidy policy, write-downs, costs, or capacity. Commercial lending is repeated beside both borrower-rate assumptions and CPI beside model-currency escalation; fixed operating cost explains that no macro API can infer the programme budget. These contextual messages never alter a value.
 
 If any essential observation for the target population, growth, or income is unavailable, the related field is cleared and automatic calculation pauses. A value from the previous country must never survive as if it belonged to the new one. See [ADR-0034](adr/0034-observations-only-country-data.md).
 
@@ -576,9 +576,10 @@ Duration is month-granular. Each complete 12-month period is labelled `Year N`; 
 Every model input written or derived from authoritative country observations is marked with the same
 blue `country-observation` state and carries a human- and machine-readable source description. The
 state survives programmatic input events during loading and is removed when the user edits the
-value. Programme terms and policy assumptions must never carry that state. Context-only country
-indicators remain in the dated country strip and do not masquerade as model inputs. See
-[ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md) and [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md).
+value. Programme terms and policy assumptions must never carry that state. The four assumptions
+covered by ADR-0050 use a separate amber `programme-assumption` state and retain their entered
+values while dated context is rendered beside them. Context-only country indicators remain in the dated country strip and do not masquerade as model inputs. See
+[ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md), [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md), and [ADR-0050](adr/0050-show-api-benchmarks-without-inventing-programme-terms.md).
 
 ---
 
