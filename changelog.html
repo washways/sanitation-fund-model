@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.13.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.14.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.14.0 — Partial-year horizons fully reported</h2>
+        <ul>
+            <li>Valid horizons shorter than a year now show charts and a labelled reporting period instead of a blank dashboard.</li>
+            <li>Horizons such as 18 months now include the final six months instead of stopping annual views at month 12.</li>
+            <li>Partial periods are labelled clearly, for example <strong>Year 2 (6 months)</strong>.</li>
+            <li>Period flows and cumulative reach are checked against the underlying monthly series, and the 6-month render path is tested.</li>
+            <li>F-52 is resolved. Whole-year scenarios and the standard Malawi result are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.13.0 — Annual grant chart corrected</h2>
         <ul>
             <li>Annual grant spending now always appears as an outflow in the cash-flow chart.</li>

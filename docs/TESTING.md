@@ -3,7 +3,7 @@
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # Node is not on PATH
 npm ci                 # installs ESLint, the one devDependency — needed once
-npm test              # 100 tests, ~3s
+npm test              # 102 tests, ~3s
 npm run test:watch    # re-run on change
 npm run golden:diff   # what would move, without writing
 npm run verify        # reproduce the audit findings
@@ -149,6 +149,7 @@ Two of its tests earn their place beyond crash-catching:
 - **`solvency advice is model-tested`** asserts that every offered remedy actually improves repayment when simulated, and that extending the repayment term is never offered — because measurement shows it makes repayment worse (F-32).
 - **`monthly table aligns its columns and reports exact ME launches`** requires each rendered row to match the header width and reconciles the canonical launch count to the working-capital-inclusive ME loan value (F-49).
 - **`annual cash-flow chart uses annual grant spending as an outflow`** captures the real Chart.js configuration, reconciles its grant dataset to `series.dataGrants`, and prevents declining annual spending from appearing as income (F-51).
+- **Partial-year regressions** require 6- and 18-month runs to retain the final period, reconcile its flows and cumulative reach to monthly data, and reach Chart.js even when no complete year exists (F-52).
 
 If a future change needs the DOM stub to *do* something rather than merely exist, that is a signal the model has grown a hidden UI dependency.
 

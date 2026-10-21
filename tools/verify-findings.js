@@ -425,12 +425,32 @@ console.log('='.repeat(80));
     corrected.map(value => money(value)).join(', ') + '.');
 }
 
+// F-52 — month-granular durations retain the final partial period in annual views.
+{
+  const sixMonths = run({ duration: 0.5, verify: true });
+  const eighteenMonths = run({ duration: 1.5, verify: true });
+  const sixSeries = sixMonths.series;
+  const eighteenSeries = eighteenMonths.series;
+  const sixMonthGrants = sum(sixSeries.dataMonthlyGrantDisbursed);
+  const reportsAllMonths = sixSeries.labels.length === 1
+    && sixSeries.labels[0] === 'Year 1 (6 months)'
+    && Math.abs(sixSeries.dataGrants[0] - sixMonthGrants) < 0.01
+    && sixSeries.dataToilets[0] === sixMonths.kpis.reach.toilets
+    && eighteenSeries.labels.length === 2
+    && eighteenSeries.labels[1] === 'Year 2 (6 months)'
+    && eighteenSeries.dataToilets[1] === eighteenMonths.kpis.reach.toilets;
+  check('F-52', 'valid partial-year horizons retain every month in annual reporting',
+    reportsAllMonths,
+    `Six months now reports ${sixSeries.labels.join(', ')} and ${sixMonths.kpis.reach.toilets.toLocaleString()} toilets; ` +
+    `18 months reports ${eighteenSeries.labels.join(', ')} and ${eighteenMonths.kpis.reach.toilets.toLocaleString()} toilets.`);
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 51 of 51 resolved.');
+console.log('Findings register: 52 of 52 resolved.');
 console.log('Open modelling question: MODEL_SPEC R-7.6/Q14 (headline constraint reporting).');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

@@ -30,6 +30,7 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | S6 reporting integrity — 2026-10-21 | Added the exact monthly ME-launch series and realigned the implementation table's count/value headings. | `New MEs` comes from `dataMonthlyNewMes`; never reconstruct it from loan value or setup cost. Every row must match the header width. |
 | S6 zero-input fidelity — 2026-10-21 | Removed the `mePerDistrict || 20` fallback that turned an explicit zero-capacity stress into the default Malawi network. | After `validateInputs()`, use supplied values directly. Never use truthiness to default a numeric input for which zero is valid. |
 | S6 chart integrity — 2026-10-21 | Corrected annual grant bars that differenced yearly flows and created fictitious positive income. The smoke harness now captures Chart.js configs. | `dataGrants` is an annual flow: negate once. Reconcile chart datasets to canonical model series rather than inferring their semantics from comments. |
+| S6 partial-period reporting — 2026-10-21 | Added one canonical annual-period recorder for complete years and the final partial year; sub-year scenarios now render charts. | Duration is month-granular. Never drop months after the last 12-month boundary; label partial periods explicitly and reconcile them to monthly series. |
 
 The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) and [docs/adr/](docs/adr/). Never edit an accepted ADR; supersede it.
 
@@ -65,5 +66,6 @@ CPI, commercial lending, poverty, Gini, and sanitation levels are context. Do no
 - The monthly ME loan includes setup plus working capital. Use `series.dataMonthlyNewMes` for launch counts; dividing by `meSetupCost` overstates them and shifts reporting logic outside the model.
 - `mePerDistrict = 0` is valid and means no enterprise network. The pure model has no hidden default after validation; use nullish/presence logic only at boundaries where absence is actually permitted.
 - `series.dataGrants` contains yearly spending, not a cumulative balance. Annual cash-flow outflows are negative; declining spend must never become positive income.
+- A valid duration may be any whole number of months. Annual reporting must include a labelled final partial period; a duration below one year must not produce an empty `series.labels` array.
 
 This model informs funding decisions. A plausible wrong number is worse than an obvious crash.

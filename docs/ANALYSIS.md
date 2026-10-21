@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 51 of 51 findings resolved as of 2026-10-21. F-51 was fixed under ADR-0042. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 52 of 52 findings resolved as of 2026-10-21. F-52 was fixed under ADR-0043. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -1012,6 +1012,12 @@ The equivalent genuine zero-cap run produces no enterprises or toilets and is no
 **High — fixed.** The engine's `dataGrants` entries are annual flows, reset after every year. The annual cash-flow chart treated them as cumulative totals and differenced adjacent years. In the Malawi reference run, actual grant spending of approximately $278k, $356k, $292k, $0, and $0 became chart values of -$278k, -$78k, **+$64k**, **+$292k**, and $0. Positive bars implied grant income, including $292k in a year with no grant spending.
 
 **Fix:** negate each annual flow once and add a render-path regression against the actual Chart.js dataset. Remove the unused placeholder inside the same default aggregation. [ADR-0042](adr/0042-chart-annual-grants-as-flows.md). Resolved in `04cc47f`.
+
+### F-52 — Valid partial-year horizons disappear from annual views
+
+**High — fixed.** Duration accepts any whole number of months, but annual aggregates were pushed only when `month % 12 === 0`. A valid 6-month Malawi run built 12,814 toilets while returning zero annual labels and rows, causing `renderCharts()` to exit and leave every chart blank. A valid 18-month run built 43,802 toilets but its annual table and charts omitted months 13–18.
+
+**Fix:** record a labelled final partial period after the loop, using the same aggregation path as complete years, and test both pure series reconciliation and the 6-month chart render. [ADR-0043](adr/0043-report-final-partial-year.md). Resolved in `pending`.
 
 ---
 

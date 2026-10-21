@@ -508,6 +508,10 @@ lendable        = solvent ? max(0, loanCash - requiredReserve) : 0</div>
             Grant bars are each year's actual grant spending, not the change from the prior year's spending. The net
             cash-flow line is the annual sum of the monthly ledger movements.</p>
 
+        <p>For a horizon that is not a whole number of years, the final chart period is labelled with its month
+            count, for example <strong>Year 2 (6 months)</strong>. Its flows cover only those remaining months; its
+            cumulative reach is the position at the actual end of the scenario.</p>
+
         <p><strong>Write-offs are not cash.</strong> A loan written down reduces the portfolio balance and is reported
             as a write-off, but no money leaves the building. This is checked on every run: net cash flow is rebuilt
             from its components and must reconcile.</p>

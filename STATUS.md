@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.13.0 — annual grant cash-flow chart corrected |
+| **Release** | 0.14.0 — partial-year horizons fully reported |
 | **Stages complete** | S0, S1, S2, S3, S5; S4 solver correctness complete, other S4 work and S6 remain |
-| **Tests** | ✅ 100 pass, 0 todo, 0 fail (`npm test`, ~3s) |
+| **Tests** | ✅ 102 pass, 0 todo, 0 fail (`npm test`, ~3s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
-| **Findings register** | ✅ 51 of 51 resolved |
+| **Findings register** | ✅ 52 of 52 resolved |
 | **Open modelling question** | MODEL_SPEC R-7.6: whether the headline constraint label should derive directly from the production minimum |
 
 ## What remains unresolved
@@ -86,6 +86,7 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 
 - `series.dataGrants` contains annual flows, not cumulative balances. The annual cash-flow chart negates each value once and never differences adjacent years.
 - Chart inflows are positive and outflows are negative. The smoke harness captures the Chart.js configuration and reconciles the `Grants` dataset to the engine series. See [ADR-0042](docs/adr/0042-chart-annual-grants-as-flows.md).
+- Month-granular horizons always retain a final partial reporting period, labelled with its month count. A sub-year scenario must still render charts. See [ADR-0043](docs/adr/0043-report-final-partial-year.md).
 
 ## Environment
 
@@ -104,4 +105,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.13.0 closed F-51 under [ADR-0042](docs/adr/0042-chart-annual-grants-as-flows.md). The annual cash-flow chart now shows the engine's yearly grant spending as outflows instead of turning year-to-year declines into fictitious income. The ledger and Malawi headlines are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.14.0 closed F-52 under [ADR-0043](docs/adr/0043-report-final-partial-year.md). Valid 6- and 18-month horizons now retain and render their final partial period instead of showing no annual data or truncating at month 12. Whole-year results are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

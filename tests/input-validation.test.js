@@ -66,5 +66,27 @@ describe('model input validation (F-46)', () => {
     assert.strictEqual(result.viability.ok, false,
       'a no-delivery scenario must not inherit the default scenario\'s viable verdict');
   });
+
+  test('valid partial-year horizons retain their final months in annual reporting (F-52, ADR-0043)', () => {
+    for (const duration of [0.5, 1.5]) {
+      const result = ModelModule.calculate({ ...BASE, duration, verify: true });
+      const s = result.series;
+      const expectedPeriods = Math.ceil(duration);
+      const partialMonths = (duration * 12) % 12;
+
+      assert.strictEqual(s.labels.length, expectedPeriods);
+      assert.strictEqual(s.dataGrants.length, expectedPeriods);
+      assert.match(s.labels[s.labels.length - 1], new RegExp(`\\(${partialMonths} months\\)$`));
+      assert.strictEqual(s.dataToilets[s.dataToilets.length - 1], result.kpis.reach.toilets,
+        'final period snapshot must include every simulated month');
+
+      const finalStart = Math.floor(duration) * 12;
+      const expectedFinalGrants = s.dataMonthlyGrantDisbursed
+        .slice(finalStart)
+        .reduce((sum, value) => sum + value, 0);
+      assert.ok(Math.abs(s.dataGrants[s.dataGrants.length - 1] - expectedFinalGrants) < 0.01,
+        'final partial-period grant flow must reconcile to its monthly values');
+    }
+  });
 });
 

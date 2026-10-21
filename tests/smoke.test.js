@@ -287,4 +287,14 @@ describe('application smoke', () => {
     assert.ok(actual.every(value => value <= 0),
       'grant spending must never appear as a positive cash inflow');
   });
+
+  test('a valid six-month scenario still renders period charts (F-52, ADR-0043)', () => {
+    const app = makeApp();
+    app.el('wiz-duration-sidebar').value = '0.5';
+    app.runCalculation(true);
+
+    assert.deepStrictEqual(Array.from(app.UI.lastResults.series.labels), ['Year 1 (6 months)']);
+    assert.ok(app.chartConfigs.length >= 4,
+      'the chart renderer must not exit just because the horizon is shorter than one year');
+  });
 });

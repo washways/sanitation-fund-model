@@ -431,6 +431,32 @@ const ModelModule = {
         // Sim Helpers
         let yearLoansHh = 0, yearLoansMe = 0, yearGrants = 0, yearRepayments = 0, yearDefaultsHh = 0, yearDefaultsMe = 0, yearDebtService = 0;
 
+        // One reporting path for complete and partial years (F-52). Duration is
+        // month-granular, so the final reporting period is not always 12 months.
+        const recordAnnualPeriod = label => {
+            labels.push(label);
+            dataToilets.push(toiletsBuiltCumulative);
+            dataPeople.push(toiletsBuiltCumulative * inputs.avgHHSize);
+            dataCarbon.push(cumulativeCarbon);
+            dataDalys.push(cumulativeDalys);
+
+            dataLoansHh.push(yearLoansHh);
+            dataLoansMe.push(yearLoansMe);
+            dataGrants.push(yearGrants);
+            dataRepayments.push(yearRepayments);
+            dataDefaultsHh.push(yearDefaultsHh);
+            dataDefaultsMe.push(yearDefaultsMe);
+            dataFundDebtService.push(yearDebtService);
+
+            yearLoansHh = 0;
+            yearLoansMe = 0;
+            yearGrants = 0;
+            yearRepayments = 0;
+            yearDefaultsHh = 0;
+            yearDefaultsMe = 0;
+            yearDebtService = 0;
+        };
+
         // Initial Startup (M0 Logic)
         // Assumption: ME Setup is a LOAN from LoanCash.
         let startLoanVolume = 0;
@@ -877,25 +903,15 @@ const ModelModule = {
             yearDebtService += debtService;
 
             if (m % 12 === 0) {
-                labels.push(`Year ${currentYear}`);
-                dataToilets.push(toiletsBuiltCumulative);
-                // Snapshot People for Legacy Charts (optional)
-                dataPeople.push(toiletsBuiltCumulative * inputs.avgHHSize);
-                dataCarbon.push(cumulativeCarbon);
-                dataDalys.push(cumulativeDalys);
-
-                dataLoansHh.push(yearLoansHh);
-                dataLoansMe.push(yearLoansMe);
-                dataGrants.push(yearGrants);
-                dataRepayments.push(yearRepayments);
-                dataDefaultsHh.push(yearDefaultsHh);
-                dataDefaultsMe.push(yearDefaultsMe);
-                dataFundDebtService.push(yearDebtService);
-
-                // Reset
-                yearLoansHh = 0; yearLoansMe = 0; yearGrants = 0; yearRepayments = 0; yearDefaultsHh = 0; yearDefaultsMe = 0; yearDebtService = 0;
+                recordAnnualPeriod(`Year ${currentYear}`);
             }
         } // End Loop
+
+        const partialMonths = totalSimMonths % 12;
+        if (partialMonths !== 0) {
+            const partialYear = Math.ceil(totalSimMonths / 12);
+            recordAnnualPeriod(`Year ${partialYear} (${partialMonths} months)`);
+        }
 
         // --- Final Package ---
         const series = {

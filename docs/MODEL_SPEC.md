@@ -508,6 +508,10 @@ Every financial recommendation shown by the application is produced by rerunning
 
 Annual inflows plot above zero and annual outflows plot below zero. `dataGrants[y]` is already the grant spending flow for year `y`, so the grant dataset is `-dataGrants[y]`; it is never differenced as though cumulative. The chart configuration must reconcile to the engine's annual series.
 
+### R-10.6 Final partial period **[AS-BUILT]** (F-52)
+
+Duration is month-granular. Each complete 12-month period is labelled `Year N`; if months remain after the last complete year, one final period is labelled `Year N (M months)`. Its flow fields sum only those remaining months, while cumulative fields snapshot the final simulated month. A valid duration shorter than one year therefore still produces one period and renders every chart.
+
 ---
 
 ## 11. KPI definitions

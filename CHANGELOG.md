@@ -11,6 +11,20 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.14.0] — 2026-10-21 — Partial-year horizons fully reported
+
+### Fixed
+
+- **Valid month-granular horizons no longer disappear from annual views.** Duration already accepts any whole number of months, but annual series were recorded only at exact 12-month boundaries. A 6-month Malawi run built 12,814 toilets yet returned no annual labels, rows, or charts. An 18-month run built 43,802 toilets while every annual view stopped at month 12. ([ADR-0043](docs/adr/0043-report-final-partial-year.md), F-52)
+- **The final partial period now uses the same aggregation path as complete years.** A 6-month run reports `Year 1 (6 months)`; an 18-month run reports `Year 1` and `Year 2 (6 months)`. Period flows sum the remaining months and cumulative reach snapshots the actual horizon end.
+- **Both core and render paths are pinned.** Regressions reconcile partial-period grants and final toilets to monthly data, and require a valid 6-month scenario to produce Chart.js configurations rather than returning early.
+
+### Golden movement
+
+None. All 21 recorded scenarios and the Malawi startup use whole-year horizons, so their outputs are unchanged. Only previously omitted partial-period reporting is added.
+
+---
+
 ## [0.13.0] — 2026-10-21 — Correct annual grant cash-flow chart
 
 ### Fixed
