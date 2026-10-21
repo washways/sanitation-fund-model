@@ -997,7 +997,7 @@ Following that advice makes the outcome worse. The advisor was written against a
 
 That count is calculated as `new ME loan value / meSetupCost`, even though ADR-0031 made each enterprise loan include setup cost plus working capital. With the current Malawi defaults, the table divides by $3,000 instead of the $11,400 actually lent per enterprise and therefore reports 3.8 times the true launch count in expansion months.
 
-**Fix:** `dataMonthlyNewMes` exposes the exact simulated monthly launch count; the table labels count and value separately, and a render-path regression requires every row to match the header width. [ADR-0040](adr/0040-report-exact-me-launches.md). Resolved in `pending`.
+**Fix:** `dataMonthlyNewMes` exposes the exact simulated monthly launch count; the table labels count and value separately, and a render-path regression requires every row to match the header width. [ADR-0040](adr/0040-report-exact-me-launches.md). Resolved in `e9e038b`.
 
 ---
 

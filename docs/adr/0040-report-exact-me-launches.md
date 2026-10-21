@@ -59,5 +59,10 @@ series rather than divide currency by a cost assumption.
 
 ## Verification
 
-Pending implementation. The regression will require an exact loan-value reconciliation
-for every month and equal header/data cell counts in the rendered table.
+- `npm test`: 98 pass. The F-49 render-path regression checks all 60 monthly values,
+  requires a scenario with in-loop expansion, and requires every rendered row to have
+  the same cell count as the header.
+- `npm run golden:diff`: no behaviour change across all 21 scenarios.
+- `npm run lint`: zero errors and zero warnings.
+- `node tools/verify-findings.js`: all 60 monthly launch values reconcile to the
+  $11,400 Malawi capital requirement; F-49 fixed.
