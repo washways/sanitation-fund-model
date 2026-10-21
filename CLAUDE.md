@@ -22,7 +22,7 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | S3 — model correctness | Corrected arrears/grace accounting, demand growth, SROI, time value, ME attrition, service-life gating, terminal wind-up, reserves, ME capital requirements, and parameter units. | Grant and loan ledgers stay separate. A dead fund stops costing money. One unit convention at the boundary. |
 | S4 — decision support (partial) | Replaced monotonic binary-search assumptions with grid-then-bisect typed solver results. | Solver failure is not the numeric answer zero. Caching, sensitivity, and scenario comparison remain open. |
 | S5 — structure | Split the 4,028-line app into `src/model/`, `src/ui/`, `src/data/`, and the controller, with byte-identical goldens. | `src/model/` is pure and DOM-free. `tools/app-source.js` and `index.html` load order must match. |
-| Post-S5 audit — 2026-10-20 | Recalibrated Malawi defaults from primary evidence; restricted country loading to dated observations; stopped local CPI, commercial lending, poverty, governance, and third-party district data from silently setting programme assumptions; honored explicit 0% write-downs; corrected demand recurrence order. | API data writes only target population, population growth, and income. Missing essentials clear fields and pause. DALYs/carbon default to zero without evidence. |
+| Post-S5 audit — 2026-10-20 | Recalibrated Malawi defaults from primary evidence; restricted country loading to dated observations; stopped local CPI, commercial lending, poverty, governance, and third-party district data from silently setting programme assumptions; honored explicit 0% write-downs; corrected demand recurrence order. | APIs write only target population, population growth, income, and the transparent DALY derivation added later. Missing essentials clear fields and pause; missing optional health evidence resets to not estimated. Carbon remains off without project evidence. |
 | S6 debt robustness — 2026-10-21 | Completed capitalised-interest catch-up and terminal senior settlement; added direct waterfall tests and liability reconciliation. | Pay old capitalised interest, then current interest, then original principal. At wind-up use loan cash only, never grant cash; freeze after the terminal transfer. INV-20/21 must remain green. |
 | S6 input boundary — 2026-10-21 | Added pure fail-fast validation and one combined browser message; blank fields no longer restore hidden defaults, and failed reruns clear stale results. | Invalid inputs never enter month 1. Preserve `NaN` from blank/malformed fields until validation; never clamp, silently fall back, or add unsupported policy caps. |
 | S6 export integrity — 2026-10-21 | Bound CSV/clipboard reports to each successful run's input snapshot and canonical liability/leverage KPIs. | Exports never reread the live form or reconstruct a KPI. Add a canonical model/KPI field first, then report it. |
@@ -33,9 +33,10 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | S6 partial-period reporting — 2026-10-21 | Added one canonical annual-period recorder for complete years and the final partial year; sub-year scenarios now render charts. | Duration is month-granular. Never drop months after the last 12-month boundary; label partial periods explicitly and reconcile them to monthly series. |
 | S4 constraint reporting — 2026-10-21 | Resolved R-7.6/Q14: monthly and headline constraints now derive from actual foregone production, retain mixed causes, and expose grant and loan capital separately. | `capacity + loanCapital` must reconcile demand to production. Grant-capital recovery overlaps loan-capital loss and must never be added to that partition. Viability remains a separate verdict. |
 | S4 sensitivity — 2026-10-21 | Added a pure, deterministic one-at-a-time engine and JSON CLI for up to eight evidence-bounded parameters. | Every low/high pair must bracket base, pass normal validation, and carry a source. Never add built-in generic shocks, undocumented country ranges, timestamps, network fetches, or mutation. |
-| S6 country provenance — 2026-10-21 | Gave the three World Bank-derived model inputs one blue, dated source state and made real user edits clear it. | Only `popReqToilets`, `popGrowthRate`, and `avgAnnualIncome` may receive `country-observation`. Programme assumptions never do; extend the startup regression if the API boundary changes. |
+| S6 country provenance — 2026-10-21 | Gave country-derived model inputs one blue, dated source state and made real user edits clear it. | Only `popReqToilets`, `popGrowthRate`, `avgAnnualIncome`, and `dalyPerPerson` may receive `country-observation`. Programme assumptions never do; extend the startup regression if the API boundary changes. |
 | S3 rollout realism — 2026-10-21 | Replaced the cash-maximising month-zero cohort with an explicit 15% pilot share of the target ME network. | Opening enterprises are `min(target share, affordable, network cap)`. The pilot share is a visible programme assumption, never country-derived; zero must seed no hidden cohort. |
 | S6 responsive results — 2026-10-21 | Replaced the fixed three-column programme summary and global no-wrap cells with an adaptive grid and scoped monthly-table scrolling. | Compact summary cards must wrap and fit the main panel. Only `#monthlyDataTable` may retain wide no-wrap cells inside its local scroll container. |
+| S3 impact evidence — 2026-10-21 | Made jobs per active enterprise explicit, derived a conservative sanitation-burden proxy from WHO plus matching-year World Bank exposure, applied an explicit intervention-effect assumption, and relabelled zero carbon as not estimated. | Jobs are point-in-time jobs supported, not job-years. Never treat 100% of attributable burden as averted: apply the editable `dalyImpactRealisation` factor (21% interim basic non-sewered sanitation estimate). DALY value stays zero unless separately evidenced. Carbon needs a project baseline/technology factor. |
 
 The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) and [docs/adr/](docs/adr/). Never edit an accepted ADR; supersede it.
 
@@ -43,7 +44,8 @@ The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) a
 
 - Observed/default context: 9,244,139 rural people without basic sanitation, 2.56% population growth, $600 GNI per capita.
 - Evidence-backed programme references: 4.4 people/household, 28 districts, $100 toilet planning cost, $3,000 enterprise capital, 12-month household and enterprise terms, 0.25 hours saved/person/day, 50% time-value factor.
-- Unsupported health and carbon claims are off: DALYs/person = 0, DALY value = 0, CO2e/toilet = 0.
+- Country loading derives 0.0096719 sanitation-attributable burden DALY per exposed person-year for Malawi 2019 from the WHO lower bound and matching World Bank exposure. The separate 21% `dalyImpactRealisation` programme assumption scales this to about 2,139 DALYs averted over five years. DALY value remains 0, so SROI does not silently monetise it. CO2e/toilet remains 0 and is displayed as not estimated pending project evidence.
+- Jobs supported use an explicit three-per-active-enterprise Malawi reference (one owner/operator plus two FTE workers). This is editable and is not a country observation.
 - Financing rates, write-downs, operating costs, capacity/productivity, contingency, and grant pacing are illustrative editable assumptions — not facts about Malawi and never country-derived.
 - The opening ME cohort is an illustrative 15% of the target network: 84 enterprises in Malawi,
   capped by available loan capital. It scales through the separate monthly growth controls.
@@ -51,17 +53,19 @@ The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) a
 
 ## Country-data contract
 
-`src/data/worldbank.js` uses `mrnev=1` and retains indicator labels and years. It supplies only:
+`src/data/worldbank.js` uses `mrnev=1` and retains indicator labels and years. `src/data/who.js` selects the latest both-sex/all-age record with a valid lower uncertainty bound. Together they supply only:
 
 1. `popReqToilets` from rural population × the basic-sanitation gap;
 2. `popGrowthRate`;
 3. `avgAnnualIncome` from GNI per capita, with GDP per capita fallback.
+4. `dalyPerPerson`, a burden proxy from the WHO `WSH_30_SAN` lower bound divided by matching-year World Bank total population without basic sanitation. The separate `dalyImpactRealisation` assumption is never API-filled.
 
 CPI, commercial lending, poverty, Gini, and sanitation levels are context. Do not resurrect `countriesnow.space`, `PV.EST` heuristics, smart-rate formulas, poverty-to-grant mappings, cost tiers, or cross-country operating-cost formulas.
 
-After loading, all three model-driving country fields use the blue `country-observation` state and
+After loading, all four model-driving country fields use the blue `country-observation` state and
 carry a source description. Trusted user input removes that state. Do not use `auto-filled`, inline
-background colours, or the obsolete `api-field` class to represent World Bank provenance.
+background colours, or the obsolete `api-field` class to represent API provenance. Missing health
+evidence resets the optional rate to zero/not estimated; never retain the previous country.
 
 ## Owner decisions — 2026-10-21
 

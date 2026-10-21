@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 55 of 55 findings resolved as of 2026-10-21. F-55 was fixed under ADR-0048. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 58 of 58 findings resolved as of 2026-10-21. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,6 +54,9 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
+| ✅ [F-58](#f-58--carbon-zero-is-presented-as-a-measured-result) | Medium | Impact | Zero carbon is presented as measured mitigation although no technology factor exists | src | S3 |
+| ✅ [F-57](#f-57--country-health-burden-is-available-but-dalys-stay-zero) | Medium | Impact | DALYs stay zero despite a conservative country derivation from WHO and World Bank data | api | S3 |
+| ✅ [F-56](#f-56--jobs-chart-reads-a-series-the-engine-never-creates) | **High** | Impact | Jobs headline uses a hidden multiplier while the chart reads an absent series | src, run | S3 |
 | ✅ [F-55](#f-55--programme-summary-tables-overflow-the-page) | Medium | UI | Summary cards are fixed to three columns while all cells are forced not to wrap | src | S6 |
 | ✅ [F-54](#f-54--month-zero-launches-half-the-national-enterprise-network) | **High** | Assumptions | Month zero cash-maximises the startup cohort, creating $25.8k of ME interest in month one | run | S3 |
 | ✅ [F-53](#f-53--country-derived-input-highlighting-contradicts-its-own-source-state) | Medium | UI | API provenance disappears immediately on some fields and remains falsely on edited values | run | S6 |
@@ -1041,6 +1044,24 @@ The `Starting Capacity Throttle` did not state an operational target. It subtrac
 **Medium — fixed.** The results grid below “Programme Summary (End of Project Estimation)” was fixed to three columns in an inline style. A later global `.summary-table th, .summary-table td` rule also applied a 100px minimum width and `white-space: nowrap` to both the compact summary cards and the 22-column monthly audit table. With the fixed sidebar, ordinary laptop and tablet widths could not accommodate the minimum content width, so cards and tables extended beyond the visible main panel.
 
 **Fix:** the summary now uses a CSS auto-fitting grid, compact summary cells wrap, and wide no-wrap cells are scoped to the monthly audit table inside its local horizontal scroll container. [ADR-0048](adr/0048-fit-programme-summary-to-viewport.md). Resolved in `ffff787`.
+
+### F-56 — Jobs chart reads a series the engine never creates
+
+**High — fixed.** The headline calculated jobs as ending micro-enterprises multiplied by a hidden constant of three. The Project Impact chart instead read `series.dataJobs`, which was never created or returned, so selecting Jobs plotted an absent/zero dataset. The summary then applied an unrelated hard-coded `$3,000` valuation that the SROI did not use.
+
+**Fix:** expose the three-jobs-per-active-enterprise assumption, use it for both the headline and annual chart, describe the result as jobs supported, and remove the unsupported valuation. [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md). Resolved in `da3cd8b`.
+
+### F-57 — Country health burden is available but DALYs stay zero
+
+**Medium — fixed.** WHO GHO publishes country-level diarrhoeal DALYs attributable specifically to inadequate sanitation, with uncertainty bounds, while World Bank supplies matching-year population and basic-sanitation coverage. The model left `dalyPerPerson` at zero for every country, so the physical DALY chart was uninformative even where a transparent conservative estimate was possible.
+
+**Fix:** divide the WHO lower uncertainty bound by the matching World Bank population without basic sanitation and mark the result with both sources and year. Treat that result as a burden proxy, then apply a separate editable 21% basic non-sewered sanitation effect from the 2022 meta-analysis rather than silently assuming 100% of the burden is averted. Retain zero/not estimated when any API component is unavailable and keep DALY valuation at zero. The live audit found burden-data coverage for 42 of 44 selector countries. [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md). Resolved in `da3cd8b`.
+
+### F-58 — Carbon zero is presented as a measured result
+
+**Medium — fixed.** With `co2PerToilet = 0`, the summary and chart displayed zero carbon mitigated without saying that mitigation was not estimated. A positive factor cannot be inferred from users or toilets: IPCC wastewater accounting needs the baseline and project treatment systems and methane-conversion factors, and the sign is not assured without them.
+
+**Fix:** retain the project-specific factor and safe zero default, but label the output as not estimated until that factor is supplied. Do not invent a people-based mitigation coefficient. [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md). Resolved in `da3cd8b`.
 
 ---
 

@@ -29,9 +29,23 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.18.1 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.19.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.19.0 — Impact estimates are explicit and evidence-linked</h2>
+        <ul>
+            <li><strong>Jobs Supported</strong> now plots correctly. The Malawi reference assumption is an editable three jobs per active enterprise: one owner/operator plus two full-time-equivalent workers.</li>
+            <li>The jobs headline and chart now use the same formula. The old unsupported $3,000-per-job valuation is removed, and the result is not described as job-years.</li>
+            <li>The DALY field is derived conservatively from the WHO lower estimate of sanitation-attributable diarrhoeal burden and matching-year World Bank exposure data. Malawi uses 2019 data: 0.0096719 DALY per exposed person-year.</li>
+            <li>A separate, editable 21% health-effect assumption uses the 2022 meta-analysis point estimate for basic sanitation without sewer connection. This avoids silently treating 100% of the country burden as averted.</li>
+            <li>The five-year Malawi reference now shows about 2,139 physical DALYs averted. Value per DALY remains zero, so SROI stays 2.73 rather than silently monetising the estimate.</li>
+            <li>The derivation is available for 42 of 44 selector countries. Eritrea and Tuvalu fall back clearly to <strong>Not estimated</strong> because a required source is unavailable.</li>
+            <li>Carbon remains off until the programme supplies a project-specific baseline and technology factor. The result now says <strong>Not estimated — project factor required</strong> instead of presenting zero as measured mitigation.</li>
+            <li>F-56, F-57, and F-58 are resolved. Financial outputs and all 21 recorded scenarios are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.18.1 — Programme summary fits the page</h2>
         <ul>
             <li>The tables below <strong>Programme Summary (End of Project Estimation)</strong> now stay inside the page at laptop, tablet, and phone widths.</li>

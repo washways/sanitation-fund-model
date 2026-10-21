@@ -121,7 +121,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-        const data = await ApiModule.fetchData(country);
+        const [data, healthBurden] = await Promise.all([
+            ApiModule.fetchData(country),
+            WhoApiModule.fetchSanitationDalys(country),
+        ]);
+        let healthEstimate = null;
+        if (healthBurden) {
+            const exposure = await ApiModule.fetchSanitationExposure(country, healthBurden.year);
+            const population = Number(exposure?.population?.value);
+            const basicSanitationPct = Number(exposure?.basicSanitation?.value);
+            const lowerBoundDalys = Number(healthBurden.low);
+            const exposedPopulation = population * (1 - basicSanitationPct / 100);
+            if (Number.isFinite(population) && population > 0
+                && Number.isFinite(basicSanitationPct) && basicSanitationPct >= 0 && basicSanitationPct < 100
+                && Number.isFinite(lowerBoundDalys) && lowerBoundDalys >= 0
+                && Number.isFinite(exposedPopulation) && exposedPopulation > 0) {
+                healthEstimate = {
+                    rate: lowerBoundDalys / exposedPopulation,
+                    lowerBoundDalys,
+                    exposedPopulation,
+                    year: healthBurden.year,
+                };
+            }
+        }
         // A slower earlier request must never overwrite a country selected later.
         if (requestId !== countryLoadSequence) return;
         btn.innerText = originalText;
@@ -165,6 +187,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const incomeLabel = hasNumber(data.gni) ? 'GNI/c' : 'GDP/c';
             const incomeCode = hasNumber(data.gni) ? 'NY.GNP.PCAP.CD' : 'NY.GDP.PCAP.CD';
 
+            const healthTag = healthEstimate
+                ? `<a href="https://www.who.int/data/gho/data/indicators/indicator-details/GHO/number-of-diarrhoea-dalys-from-inadequate-sanitation" target="_blank" class="tag" style="text-decoration:none; color:inherit; border-bottom:1px dotted #ccc;">
+                        <strong>Conservative sanitation burden (${healthEstimate.year}):</strong> ${healthEstimate.rate.toFixed(5)} DALY/person-year &#8599;
+                    </a>`
+                : `<span class="tag"><strong>Sanitation DALY burden:</strong> Not estimated</span>`;
+
             wbDiv.innerHTML = `
                 <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
                     <a href="https://data.worldbank.org/indicator/SP.RUR.TOTL?locations=${country}" target="_blank" class="tag" style="text-decoration:none; color:inherit; border-bottom:1px dotted #ccc;">
@@ -189,10 +217,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <a href="https://data.worldbank.org/indicator/FR.INR.LEND?locations=${country}" target="_blank" class="tag" style="text-decoration:none; color:inherit; border-bottom:1px dotted #ccc;">
                         <strong>Commercial Lending (${yearOf('lendingRate')}):</strong> ${hasNumber(data.lendingRate) ? data.lendingRate.toFixed(1) + '%' : 'N/A'} &#8599;
                     </a>
+                    ${healthTag}
                 </div>
     `;
 
-            const fillParam = (id, val, sourceDescription) => {
+            const fillParam = (id, val, sourceDescription, sourceType = 'world-bank', sourceLabel = 'World Bank') => {
                 const el = document.getElementById(id);
                 if (el && val !== null && val !== undefined && !isNaN(val)) {
                     if (id === 'popReqToilets') {
@@ -201,14 +230,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         el.value = val;
                     }
 
-                    // ADR-0046: this state belongs only to model inputs populated from
-                    // World Bank observations. A synthetic input event lets existing UI
-                    // listeners update without pretending a user supplied the value.
+                    // ADR-0046/0049: this state belongs only to inputs populated from
+                    // authoritative country observations or transparent derivations.
                     el.classList.remove('auto-filled');
                     el.classList.add('country-observation');
-                    el.dataset.sourceType = 'world-bank';
+                    el.dataset.sourceType = sourceType;
                     el.dataset.sourceDescription = sourceDescription;
-                    el.title = `World Bank country data: ${sourceDescription}`;
+                    el.title = `${sourceLabel} country data: ${sourceDescription}`;
 
                     if (!el.dataset.hasProvenanceListener) {
                         el.dataset.hasProvenanceListener = 'true';
@@ -217,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             el.classList.remove('country-observation');
                             el.dataset.sourceType = 'user';
                             el.dataset.sourceDescription = 'User-entered value';
-                            el.title = 'User-entered value; World Bank provenance removed.';
+                            el.title = 'User-entered value; country API provenance removed.';
                         });
                     }
                     el.dispatchEvent(new Event('input'));
@@ -232,6 +260,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     delete el.dataset.sourceType;
                     delete el.dataset.sourceDescription;
                     el.title = 'No country observation available; enter a cited value before recalculating.';
+                }
+            };
+            const resetOptionalEstimate = (id, value, description) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = String(value);
+                    el.classList.remove('auto-filled');
+                    el.classList.remove('country-observation');
+                    el.dataset.sourceType = 'default';
+                    el.dataset.sourceDescription = description;
+                    el.title = description;
+                    el.dispatchEvent(new Event('input'));
                 }
             };
             const missing = [];
@@ -307,11 +347,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 missing.push('GNI/GDP per capita');
             }
 
+            // The physical health burden proxy is optional: use the conservative WHO lower
+            // uncertainty bound with matching-year World Bank exposure, or reset to
+            // zero so a previous country's estimate can never leak into this one.
+            if (healthEstimate && Number.isFinite(healthEstimate.rate)) {
+                fillParam(
+                    'dalyPerPerson',
+                    healthEstimate.rate.toFixed(7),
+                    `WHO lower-bound sanitation-attributable diarrhoeal DALYs (${healthEstimate.year}) ` +
+                        `divided by ${Math.round(healthEstimate.exposedPopulation).toLocaleString()} people ` +
+                        `without basic sanitation in matching World Bank data`,
+                    'who-world-bank',
+                    'WHO / World Bank'
+                );
+            } else {
+                resetOptionalEstimate(
+                    'dalyPerPerson',
+                    0,
+                    'Not estimated: matching WHO sanitation DALYs and World Bank exposure data were unavailable.'
+                );
+            }
+
             // 4. Update Affordability Calculation trigger (Grant Support)
             // If we have Income (GNI), checking toilets vs income might replace this logic?
             // CalculateAffordability function uses 'gdp' in 'UI.lastApiData'.
             // I should update UI.lastApiData to include 'gni'.
-            UI.lastApiData = data;
+            UI.lastApiData = { ...data, healthEstimate };
 
             // Affordability is advice only; it never writes policy inputs.
             const toiletCost = parseFloat(document.getElementById('avgToiletCost').value) || 0;

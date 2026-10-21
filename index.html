@@ -115,10 +115,10 @@
 
                     <button id="fetchDataBtn">Load Country Data</button>
                     <small id="country-help">Change the country, then click Load to pull its
-                        observed population, growth and income plus dated context.</small>
+                        observed population, growth, income and conservative sanitation-health estimate plus dated context.</small>
                     <small id="country-source-key" class="country-source-key">
                         <span class="country-source-swatch" aria-hidden="true"></span>
-                        Blue fields were loaded or derived from World Bank observations. Editing one removes the marker.
+                        Blue fields were loaded or transparently derived from authoritative country APIs. Editing one removes the marker.
                     </small>
                 </div>
             </div>
@@ -283,6 +283,13 @@
                     </label>
                     <input type="number" id="mePerDistrict" value="20">
                 </div>
+                <div class="input-group">
+                    <label>Jobs Supported / Active ME
+                        <span class="info-icon"
+                            title="Full-time-equivalent livelihoods supported by each active sanitation enterprise. The illustrative default assumes one owner/operator plus two workers; replace it with programme staffing evidence.">i</span>
+                    </label>
+                    <input type="number" id="jobsPerMe" value="3" step="0.5">
+                </div>
 
                 <div class="input-group">
                     <label>Toilets / ME / Month
@@ -393,11 +400,18 @@
                 </div>
 
                 <div class="input-group">
-                    <label>DALYs Averted / Person
+                    <label>Sanitation DALY Burden / Exposed Person / Year
                         <span class="info-icon"
-                            title="Programme-evaluation input. Zero by default because no Malawi programme-specific DALY estimate has been supplied; enter cited evidence before publishing SROI.">i</span>
+                            title="On country load, conservatively derived from the WHO lower-bound diarrhoeal DALYs attributable to inadequate sanitation divided by the matching World Bank population without basic sanitation. This is a burden proxy, not an intervention effect; the separate health-effect input scales it. Editing removes API provenance.">i</span>
                     </label>
                     <input type="number" id="dalyPerPerson" value="0" step="0.001">
+                </div>
+                <div class="input-group">
+                    <label>Sanitation Health Effect (%)
+                        <span class="info-icon"
+                            title="Share of the country sanitation-attributable burden expected to be averted by the financed toilets. The 21% interim default is the 2022 meta-analysis point estimate for basic sanitation without sewer connection versus unimproved or limited sanitation (RR 0.79; 95% CI 0.61–1.03). Replace with programme evidence when available.">i</span>
+                    </label>
+                    <input type="number" id="dalyImpactRealisation" value="21" step="1">
                 </div>
                 <div class="input-group">
                     <label>Toilet Service Life (Years)
@@ -430,9 +444,9 @@
                     <input type="number" id="dalyValue" value="0">
                 </div>
                 <div class="input-group">
-                    <label>CO2e / Toilet (Tonnes/Yr)
+                    <label>Net CO2e Avoided / Toilet (Tonnes/Yr)
                         <span class="info-icon"
-                            title="Climate Metric: Tonnes of CO2 equivalent emissions prevented per toilet per year (via waste treatment/methane capture).">i</span>
+                            title="Project-specific net emissions reduction versus the baseline sanitation system. It cannot be inferred from users or toilet count alone; IPCC accounting requires baseline and project treatment technologies. Zero means not estimated.">i</span>
                     </label>
                     <input type="number" id="co2PerToilet" value="0" step="0.01">
                 </div>
@@ -538,7 +552,7 @@
                                 style="padding:0.25rem; font-size:0.85rem; border:1px solid #cbd5e1; border-radius:0.25rem;">
                                 <option value="toilets">Toilets Built</option>
                                 <option value="people">People Reached</option>
-                                <option value="jobs">Jobs Created</option>
+                                <option value="jobs">Jobs Supported</option>
                                 <option value="dalys">DALYs Averted</option>
                                 <option value="carbon">Carbon Mitigated</option>
                             </select>
@@ -636,12 +650,8 @@
                                         </tr>
                                         <tr class="separator"></tr>
                                         <tr>
-                                            <td>Jobs (Job-Years)</td>
+                                            <td>Jobs Supported (at Horizon)</td>
                                             <td id="sum-jobs">--</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="sub-label"> Job Valuation</td>
-                                            <td id="sum-val-jobs" class="text-sm">--</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -833,13 +843,14 @@
         </main>
     </div>
     <!--
-      S5 structural split (ADR-0033): app.js became these 14 files. Classic (non-module)
+      S5 structural split (ADR-0033): app.js is loaded from these ordered files. Classic (non-module)
       scripts share one global Script Environment Record, so this is functionally
       identical to the old single <script src="app.js">, just spread out — order matters,
       and it must match tools/app-source.js's FILES list exactly (that file is what the
       test suite loads from; nothing here can automatically stay in sync with it).
     -->
     <script src="src/data/worldbank.js"></script>
+    <script src="src/data/who.js"></script>
     <script src="src/data/countries.js"></script>
     <script src="src/data/stakeholders.js"></script>
     <script src="src/model/engine.js"></script>

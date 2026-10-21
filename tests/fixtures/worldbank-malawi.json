@@ -7,9 +7,17 @@
       "value": 18307197,
       "year": "2025"
     },
+    "SP.POP.TOTL": {
+      "value": 19025752,
+      "year": "2019"
+    },
     "SH.STA.BASS.RU.ZS": {
       "value": 49.505434868274,
       "year": "2024"
+    },
+    "SH.STA.BASS.ZS": {
+      "value": 42.8038384563156,
+      "year": "2019"
     },
     "SH.STA.SMSS.RU.ZS": {
       "value": 47.2932533710812,
@@ -44,5 +52,15 @@
       "year": "2019",
       "label": "Poverty headcount ratio at $3.00 a day (2021 PPP) (% of population)"
     }
+  },
+  "who": {
+    "indicator": "WSH_30_SAN",
+    "country": "MWI",
+    "year": 2019,
+    "value": 149933.5313,
+    "low": 105249.6094,
+    "high": 205092,
+    "sex": "SEX_BTSX",
+    "age": "AGEGROUP_YEARSALL"
   }
 }

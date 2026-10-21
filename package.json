@@ -1,6 +1,6 @@
 {
   "name": "sanitation-fund-model",
-  "version": "0.18.1",
+  "version": "0.19.0",
   "private": true,
   "description": "Blended-finance revolving fund model for market-based sanitation in LDCs",
   "license": "UNLICENSED",
@@ -14,6 +14,7 @@
     "golden:record": "node tests/golden.record.js",
     "verify": "node tools/verify-findings.js",
     "audit:countries": "node tools/audit-country-data.js",
+    "audit:impact": "node tools/audit-impact-data.js",
     "sensitivity": "node tools/sensitivity.js",
     "probe": "node tools/probe.js",
     "serve": "node server.js",

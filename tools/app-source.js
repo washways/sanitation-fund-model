@@ -19,6 +19,7 @@ const ROOT = path.join(__dirname, '..');
 
 const FILES = [
   'src/data/worldbank.js',
+  'src/data/who.js',
   'src/data/countries.js',
   'src/data/stakeholders.js',
   'src/model/engine.js',

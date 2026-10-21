@@ -3,7 +3,7 @@
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # Node is not on PATH
 npm ci                 # installs ESLint, the one devDependency — needed once
-npm test              # 116 tests, ~4s
+npm test              # 122 tests, ~4s
 npm run test:watch    # re-run on change
 npm run golden:diff   # what would move, without writing
 npm run verify        # reproduce the audit findings
@@ -13,7 +13,7 @@ No test framework, no bundler, no `node_modules`. The suite uses Node's built-in
 
 ---
 
-## Why thirteen kinds of test
+## Why sixteen kinds of test
 
 This codebase's git history contains eight "Fix TypeError" commits from before the suite existed — each a defect found by a user in a browser. The suite is shaped around the distinct ways this particular model goes wrong; no one suite subsumes another.
 
@@ -28,6 +28,7 @@ This codebase's git history contains eight "Fix TypeError" commits from before t
 | `startup.test.js` | A broken scenario behind the country fetch | *Does the thing a user opens actually work?* |
 | `startup-scale.test.js` | An implausible time-zero enterprise cohort or hidden seed network | *Does rollout begin at the explicit affordable pilot and scale from there?* |
 | `layout.test.js` | Summary cards forced wider than the available page | *Do results reflow while only the audit table scrolls?* |
+| `impact-estimates.test.js` | A hidden jobs multiplier or a chart series drifting from the headline | *Do impact outputs use explicit assumptions and canonical model series?* |
 | `writedown.test.js` | A write-down/default formula drifting from what the spec says it does | *Does a written-down loan behave the way `MODEL_SPEC.md` says?* |
 | `export.test.js` | A broken or untested export path | *Does clicking Export actually produce a file?* |
 | `solver.test.js` | A solver silently converging on a wrong or fake-zero answer where the model isn't monotone | *When there's no feasible answer, does the tool say so instead of guessing?* |
@@ -166,10 +167,10 @@ The single most valuable test in the suite, added because its absence let a brok
 
 The problem it addresses: `tools/baseline-inputs.js` mirrors the `value=""` attributes in `index.html`, and the entire suite is built on it — but the app auto-fetches country data half a second after load and overwrites most of the form. **The tested state exists for about 500 milliseconds.** A set of defaults can be tuned, verified, and committed while the browser opens on something completely different. That is finding F-34, and it was found by a user, not by us.
 
-This suite boots the app with controllable timers, fires `DOMContentLoaded`, drains the deferred work in scheduled order, and lets the real fetch handler run against **recorded** World Bank and administrative-unit responses. It then asserts on the scenario that results:
+This suite boots the app with controllable timers, fires `DOMContentLoaded`, drains the deferred work in scheduled order, and lets the real fetch handler run against **recorded** World Bank and WHO responses. It then asserts on the scenario that results:
 
 - the country selector lists every country, not just the default — it was an `<input list="...">` pre-filled with "Malawi", and browsers filter a datalist against what is already typed, so the dropdown showed one entry;
-- observed data reaches the form (target population, population growth, and income);
+- observed data reaches the form (target population, population growth, income, and the conservative sanitation DALY derivation);
 - every model-driving country observation receives the same dated blue provenance state, which a real user edit removes;
 - the fetch does **not** fill negotiated terms or policy choices — a commercial lending rate is not a term sheet, and a poverty headcount is not a policy;
 - the resulting fund is viable;
@@ -193,7 +194,7 @@ To re-record, fetch the indicators listed in the fixture and write them back in 
 
 **If a stub ever has to *do* something rather than merely exist, that is the bug** — the model has grown a hidden DOM dependency. Stage S5 ([ADR-0033](adr/0033-s5-structural-split.md)) confirmed `src/model/` has none: `tests/purity.test.js` loads it with **no DOM stub at all**, not even this file's minimal one. `tools/load-model.js` itself was kept rather than deleted — every test that needs `ModelModule` in Node still goes through it, since replacing it would mean rewriting each of those tests' loading mechanism, a larger change than the rule asked for.
 
-The stub's `fetch` rejects. Tests must never touch the network: the World Bank API would make the suite slow, flaky, and dependent on an external service's uptime.
+The stub's `fetch` rejects. Tests must never touch the network: World Bank and WHO APIs would make the suite slow, flaky, and dependent on external services' uptime.
 
 ---
 
@@ -207,7 +208,7 @@ Named honestly so nobody assumes coverage that does not exist.
 | **A real browser** | Everything is verified against a DOM stub, faithful as it is. No test has ever opened this in an actual browser. | now |
 | **Accessibility** | Not assessed at all. Assume it fails. | S6 |
 
-`ApiModule` (World Bank fetching, the LDC list) has fixture-based coverage via `tests/startup.test.js` and `tests/fixtures/worldbank-malawi.json` — recorded responses, never a live call.
+`ApiModule` and `WhoApiModule` have fixture-based coverage via `tests/startup.test.js` and `tests/fixtures/worldbank-malawi.json` — recorded responses, never a live call. The optional `npm run audit:impact` command performs a live, read-only coverage check outside CI.
 
 ---
 

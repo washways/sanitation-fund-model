@@ -13,7 +13,9 @@
 const ApiModule = {
     indicators: {
         ruralPop: 'SP.RUR.TOTL',
+        totalPop: 'SP.POP.TOTL',
         basicSanitation: 'SH.STA.BASS.RU.ZS',
+        basicSanitationTotal: 'SH.STA.BASS.ZS',
         safelyManaged: 'SH.STA.SMSS.RU.ZS',
         gdpPerCapita: 'NY.GDP.PCAP.CD',
         gniPerCapita: 'NY.GNP.PCAP.CD', // Added GNI
@@ -24,46 +26,44 @@ const ApiModule = {
         poverty: 'SI.POV.DDAY'
     },
 
-    async fetchData(countryCode) {
+    async fetchIndicator(countryCode, indicator, query = 'mrnev=1') {
         const baseUrl = 'https://api.worldbank.org/v2/country';
         const format = 'format=json';
-
-        const fetchIndicator = async (ind) => {
-            try {
-                // `mrnev=1` means the latest non-empty observation. `MRV=5`, used
-                // previously, means five calendar periods and silently dropped older
-                // but still latest poverty/Gini observations in countries with patchy
-                // series. Keep the record's year and API label for provenance.
-                const url = `${baseUrl}/${countryCode}/indicator/${ind}?${format}&mrnev=1`;
-                const res = await fetch(url);
-                const data = await res.json();
-                if (data && data[1] && data[1].length > 0) {
-                    const validRecord = data[1].find(r => r.value !== null);
-                    return validRecord ? {
-                        value: validRecord.value,
-                        year: validRecord.date || null,
-                        label: validRecord.indicator?.value || ind
-                    } : null;
-                }
-                return null;
-            } catch (e) {
-                console.error(`Error fetching ${ind}`, e);
-                return null;
+        try {
+            // `mrnev=1` means the latest non-empty observation. Exact-year queries are
+            // used when an external dated numerator needs a matching denominator.
+            const url = `${baseUrl}/${countryCode}/indicator/${indicator}?${format}&${query}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data && data[1] && data[1].length > 0) {
+                const validRecord = data[1].find(r => r.value !== null);
+                return validRecord ? {
+                    value: validRecord.value,
+                    year: validRecord.date || null,
+                    label: validRecord.indicator?.value || indicator
+                } : null;
             }
-        };
+            return null;
+        } catch (e) {
+            console.error(`Error fetching ${indicator}`, e);
+            return null;
+        }
+    },
+
+    async fetchData(countryCode) {
 
         const [popRecord, basicSanRecord, safeSanRecord, gdpRecord, gniRecord,
             inflationRecord, popGrowthRecord, lendingRateRecord, giniRecord, povertyRecord] = await Promise.all([
-            fetchIndicator(this.indicators.ruralPop),
-            fetchIndicator(this.indicators.basicSanitation),
-            fetchIndicator(this.indicators.safelyManaged),
-            fetchIndicator(this.indicators.gdpPerCapita),
-            fetchIndicator(this.indicators.gniPerCapita),
-            fetchIndicator(this.indicators.inflation),
-            fetchIndicator(this.indicators.popGrowth),
-            fetchIndicator(this.indicators.lendingRate),
-            fetchIndicator(this.indicators.gini),
-            fetchIndicator(this.indicators.poverty)
+            this.fetchIndicator(countryCode, this.indicators.ruralPop),
+            this.fetchIndicator(countryCode, this.indicators.basicSanitation),
+            this.fetchIndicator(countryCode, this.indicators.safelyManaged),
+            this.fetchIndicator(countryCode, this.indicators.gdpPerCapita),
+            this.fetchIndicator(countryCode, this.indicators.gniPerCapita),
+            this.fetchIndicator(countryCode, this.indicators.inflation),
+            this.fetchIndicator(countryCode, this.indicators.popGrowth),
+            this.fetchIndicator(countryCode, this.indicators.lendingRate),
+            this.fetchIndicator(countryCode, this.indicators.gini),
+            this.fetchIndicator(countryCode, this.indicators.poverty)
         ]);
 
         const records = {
@@ -92,5 +92,16 @@ const ApiModule = {
             poverty: value('poverty'),
             meta: records
         };
+    },
+
+    async fetchSanitationExposure(countryCode, year) {
+        if (!Number.isInteger(Number(year))) return null;
+        const query = `date=${Number(year)}`;
+        const [population, basicSanitation] = await Promise.all([
+            this.fetchIndicator(countryCode, this.indicators.totalPop, query),
+            this.fetchIndicator(countryCode, this.indicators.basicSanitationTotal, query),
+        ]);
+        if (!population || !basicSanitation) return null;
+        return { population, basicSanitation };
     }
 };

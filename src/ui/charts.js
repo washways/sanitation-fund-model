@@ -225,7 +225,7 @@ Object.assign(UI, {
                 color = '#10b981'; // Green
                 break;
             case 'jobs':
-                label = 'Jobs Supported (Annual)';
+                label = 'Jobs Supported by Active Enterprises';
                 data = series.dataJobs;
                 color = '#3b82f6'; // Blue
                 break;
@@ -235,7 +235,9 @@ Object.assign(UI, {
                 color = '#ef4444'; // Red
                 break;
             case 'carbon':
-                label = 'Carbon Mitigated (Cumulative Tonnes)';
+                label = series.dataCarbon.some(value => value > 0)
+                    ? 'Carbon Mitigated (Cumulative Tonnes)'
+                    : 'Carbon Not Estimated — Project Factor Required';
                 data = series.dataCarbon;
                 color = '#f59e0b'; // Amber
                 break;

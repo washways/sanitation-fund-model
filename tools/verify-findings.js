@@ -455,16 +455,28 @@ console.log('='.repeat(80));
 // the source boundary and the single CSS definition visible in the findings report.
 {
   const markedOnlyByLoader = /classList\.add\('country-observation'\)/.test(APP_SRC)
-    && /dataset\.sourceType = 'world-bank'/.test(APP_SRC)
+    && /sourceType = 'world-bank'/.test(APP_SRC)
+    && /'who-world-bank'/.test(APP_SRC)
     && /if \(!event\.isTrusted\) return;/.test(APP_SRC);
   const hasLegend = /id="country-source-key"/.test(HTML_SRC)
-    && /Blue fields were loaded or derived from World Bank observations/.test(HTML_SRC);
+    && /Blue fields were loaded or transparently derived from authoritative country APIs/.test(HTML_SRC);
   const programmeTermsUnmarked = !/id="(?:loanInterestRate_v2|meLoanInterestRate_v2)"[^>]*class="[^"]*api-field/.test(HTML_SRC);
   const oneCountryStyle = (CSS_SRC.match(/\.country-observation\s*\{/g) || []).length === 1;
   check('F-53', 'country-derived inputs share one truthful provenance state',
     markedOnlyByLoader && hasLegend && programmeTermsUnmarked && oneCountryStyle,
-    'All three API-driven fields use country-observation; trusted user edits clear it; ' +
+    'All four API-driven fields use country-observation; trusted user edits clear it; ' +
     'programme rates remain unmarked; one CSS rule and an on-page legend define the visual state.');
+}
+
+// F-55 — compact summary cards fit the main panel; only the audit table stays wide.
+{
+  const adaptive = /\.results-grid\s*\{[^}]*repeat\(auto-fit,/s.test(CSS_SRC);
+  const summaryWraps = /\.summary-table\s+th,\s*\.summary-table\s+td\s*\{[^}]*overflow-wrap:\s*anywhere/s.test(CSS_SRC);
+  const auditOnlyNoWrap = /#monthlyDataTable\s+th,\s*#monthlyDataTable\s+td\s*\{[^}]*white-space:\s*nowrap/s.test(CSS_SRC)
+    && !/\.summary-table th,\s*\.summary-table td\s*\{[^}]*white-space:\s*nowrap/s.test(CSS_SRC);
+  check('F-55', 'programme summary fits while the monthly audit table scrolls locally',
+    adaptive && summaryWraps && auditOnlyNoWrap,
+    'Summary cards auto-fit and wrap; no-wrap is scoped to the 22-column monthly audit table.');
 }
 
 // F-54 — month zero is a visible rollout target, not the largest cash-funded cohort.
@@ -485,12 +497,52 @@ console.log('='.repeat(80));
     `${Math.round(s.dataMonthlyMes[11])} enterprises by month 12, and fully repays senior principal.`);
 }
 
+// F-56 — jobs use one visible assumption in both model outputs.
+{
+  const explicitInput = /id="jobsPerMe"[^>]*value="3"/.test(HTML_SRC);
+  const oneFormula = k.reach.jobs === k.reach.mes * BASE.jobsPerMe
+    && s.dataJobs.at(-1) === k.reach.jobs
+    && k.reach.jobs === 801;
+  const unsupportedValuationGone = !/id="sum-val-jobs"/.test(HTML_SRC)
+    && !/jobs\s*\*\s*3000/.test(APP_SRC);
+  check('F-56', 'jobs chart and headline use the explicit jobs-per-enterprise assumption',
+    explicitInput && oneFormula && unsupportedValuationGone,
+    `The Malawi default supports ${k.reach.jobs} jobs from ${k.reach.mes} active enterprises at ` +
+    `${BASE.jobsPerMe} jobs each; no monetary job valuation remains.`);
+}
+
+// F-57 — a conservative country health rate produces physical impact without hidden value.
+{
+  const malawiRate = 105249.6094 / (19025752 * (1 - 42.8038384563156 / 100));
+  const withHealth = run({ dalyPerPerson: malawiRate, dalyValue: 0, verify: true });
+  const hasCountryDerivation = /WSH_30_SAN/.test(APP_SRC)
+    && /SH\.STA\.BASS\.ZS/.test(APP_SRC)
+    && /SP\.POP\.TOTL/.test(APP_SRC);
+  check('F-57', 'country health burden becomes a conservative physical DALY estimate',
+    hasCountryDerivation
+      && Math.abs(malawiRate - 0.0096719) < 0.0000001
+      && Math.abs(withHealth.kpis.impact.dalys - 2138.94) < 0.1
+      && Math.abs(withHealth.kpis.value.sroi - base.kpis.value.sroi) < 1e-12,
+    `Malawi 2019 derives ${malawiRate.toFixed(7)} DALY/person/year and ` +
+    `${Math.round(withHealth.kpis.impact.dalys).toLocaleString()} physical DALYs; DALY value zero leaves SROI unchanged.`);
+}
+
+// F-58 — lack of a project carbon factor is a disclosed non-estimate.
+{
+  const disclosed = /Not estimated/.test(APP_SRC)
+    && /Project factor required/.test(APP_SRC)
+    && /Carbon Not Estimated/.test(APP_SRC);
+  check('F-58', 'zero carbon factor is disclosed as not estimated',
+    BASE.co2PerToilet === 0 && disclosed,
+    'The safe zero remains, but the summary, chart, and export require a project-specific factor.');
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 54 of 54 resolved.');
+console.log('Findings register: 58 of 58 resolved.');
 console.log('Open modelling questions: none. R-7.6/Q14 was resolved by ADR-0044.');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

@@ -291,8 +291,8 @@ Object.assign(UI, {
             lines.push(`Health & Climate Impact`);
             lines.push(`DALYs Averted,${stats.dalys}`);
             lines.push(`Economic Value (Health),$${stats.economicValue}`);
-            lines.push(`Carbon Mitigated,${stats.carbon} Tons`);
-            lines.push(`Job Creation,${stats.jobs}`);
+            lines.push(`Carbon Mitigated,${Number(stats.carbon) > 0 ? `${stats.carbon} Tons` : 'Not estimated — project factor required'}`);
+            lines.push(`Jobs Supported at Horizon,${stats.jobs}`);
             lines.push(``);
             lines.push(`Sustainability Scorecard`);
             lines.push(`OSS Ratio,${((stats.ossRatio || 0) * 100).toFixed(1)}%`);

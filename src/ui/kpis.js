@@ -78,10 +78,9 @@ Object.assign(UI, {
             if (k.impact) {
                 setText('sum-dalys', fmtVal(k.impact.dalys));
                 setText('sum-val-dalys', fmtMoney(k.impact.valDalys));
-                setText('sum-carbon', fmtNum(k.impact.carbon));
-                setText('sum-val-carbon', fmtMoney(k.impact.valCarbon));
+                setText('sum-carbon', inputs.co2PerToilet > 0 ? `${fmtNum(k.impact.carbon)} tCO2e` : 'Not estimated');
+                setText('sum-val-carbon', inputs.co2PerToilet > 0 ? fmtMoney(k.impact.valCarbon) : 'Project factor required');
                 setText('sum-jobs', fmtVal(k.reach.jobs)); // Jobs is in Reach now
-                setText('sum-val-jobs', fmtMoney(k.impact.valHours)); // Time savings value
             }
 
             // --- Sustainability Scorecard ---
@@ -314,10 +313,11 @@ Object.assign(UI, {
         // 4. Impact
         setTxt('sum-dalys', fmt(stats.dalys));
         setTxt('sum-val-dalys', fmtMoney(stats.economicValue));
-        setTxt('sum-carbon', fmt(stats.carbon) + " tCO2e");
-        setTxt('sum-val-carbon', fmtMoney(stats.carbon * (inputs.co2Value || 0)));
+        setTxt('sum-carbon', inputs.co2PerToilet > 0 ? fmt(stats.carbon) + " tCO2e" : "Not estimated");
+        setTxt('sum-val-carbon', inputs.co2PerToilet > 0
+            ? fmtMoney(stats.carbon * (inputs.co2Value || 0))
+            : "Project factor required");
         setTxt('sum-jobs', fmt(stats.jobs));
-        setTxt('sum-val-jobs', fmtMoney(stats.jobs * 3000));
 
         // 5. Sustainability Scorecard (Full Population)
         // 5. Sustainability Scorecard (Full Population)
