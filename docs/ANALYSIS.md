@@ -1011,7 +1011,7 @@ The equivalent genuine zero-cap run produces no enterprises or toilets and is no
 
 **High — fixed.** The engine's `dataGrants` entries are annual flows, reset after every year. The annual cash-flow chart treated them as cumulative totals and differenced adjacent years. In the Malawi reference run, actual grant spending of approximately $278k, $356k, $292k, $0, and $0 became chart values of -$278k, -$78k, **+$64k**, **+$292k**, and $0. Positive bars implied grant income, including $292k in a year with no grant spending.
 
-**Fix:** negate each annual flow once and add a render-path regression against the actual Chart.js dataset. Remove the unused placeholder inside the same default aggregation. [ADR-0042](adr/0042-chart-annual-grants-as-flows.md). Resolved in `pending`.
+**Fix:** negate each annual flow once and add a render-path regression against the actual Chart.js dataset. Remove the unused placeholder inside the same default aggregation. [ADR-0042](adr/0042-chart-annual-grants-as-flows.md). Resolved in `04cc47f`.
 
 ---
 

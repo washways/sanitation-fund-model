@@ -59,5 +59,10 @@ pixel-level browser test.
 
 ## Verification
 
-Pending implementation. The regression will compare the chart's `Grants` dataset with
-`series.dataGrants.map(value => -value)` for the full Malawi run.
+- `npm test`: 100 pass. The F-51 render-path regression captures Chart.js
+  configuration and compares the `Grants` dataset with
+  `series.dataGrants.map(value => -value)`.
+- `npm run golden:diff`: no behaviour change across all 21 scenarios.
+- `npm run lint`: zero errors and zero warnings; the old `meDef` suppression is gone.
+- `node tools/verify-findings.js`: Malawi grant bars reconcile to -$277,973,
+  -$355,684, -$292,161, $0, and $0; F-51 fixed.
