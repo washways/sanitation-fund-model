@@ -1049,19 +1049,19 @@ The `Starting Capacity Throttle` did not state an operational target. It subtrac
 
 **High — fixed.** The headline calculated jobs as ending micro-enterprises multiplied by a hidden constant of three. The Project Impact chart instead read `series.dataJobs`, which was never created or returned, so selecting Jobs plotted an absent/zero dataset. The summary then applied an unrelated hard-coded `$3,000` valuation that the SROI did not use.
 
-**Fix:** expose the three-jobs-per-active-enterprise assumption, use it for both the headline and annual chart, describe the result as jobs supported, and remove the unsupported valuation. [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md). Resolved in `[implementation commit]`.
+**Fix:** expose the three-jobs-per-active-enterprise assumption, use it for both the headline and annual chart, describe the result as jobs supported, and remove the unsupported valuation. [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md). Resolved in `da3cd8b`.
 
 ### F-57 — Country health burden is available but DALYs stay zero
 
 **Medium — fixed.** WHO GHO publishes country-level diarrhoeal DALYs attributable specifically to inadequate sanitation, with uncertainty bounds, while World Bank supplies matching-year population and basic-sanitation coverage. The model left `dalyPerPerson` at zero for every country, so the physical DALY chart was uninformative even where a transparent conservative estimate was possible.
 
-**Fix:** divide the WHO lower uncertainty bound by the matching World Bank population without basic sanitation and mark the result with both sources and year. Treat that result as a burden proxy, then apply a separate editable 21% basic non-sewered sanitation effect from the 2022 meta-analysis rather than silently assuming 100% of the burden is averted. Retain zero/not estimated when any API component is unavailable and keep DALY valuation at zero. The live audit found burden-data coverage for 42 of 44 selector countries. [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md). Resolved in `[implementation commit]`.
+**Fix:** divide the WHO lower uncertainty bound by the matching World Bank population without basic sanitation and mark the result with both sources and year. Treat that result as a burden proxy, then apply a separate editable 21% basic non-sewered sanitation effect from the 2022 meta-analysis rather than silently assuming 100% of the burden is averted. Retain zero/not estimated when any API component is unavailable and keep DALY valuation at zero. The live audit found burden-data coverage for 42 of 44 selector countries. [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md). Resolved in `da3cd8b`.
 
 ### F-58 — Carbon zero is presented as a measured result
 
 **Medium — fixed.** With `co2PerToilet = 0`, the summary and chart displayed zero carbon mitigated without saying that mitigation was not estimated. A positive factor cannot be inferred from users or toilets: IPCC wastewater accounting needs the baseline and project treatment systems and methane-conversion factors, and the sign is not assured without them.
 
-**Fix:** retain the project-specific factor and safe zero default, but label the output as not estimated until that factor is supplied. Do not invent a people-based mitigation coefficient. [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md). Resolved in `[implementation commit]`.
+**Fix:** retain the project-specific factor and safe zero default, but label the output as not estimated until that factor is supplied. Do not invent a people-based mitigation coefficient. [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md). Resolved in `da3cd8b`.
 
 ---
 
