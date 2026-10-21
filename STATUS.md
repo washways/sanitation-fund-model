@@ -6,21 +6,20 @@
 
 | | |
 |---|---|
-| **Release** | 0.14.0 — partial-year horizons fully reported |
-| **Stages complete** | S0, S1, S2, S3, S5; S4 solver correctness complete, other S4 work and S6 remain |
-| **Tests** | ✅ 102 pass, 0 todo, 0 fail (`npm test`, ~3s) |
+| **Release** | 0.15.0 — production constraints follow actual output |
+| **Stages complete** | S0, S1, S2, S3, S5; S4 solver correctness and constraint reporting complete, other S4 work and S6 remain |
+| **Tests** | ✅ 105 pass, 0 todo, 0 fail (`npm test`, ~4s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
 | **Findings register** | ✅ 52 of 52 resolved |
-| **Open modelling question** | MODEL_SPEC R-7.6: whether the headline constraint label should derive directly from the production minimum |
+| **Open modelling questions** | None — all 14 owner decisions are recorded |
 
 ## What remains unresolved
 
 | What | Why it matters | Recommended next action |
 |---|---|---|
-| **R-7.6 constraint label** | The displayed dominant constraint is recomputed separately from actual production limits and can disagree. | Decide the reporting convention before changing code. |
-| Solver caching, sensitivity analysis, scenario save/load | S4 items 2–4 remain. | Sensitivity analysis is the most useful next robustness feature. |
+| Solver caching, sensitivity analysis, scenario save/load | S4 items 2–4 remain. | Build evidence-bounded one-at-a-time sensitivity first, then transparent JSON scenario comparison. |
 | Real-browser chart/advisor click-through | Headless tests cover startup, calculation, export, and wiring, but not visual chart interaction. | Add a browser smoke pass during S6 accessibility/mobile work. |
 
 ## Malawi reference run
@@ -37,6 +36,7 @@ Static defaults and the recorded post-fetch Malawi startup now agree on the mode
 | Senior debt | Repaid in full |
 | OSS / FSS | 1.83 / 1.19 |
 | SROI | 4.09 (time value only by default; unsupported DALY and carbon inputs are zero) |
+| Production constraints | ME capacity primary; loan and grant capital secondary |
 | Verdict | Integrity OK; viability OK |
 
 The 20-year stress scenario is **not viable** under the same assumptions: 164,749 toilets, -$11,751 net assets, and 40 insolvent months. This is accepted and disclosed rather than hidden by inventing a higher portfolio rate or lower operating cost. The sourced 12-month Malawi household term turns capital faster but earns less interest per loan, so the illustrative 40% portfolio rate does not sustain indefinite operations.
@@ -48,6 +48,15 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 - Missing essential observations clear the field and pause automatic calculation; another country's value is never retained.
 - Malawi references are documented in [docs/PARAMETERS.md](docs/PARAMETERS.md): 4.4 people/household, 28 districts, $100 toilet planning cost, $3,000 enterprise capital, 12-month loan terms, 0.25 hours saved/day, and a 50% time-value factor.
 - Financing, operating, write-down, capacity, contingency, and grant-pacing defaults remain illustrative programme assumptions. They must be calibrated before an investment decision.
+- The engine remains explicitly USD-only. Do not apply a live spot rate to multi-year cashflows; a later dated, user-supplied reporting conversion needs an ADR.
+- The adverse 20-year Malawi result stays visible as a stress finding. Assumptions will not be tuned merely to force viability.
+
+## Production-constraint contract
+
+- Monthly constraint reporting is calculated after final grant and loan allocations, from the same quantities that determine actual output.
+- Capacity loss plus loan-capital loss reconciles whole-toilet demand to production. Grant-capital recovery overlaps the loan-capital loss and must not be added to it.
+- The horizon headline ranks summed foregone monthly output, lists secondary causes, and uses `Mixed` when multiple causes suppress a month. It does not substitute insolvency for a production bottleneck; viability remains separate.
+- Q14 / R-7.6 is resolved by [ADR-0044](docs/adr/0044-report-actual-production-constraints.md), with three dedicated regressions.
 
 ## Investor debt contract
 
@@ -105,4 +114,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.14.0 closed F-52 under [ADR-0043](docs/adr/0043-report-final-partial-year.md). Valid 6- and 18-month horizons now retain and render their final partial period instead of showing no annual data or truncating at month 12. Whole-year results are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.15.0 resolved R-7.6/Q14 under [ADR-0044](docs/adr/0044-report-actual-production-constraints.md). Constraint labels now derive from actual foregone production and retain primary, secondary, and mixed causes. Twenty golden constraint strings changed exactly as predicted; every numeric result remained identical. All 14 modelling questions are now closed. The owner selected evidence-bounded sensitivity next, followed by transparent JSON scenario comparison, while retaining the disclosed long-horizon Malawi stress result and an explicitly USD-only engine. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

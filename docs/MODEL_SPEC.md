@@ -337,7 +337,7 @@ grantCount      = min(targetGrants, maxGrants)
 loanCount       = min(production - grantCount, maxUnits)
 ```
 
-> **Consequence to be aware of:** because `production` is set from capacity and demand *before* capital is checked, and grants take priority, a grant-rich / loan-poor fund will build its grant quota in full and then build few loan units. The reported "primary constraint" is computed separately (R-7.6) and can disagree with what actually bound.
+> **Consequence to be aware of:** because `production` is set from capacity and demand *before* capital is checked, and grants take priority, a grant-rich / loan-poor fund will build its grant quota in full and then build few loan units. Constraint reporting follows this same sequence and separately exposes capacity, loan-capital and grant-capital pressure (R-7.6).
 
 > **`grantSupportPct` is a pacing control, not a volume control (F-30).** Total grant-funded output is capped by the grant ledger, so `maxGrants` binds long before the target percentage does. Measured: sweeping 5% to 90% moves grant-funded toilets from 8,894 to 9,214 (a 3.6% change) while moving the month the grant fund is exhausted from 28 to 4. Any UI copy, advisor rule or solver strategy that treats this parameter as a subsidy-depth dial is wrong. If a genuine depth-of-subsidy control is required, it must be a per-unit subsidy that draws proportionally from both ledgers — a spec change, not a relabel.
 
@@ -345,7 +345,34 @@ loanCount       = min(production - grantCount, maxUnits)
 Both counts are floored to non-negative integers and jointly capped at `floor(backlogToilets)`, grants taking priority. `production = grantCount + loanCount`.
 
 ### R-7.6 Constraint reporting **[AS-BUILT]**
-`dataConstraintBinding[m]` is `"Demand"`, `"Capacity"` or `"Capital"`, computed from a separate set of comparisons than R-7.4 actually uses. **[OPEN]** Should this be derived from the actual binding term in R-7.4 rather than recomputed? Resolve before Stage 4; it affects the headline `dominantConstraint` KPI.
+
+Constraint reporting is derived after the final grant and loan counts are known, using
+the same quantities as R-7.4. For whole-toilet output in month `m`:
+
+```
+planned                = min(floor(demand), floor(capacity))
+capacityForegone       = floor(demand) - planned
+loanCapitalForegone    = planned - actualProduction
+grantCapitalForegone   = output with the target grant allocation fully funded
+                          (loan capacity unchanged) - actualProduction
+```
+
+`capacityForegone + loanCapitalForegone` exactly reconciles whole-toilet demand to
+actual production. `grantCapitalForegone` is an overlapping diagnostic, not an
+additive third component: loans backfill a missed grant target, so loan affordability
+is the direct final capital limit while grant affordability can still be a material
+contributor.
+
+`dataConstraintBinding[m]` reports `"Demand"` when nothing was foregone, a single
+cause when only one applied, and `"Mixed: ..."` when capacity and capital suppressed
+output together. `dataConstraintForegone[m]` retains the three quantities above for
+audit and KPI aggregation.
+
+The headline `dominantConstraint` ranks causes by summed foregone monthly output,
+reports all other positive causes as secondary, and reports demand met only when no
+output was foregone. Because the same backlog can persist, the aggregate ranks monthly
+production opportunities; it is not a count of unique unserved households. See
+[ADR-0044](adr/0044-report-actual-production-constraints.md).
 
 ### R-7.7 Disbursement **[AS-BUILT]**
 
@@ -536,7 +563,8 @@ All computed in `ModelModule.computeKPIs`, which must be **pure**: no DOM access
 | `effectiveCostPerLatrine` | `investGrant / toilets` — subsidy intensity of the whole programme | AS-BUILT |
 | `depletionMonth` | first month with negative total cash, or `null` | AS-BUILT — numeric; `isSustainable` carries the boolean. `depletionYear` is retained as a display string only |
 | `opsRunway` | `cashEnd / annualFixedOpsCost`, or `null` | AS-BUILT — the `99` sentinel is gone |
-| `dominantConstraint` | see R-7.6 | AS-BUILT |
+| `dominantConstraint` | user-facing primary and secondary production constraints; see R-7.6 | AS-BUILT |
+| `constraintAnalysis` | machine-readable primary, ranked secondary causes, and foregone-output totals; see R-7.6 | AS-BUILT |
 
 ---
 
@@ -574,9 +602,9 @@ These must hold for **every** run. They are the contract that makes the model au
 
 ## 13. Modelling decisions
 
-One modelling question remains open: R-7.6/Q14 on whether the headline constraint
-label should come directly from the production minimum. Do not resolve it by writing
-code; it needs the model owner's decision and an ADR first.
+No modelling questions remain open. New questions must be recorded here and marked
+`[OPEN]`; they must not be resolved in code without the model owner's decision and an
+ADR first.
 
 | # | Question | Decision |
 |---|---|---|
@@ -593,6 +621,7 @@ code; it needs the model owner's decision and an ADR first.
 | Q11 | Should carbon crediting have a finite service life? | Yes, 5 years, configurable. [ADR-0016](adr/0016-toilet-service-life.md) |
 | Q12 | What's a reasonable default cost of capital? | 2%, concessional. [ADR-0013](adr/0013-viable-default-scenario.md) |
 | Q13 | Should service life gate DALYs and time-saved too, not just carbon? | Yes. [ADR-0025](adr/0025-service-life-gates-all-impact.md) |
+| Q14 | Should constraint reporting derive from actual production limits and retain simultaneous causes? | Yes — partition actual foregone production into capacity and loan-capital loss, expose grant-capital recovery separately, and report secondary causes. [ADR-0044](adr/0044-report-actual-production-constraints.md) |
 
 ---
 

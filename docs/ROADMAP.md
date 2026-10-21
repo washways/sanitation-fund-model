@@ -21,7 +21,7 @@ Progress is tracked in [STATUS.md](../STATUS.md), which is the first file to rea
 | **S1** | Silent-wrongness fixes | ✅ Complete — 9 findings closed | Low | S0 |
 | **S2** | Give the user back control | ✅ Complete — 8 findings closed | Medium | S1 |
 | **S3** | Model correctness | ✅ Complete — 12 findings closed | High | S2 |
-| **S4** | Decision support | In progress — item 1 (F-27) done; items 2-4 not started | Medium | S3 |
+| **S4** | Decision support | In progress — solvers and actual constraint reporting done; items 2-4 remain | Medium | S3 |
 | **S5** | Structure | ✅ Done — enables everything after (2 files exceed 500 lines, documented) | Medium | S3 |
 | **S6** | Presentation and reach | In progress — public changelog, advice and monthly-table integrity landed | Low | S5 |
 
@@ -37,7 +37,7 @@ The ordering is deliberate and is not a priority ranking:
 
 ## S0–S3 — complete
 
-Four stages, all closed: scaffolding and a safety net (S0), fixing outputs that were silently wrong (S1), stopping the app from rewriting the user's own inputs (S2), and correcting the financial and impact mathematics against the written spec (S3). Between them they closed 35 of the 36 findings in [docs/ANALYSIS.md](ANALYSIS.md) and every modelling question in [MODEL_SPEC.md §13](MODEL_SPEC.md).
+Four stages, all closed: scaffolding and a safety net (S0), fixing outputs that were silently wrong (S1), stopping the app from rewriting the user's own inputs (S2), and correcting the financial and impact mathematics against the written spec (S3). Between them they closed 35 of the 36 findings in [docs/ANALYSIS.md](ANALYSIS.md) and modelling questions Q1–Q13 in [MODEL_SPEC.md §13](MODEL_SPEC.md). Q14 was raised later and resolved in S4 by ADR-0044.
 
 **For what happened in each stage, read [CHANGELOG.md](../CHANGELOG.md) and the relevant [decision records](adr/).** Their detailed task-by-task history isn't repeated here — a stage that's done doesn't need to be picked up cold by anyone, which is the property this file exists to give the *upcoming* stages below.
 
@@ -54,9 +54,10 @@ The one thing worth restating because it shaped everything after it: **S2 had to
 | # | Task | Finding |
 |---|---|---|
 | 1 | ✅ **Robust solvers.** Grid scan for the true extremum, then bisect the adjacent cell; return `{ ok, value, reason }`; never report failure as a value. Done 2026-08-25, [ADR-0032](adr/0032-grid-then-bisect-solvers.md). | **F-27** |
+| 1b | ✅ **Actual production constraints.** Rank primary and secondary bottlenecks from foregone output in the production allocation itself; retain mixed months and separate grant-capital pressure. Done 2026-10-21, [ADR-0044](adr/0044-report-actual-production-constraints.md). | Q14 / R-7.6 |
 | 2 | **Cache/debounce solvers.** ADR-0032 roughly doubled simulation cost while fixing correctness (22 → up to 47 per recalc with the solver panel on). Still cheap in absolute terms at the shipped horizon, but caching across recalculations is not written. | F-27 |
-| 3 | **Sensitivity analysis.** One-at-a-time tornado over the top 8 parameters — several past findings (the pacing-vs-volume confusion in what's now `grantExhaustedMonth`; the reserve that turned out to be a growth throttle) were only visible once someone swept a parameter and looked. | — |
-| 4 | **Scenario save/load/compare** as JSON. Reproducibility for board papers. | — |
+| 3 | **Evidence-bounded sensitivity analysis.** One-at-a-time tornado over the top 8 parameters. Use only documented source ranges or explicit user-supplied low/high values; do not invent a uniform percentage shock. This approach was selected by the model owner on 2026-10-21. | — |
+| 4 | **Scenario save/load/compare** as transparent JSON. Reproducibility for board papers; selected as the next user-facing feature after sensitivity analysis on 2026-10-21. | — |
 
 **Exit gate:** solvers return typed results and are tested against known-non-monotonic scenarios — done, see `tests/solver.test.js` and ADR-0032's measured sweep. Sensitivity output is reproducible from the CLI (items 2-4 still open).
 
@@ -92,7 +93,7 @@ Rules this stage followed, and how:
 | Accessibility pass (contrast, labels, keyboard, screen reader) | Not assessed in this audit — assume it fails. |
 | Mobile / small-screen layout | Not assessed. |
 | Explicit "this is a model, not a forecast" framing with assumption provenance | Every parameter should show whether it came from the World Bank, a default, or the user. |
-| Multi-currency / local currency display | Currently USD-labelled only. Needs an ADR (out of scope in R-1). |
+| Multi-currency / local currency display | Keep the engine explicitly USD-only for now (owner decision 2026-10-21). A later dated, user-supplied reporting conversion still needs an ADR; do not apply a live spot rate to multi-year cashflows. |
 | ✅ Monthly audit-table integrity | Count/value columns are aligned and exact simulated ME launches are reported directly ([ADR-0040](adr/0040-report-exact-me-launches.md)). |
 
 ---
