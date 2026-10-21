@@ -962,13 +962,13 @@ Following that advice makes the outcome worse. The advisor was written against a
 
 **High — fixed.** Missed current interest was added to `loanFundLiability` and `accruedInvestorInt`, but later debt service scheduled only current-period interest plus original principal and principal arrears. Paying current interest did not reduce the capitalised balance, so `accruedInvestorInt` could never fall. This contradicted R-4.5's claim that arrears catch up once cash permits.
 
-**Fix:** ADR-0036 defines one directly tested waterfall: old capitalised interest, current interest, then original principal. Paying old interest reduces arrears and liability. Cumulative capitalisation, capitalised interest repaid, and the outstanding balance are reported separately; INV-20 reconciles them to original principal flows. Resolution commit pending.
+**Fix:** ADR-0036 defines one directly tested waterfall: old capitalised interest, current interest, then original principal. Paying old interest reduces arrears and liability. Cumulative capitalisation, capitalised interest repaid, and the outstanding balance are reported separately; INV-20 reconciles them to original principal flows. Resolved in `ab89a06`.
 
 ### F-45 — Wind-up can freeze cash before settling investor liability
 
 **High — fixed.** Wind-up tested portfolio, production, and lendable cash but not investor liability. It then froze debt service. A reproduced no-demand scenario wound up with $172,237 of positive loan cash and $592,593 still owed, making the reported result depend on the terminal-state shortcut rather than the contractual waterfall.
 
-**Fix:** in the wind-up month, no new interest or operations accrue; remaining original principal accelerates and positive loan cash is applied through the investor waterfall before the ledger freezes. Grant cash remains ring-fenced. The no-demand regression now ends with zero loan cash, $420,355 liability, and unchanged net assets; INV-21 guards the rule. Resolution commit pending.
+**Fix:** in the wind-up month, no new interest or operations accrue; remaining original principal accelerates and positive loan cash is applied through the investor waterfall before the ledger freezes. Grant cash remains ring-fenced. The no-demand regression now ends with zero loan cash, $420,355 liability, and unchanged net assets; INV-21 guards the rule. Resolved in `ab89a06`.
 
 ---
 
