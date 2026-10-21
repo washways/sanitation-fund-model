@@ -10,7 +10,7 @@ Object.assign(ModelModule, {
     // whether the fund works — a failure is a FINDING ABOUT THE SCENARIO, and is a
     // perfectly legitimate result to report. Collapsing them is finding F-29.
 
-    /** INV-1 .. INV-14. A violation here means the model is broken. */
+    /** A violation here means the model is broken. */
     checkIntegrity(series, inputs, kpis) {
         const s = series;
         const k = kpis;
@@ -102,6 +102,30 @@ Object.assign(ModelModule, {
             v.push(`INV-9: repaid $${repaid.toFixed(0)} exceeds loan $${inputs.investLoan.toFixed(0)}`);
         }
 
+        // INV-20: every movement in the senior liability must reconcile. Capitalised
+        // interest is part of the liability, and paying it must reduce the balance
+        // even though it is reported as interest rather than original principal.
+        const capitalised = s.capitalisedInterest || 0;
+        const capitalisedRepaid = s.capitalisedInterestRepaid || 0;
+        const expectedLiability = inputs.investLoan - repaid + capitalised - capitalisedRepaid;
+        if (Math.abs(s.investorLiabilityEnd - expectedLiability) > TOL) {
+            v.push(`INV-20: senior liability $${s.investorLiabilityEnd.toFixed(0)} does not reconcile ` +
+                `to $${expectedLiability.toFixed(0)} from principal and capitalised-interest flows`);
+        }
+        if ((s.accruedInvestorInt || 0) > s.investorLiabilityEnd + TOL) {
+            v.push(`INV-20: interest arrears exceed the total senior liability`);
+        }
+
+        // INV-21: once operations end, available loan-ledger cash cannot remain
+        // stranded while senior debt is still unpaid (ADR-0036, F-45).
+        if (s.windUpMonth && s.investorLiabilityEnd > TOL) {
+            const endingLoanCash = s.dataMonthlyCashBalance[last] - s.dataMonthlyGrantCash[last];
+            if (endingLoanCash > TOL) {
+                v.push(`INV-21: wound-up fund retains $${endingLoanCash.toFixed(0)} of loan cash ` +
+                    `while owing $${s.investorLiabilityEnd.toFixed(0)} to the senior investor`);
+            }
+        }
+
         // INV-10: the grant ledger may not go overdrawn
         const variableRate = (inputs.mgmtFeeRatio || 0) + (inputs.meCostRate || 0) + (inputs.contingencyRate || 0);
         const grantSpent = s.dataMonthlyGrantDisbursed.reduce((a, b) => a + b, 0) * (1 + variableRate);
@@ -178,10 +202,12 @@ Object.assign(ModelModule, {
         // missed interest capitalises into the liability rather than sitting apart.
         const capitalised = s.capitalisedInterest || 0;
         if (capitalised > TOL) {
+            const outstanding = s.accruedInvestorInt || 0;
             issues.push({
                 code: 'INTEREST_CAPITALISED',
                 text: `$${capitalised.toLocaleString('en-US', { maximumFractionDigits: 0 })} of investor interest could not ` +
-                    `be paid when due and was added to the outstanding balance, increasing what the fund owes.`
+                    `be paid when due and was added to the senior balance; ` +
+                    `$${outstanding.toLocaleString('en-US', { maximumFractionDigits: 0 })} remains unpaid at the horizon.`
             });
         }
 

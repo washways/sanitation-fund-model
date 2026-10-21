@@ -3,7 +3,7 @@
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # Node is not on PATH
 npm ci                 # installs ESLint, the one devDependency — needed once
-npm test              # 83 tests, ~1s
+npm test              # 89 tests, ~1s
 npm run test:watch    # re-run on change
 npm run golden:diff   # what would move, without writing
 npm run verify        # reproduce the audit findings
@@ -13,12 +13,13 @@ No test framework, no bundler, no `node_modules`. The suite uses Node's built-in
 
 ---
 
-## Why nine kinds of test
+## Why ten kinds of test
 
 This codebase's git history contains eight "Fix TypeError" commits from before the suite existed — each a defect found by a user in a browser. The suite is shaped around the distinct ways this particular model goes wrong; no one suite subsumes another.
 
 | Suite | Catches | Question it answers |
 |---|---|---|
+| `debt-waterfall.test.js` | Capitalised interest or terminal senior cash disappearing inside a plausible end balance | *Does every senior-debt movement reconcile, including wind-up?* |
 | `wiring.test.js` | A parameter the model reads that the user cannot set, or a control that doesn't actually move the output | *Does the model receive what the user typed, and does it matter?* |
 | `invariants.test.js` | An internally inconsistent ledger | *Is the arithmetic self-consistent?* |
 | `golden.test.js` | An unintended change in any output | *Did I move something I did not mean to move?* |
@@ -58,7 +59,7 @@ Checks 1–3 carry an allow-list of the defects that exist today. It cuts both w
 
 ## `invariants.test.js` — is the ledger self-consistent?
 
-INV-1 to INV-18, defined normatively in [MODEL_SPEC.md §12](MODEL_SPEC.md). INV-1 through INV-14 run across a **16-scenario matrix** — no capital, no debt, zero inflation, 45% inflation, zero defaults, 40% defaults, 1-year and 20-year horizons, capital-tight, demand-exhausted, carbon on, and so on — and collects every failure before reporting, so one run tells you whether a break is universal or confined to one corner.
+INV-1 to INV-21, defined normatively in [MODEL_SPEC.md §12](MODEL_SPEC.md). INV-1 through INV-18 run across a **16-scenario matrix** — no capital, no debt, zero inflation, 45% inflation, zero defaults, 40% defaults, 1-year and 20-year horizons, capital-tight, demand-exhausted, carbon on, and so on — and collects every failure before reporting, so one run tells you whether a break is universal or confined to one corner. INV-19 pins demand recurrence; INV-20/21 are exercised directly by the debt-waterfall suite as well as by runtime integrity checks.
 
 That distinction is the whole value of the matrix. "INV-1 fails" is a puzzle; "INV-1 fails only when `investLoan` is 0" is a diagnosis.
 
@@ -90,7 +91,7 @@ Never mark a passing invariant as todo to make a build green. That is the same a
 
 ## `golden.test.js` — did anything move?
 
-18 characterisation scenarios (`tests/golden.scenarios.js`), each recorded as a ~40-field fingerprint in `tests/golden.json`: reach, every flow total, end state, ratios, impact.
+21 characterisation scenarios (`tests/golden.scenarios.js`), each recorded as a ~40-field fingerprint in `tests/golden.json`: reach, every flow total, end state, ratios, impact.
 
 **These tests assert nothing about correctness.** They lock in what the model does today, bugs included. That is the point: they make it possible to restructure 3,667 lines of untested code and *prove* nothing moved.
 

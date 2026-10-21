@@ -100,8 +100,10 @@ function summarise({ series: s, kpis: k }) {
     portfolioMeEnd: r2(s.dataMonthlyPortfolioMe[last]),
     netAssets: r2(f.netAssets),
     investorRepaidPct: r2(f.investorRepaidPct),
+    arrearsInterest: r2(s.accruedInvestorInt),
     arrearsPrincipal: r2(s.accruedInvestorPrin),
     capitalisedInterest: r2(s.capitalisedInterest),
+    capitalisedInterestRepaid: r2(s.capitalisedInterestRepaid),
     investorLiabilityEnd: r2(s.investorLiabilityEnd),
     windUpMonth: s.windUpMonth,
 

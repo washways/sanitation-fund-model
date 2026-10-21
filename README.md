@@ -12,9 +12,9 @@ It answers three questions:
 
 ## Status
 
-Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **83 automated tests and 21 characterisation scenarios.** Known limitations and unresolved findings are listed in [STATUS.md](STATUS.md) and the on-site [changelog](changelog.html).
+Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **89 automated tests and 21 characterisation scenarios.** Known limitations are listed in [STATUS.md](STATUS.md) and the on-site [changelog](changelog.html).
 
-**What's genuinely unresolved:** one low-priority finding (a solver that can misfire in an already-marginal capital-tight regime) and no open modelling questions — see [STATUS.md](STATUS.md) for specifics and [CHANGELOG.md](CHANGELOG.md) for what changed and when.
+**What's genuinely unresolved:** all 45 registered defects are resolved. One modelling decision remains open: whether the headline constraint label should be taken directly from the production minimum (R-7.6/Q14). Sensitivity analysis, scenario comparison, and real-browser chart/advisor checks remain roadmap work. See [STATUS.md](STATUS.md).
 
 **If you have output from before 2026-08-21, re-run it.** Several corrections that session moved real numbers (see the changelog); a result generated earlier is not comparable to one generated now.
 
@@ -51,7 +51,7 @@ npm ci            # installs ESLint, the one devDependency — needed once
 npm test
 ```
 
-Nine suites, zero flakiness, about a second: **golden** (did any of 21 recorded scenarios move), **invariants** (does the ledger stay internally consistent, across a scenario matrix), **purity** (is the model DOM-free), **smoke** (does the whole app run end to end without throwing), **solver**, **startup** (what does a user opening the page actually get once the country fetch has run), **wiring**, **write-down**, and **export**.
+Ten suites, zero flakiness, about a second: **debt waterfall**, **golden** (did any of 21 recorded scenarios move), **invariants** (does the ledger stay internally consistent, across a scenario matrix), **purity** (is the model DOM-free), **smoke** (does the whole app run end to end without throwing), **solver**, **startup** (what does a user opening the page actually get once the country fetch has run), **wiring**, **write-down**, and **export**.
 
 ```bash
 npm run golden:diff   # would any model output change, without writing anything?
@@ -100,7 +100,7 @@ Start with **[STATUS.md](STATUS.md)** — it's the one-page current snapshot, an
 | **[docs/TESTING.md](docs/TESTING.md)** | How the test suite is built and how to extend it. |
 | **[docs/ROADMAP.md](docs/ROADMAP.md)** | Remaining stages (S4 items 2-4, S6), each with an entry and exit gate. |
 | **[docs/adr/](docs/adr/README.md)** | One decision record per behaviour change or modelling choice — the *why* behind the changelog's *what*. Indexed. |
-| **[docs/ANALYSIS.md](docs/ANALYSIS.md)** | The original audit that started this work: 36 findings, evidence, fixes. Historical record — for current behaviour, use `MODEL_SPEC.md`. |
+| **[docs/ANALYSIS.md](docs/ANALYSIS.md)** | The audit register: 45 findings with evidence and resolutions. Historical record — for current behaviour, use `MODEL_SPEC.md`. |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | Mechanics of making a change: branch, test, commit. |
 | **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** | How to release, and what breaks under a subpath. |
 | `methodology.html` | User-facing explainer, served with the app, kept in step with `MODEL_SPEC.md`. |

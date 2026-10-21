@@ -40,3 +40,4 @@ For the short version of what each one decided, [CHANGELOG.md](../../CHANGELOG.m
 | [0033](0033-s5-structural-split.md) | S5 structural split — app.js becomes src/ |
 | [0034](0034-observations-only-country-data.md) | Import observations, preserve programme assumptions |
 | [0035](0035-zero-writedowns-and-demand-order.md) | Honor zero write-downs and the specified demand recurrence |
+| [0036](0036-complete-investor-debt-waterfall.md) | Pay interest arrears and settle available loan cash at wind-up |

@@ -46,10 +46,12 @@ describe('input wiring', () => {
   test('the current changelog and known limitations are visible from the model', () => {
     assert.match(htmlSrc, /href="changelog\.html"/,
       'the dashboard must link to the on-site change record');
-    assert.match(changelogSrc, /Version 0\.6\.0/,
+    assert.match(changelogSrc, /Version 0\.7\.0/,
       'the on-site change record must identify the current release');
-    assert.match(changelogSrc, /F-44[\s\S]*F-45/,
-      'known open correctness findings must be visible, not buried in developer docs');
+    assert.match(changelogSrc, /<li>Old capitalised investor interest[\s\S]*F-44 and F-45 are resolved/,
+      'the on-site change record must give users a simple bullet summary of the current release');
+    assert.match(changelogSrc, /Known limitations requiring follow-up[\s\S]*Long-horizon warning[\s\S]*Constraint label question/,
+      'remaining limitations must be visible, not buried in developer docs');
   });
 
   test('every id read by getInputs() exists in index.html (F-01)', () => {

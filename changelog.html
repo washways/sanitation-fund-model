@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.6.0 — 21 October 2026</strong>. This page summarizes changes that affect interpretation. The repository’s <code>CHANGELOG.md</code>, model specification, and decision records contain the full technical record.</p>
+    <p class="meta">Current release: <strong>Version 0.7.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.7.0 — Investor debt settlement completed</h2>
+        <ul>
+            <li>Old capitalised investor interest is now repaid before current interest and original principal.</li>
+            <li>Paying old interest reduces both the arrears balance and the senior liability; the model separately reports total capitalised, later repaid, and still outstanding.</li>
+            <li>At wind-up, positive loan-ledger cash is paid to the senior investor before the ledger freezes. Grant cash remains ring-fenced.</li>
+            <li>Two new integrity checks reconcile the senior balance and prevent a wound-up fund from retaining loan cash while senior debt remains unpaid.</li>
+            <li>F-44 and F-45 are resolved. The five-year Malawi reference result is unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.6.0 — Evidence-based defaults and safer country data</h2>
         <ul>
             <li>Malawi now opens with dated population, sanitation-gap, growth, and income observations plus sourced household size, district count, enterprise capital, loan terms, and time-saving assumptions.</li>
@@ -53,10 +64,11 @@
 
     <section class="notice">
         <h2>Known limitations requiring follow-up</h2>
-        <p><strong>F-44 — capitalised interest catch-up.</strong> Missed investor interest is added to the liability but is not separately scheduled for later repayment. Scenarios that capitalise interest may overstate the liability remaining at the end.</p>
-        <p><strong>F-45 — terminal investor settlement.</strong> Wind-up can freeze the ledger while investor liability remains. A dedicated terminal-settlement rule is still required.</p>
-        <p><strong>Long-horizon warning.</strong> The sourced 12-month Malawi household term makes the five-year reference run viable, but the current 20-year stress scenario eventually becomes insolvent because lower interest earned per loan does not cover indefinite operating costs. This result is disclosed rather than tuned away with an invented rate or cost.</p>
-        <p><strong>Constraint label question.</strong> The model specification still asks whether the headline “dominant constraint” should be derived directly from the production minimum. The underlying production arithmetic is unaffected.</p>
+        <ul>
+            <li><strong>Long-horizon warning:</strong> the sourced 12-month Malawi household term makes the five-year reference run viable, but the current 20-year stress scenario eventually becomes insolvent because lower interest earned per loan does not cover indefinite operating costs. This result is disclosed rather than tuned away.</li>
+            <li><strong>Constraint label question:</strong> the model specification still asks whether the headline “dominant constraint” should be derived directly from the production minimum. The underlying production arithmetic is unaffected.</li>
+            <li><strong>Calibration:</strong> financing, operating-cost, loss, capacity, contingency, and subsidy assumptions remain illustrative until replaced with programme evidence.</li>
+        </ul>
     </section>
 
     <section class="release">

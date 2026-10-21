@@ -250,6 +250,7 @@ Object.assign(ModelModule, {
                 arrearsInterest: s.accruedInvestorInt || 0,
                 arrearsPrincipal: s.accruedInvestorPrin || 0,
                 capitalisedInterest: s.capitalisedInterest || 0,
+                capitalisedInterestRepaid: s.capitalisedInterestRepaid || 0,
                 investorLiabilityEnd: investorLiabilityEnd,
                 monthsInsolvent: monthsInsolvent,
                 costPerLatrine: costPerLatrine,

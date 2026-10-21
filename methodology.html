@@ -525,15 +525,22 @@ writeOff[m]   = balance × monthlyHazard</div>
             condition, which silently forgave the interest outright.</p>
 
         <h3>The fund never pays money it does not have</h3>
-        <div class="formula-box">available  = max(0, loanCash)
-actualInt  = min(scheduledInt, available)
-actualPrin = min(scheduledPrin, max(0, available - actualInt))</div>
-        <p>Interest ranks ahead of principal.</p>
+        <div class="formula-box">available       = max(0, loanCash)
+pay old interest = min(capitalised interest outstanding, available)
+pay current int  = min(current interest, cash remaining)
+pay principal    = min(principal due, cash remaining)</div>
+        <p>Older capitalised interest ranks first, current interest second, and original principal third. This order is
+            used both during normal operation and for the final settlement at wind-up.</p>
 
         <h3>Arrears capitalise</h3>
-        <p>Interest the fund cannot pay is <strong>added to the outstanding balance</strong> in the month it is missed,
-            and reported separately as capitalised interest. Unpaid principal is carried forward and caught up
-            automatically once cash allows.</p>
+        <p>Interest the fund cannot pay is <strong>added to the outstanding balance</strong> in the month it is missed.
+            Later cash pays that old interest before new obligations. The model reports three separate facts: total
+            interest ever capitalised, how much was later repaid, and how much remains outstanding. Unpaid principal is
+            also carried forward.</p>
+        <div class="formula-box">ending senior liability = original senior principal
+                        - original principal repaid
+                        + interest capitalised
+                        - capitalised interest repaid</div>
         <p>The closing liability is the balance the simulation actually tracked. It previously reconstructed the figure
             as <em>original loan minus principal repaid</em>, which by construction cannot know about arrears &mdash; in
             a stressed scenario that overstated net assets by more than the original loan.</p>
@@ -595,8 +602,11 @@ maxUnits   = lendable / fully-burdened unit cost              capital</div>
 production == 0     nothing being built
 lendable  == 0      gate shut, no capital to redeploy</div>
 
-        <p>From that month, operating costs stop, interest stops accruing, and the ledger is frozen. Closing figures are
-            measured <strong>at wind-up</strong>, not at whatever horizon happened to be requested.</p>
+        <p>In that month, operating costs and new interest stop. All remaining original senior principal becomes due,
+            and positive loan-ledger cash is paid to the senior investor: old capitalised interest first, then
+            principal. Grant cash remains ring-fenced for subsidy purposes. The ledger freezes after that one terminal
+            transfer. Closing figures are measured <strong>at wind-up</strong>, not at whatever horizon happened to be
+            requested.</p>
 
         <p>Without this, a fund that collapsed in year four kept paying a collections team for the remaining sixteen
             years of a twenty-year run, against no income at all. Reported ending cash was therefore a measure of how

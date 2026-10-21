@@ -8,9 +8,9 @@
  * counterpart to the regression suite: `npm test` proves nothing broke, this proves
  * something was actually mended.
  *
- * A finding marked OUTSTANDING here is one that is deliberately still open — either it
- * is scheduled for a later stage or it is blocked on a decision only the model owner
- * can make. Those are listed at the end with the reason.
+ * Any finding still reproduced is reported as STILL PRESENT and makes the final count
+ * non-zero. Open modelling questions are listed separately because they are decisions,
+ * not defects masquerading as completed work.
  */
 const { ModelModule } = require('./load-model');
 const BASE = require('./baseline-inputs');
@@ -302,14 +302,45 @@ console.log('='.repeat(80));
     `The on-screen card used to skip the *100 conversion and show "${mg.value.toFixed(1)}%" instead.`);
 }
 
+// F-44 — old capitalised interest must be a real payable balance, not a counter
+// that increases forever.
+{
+  const debt = ModelModule.serviceInvestorDebt({
+    loanCash: 300,
+    liability: 1200,
+    accruedInterest: 200,
+    accruedPrincipal: 100,
+    currentInterest: 20,
+    scheduledPrincipal: 100,
+  });
+  check('F-44', 'capitalised interest is scheduled and reduces the senior liability when paid',
+    debt.paidArrearsInterest === 200 && debt.accruedInterest === 0
+    && debt.paidCurrentInterest === 20 && debt.paidPrincipal === 80
+    && debt.liability === 920,
+    `$200 old interest, $20 current interest and $80 principal are paid from $300 cash; ` +
+    `interest arrears fall to $0 and liability falls from $1,200 to $920. INV-20 reconciles the full run.`);
+}
+
+// F-45 — the terminal-state shortcut may not strand cash owed to the investor.
+{
+  const terminal = run({ popReqToilets: 0, verify: true });
+  const ts = terminal.series;
+  const last = ts.dataMonthlyCashBalance.length - 1;
+  const loanCashEnd = ts.dataMonthlyCashBalance[last] - ts.dataMonthlyGrantCash[last];
+  check('F-45', 'wind-up settles available loan cash before the ledger freezes',
+    terminal.integrity.ok && ts.windUpMonth !== null && Math.abs(loanCashEnd) < 0.01
+    && ts.investorLiabilityEnd > 0,
+    `no-demand control winds up at M${ts.windUpMonth}; loan cash ends at ${money(loanCashEnd)}, ` +
+    `senior principal repaid is ${money(terminal.kpis.financials.investorRepaid)}, and the unpaid ` +
+    `${money(ts.investorLiabilityEnd)} remains visible rather than being written off.`);
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('DELIBERATELY OUTSTANDING (see docs/ANALYSIS.md and STATUS.md):');
-console.log('  F-44: capitalised interest is not scheduled for catch-up repayment.');
-console.log('  F-45: wind-up can freeze cash before investor liability is settled.');
-console.log('  Findings register: 43 of 45 resolved.');
+console.log('Findings register: 45 of 45 resolved.');
+console.log('Open modelling question: MODEL_SPEC R-7.6/Q14 (headline constraint reporting).');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

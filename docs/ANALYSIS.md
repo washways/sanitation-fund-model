@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 43 of 45 findings resolved as of 2026-10-20. F-38–F-43 were found in the post-S5 assumptions audit and fixed with ADR-0034/0035; F-44 and F-45 remain open. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 45 of 45 findings resolved as of 2026-10-21. F-38–F-43 were fixed with ADR-0034/0035; F-44/F-45 were fixed together under ADR-0036. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,8 +54,8 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
-| [F-45](#f-45--wind-up-can-freeze-cash-before-settling-investor-liability) | **High** | Core | Wind-up can freeze positive loan cash while senior liability remains outstanding | run | Post-S5 |
-| [F-44](#f-44--capitalised-interest-is-never-scheduled-for-catch-up) | **High** | Core | Capitalised interest grows the liability but is never scheduled for catch-up repayment | src, run | Post-S5 |
+| ✅ [F-45](#f-45--wind-up-can-freeze-cash-before-settling-investor-liability) | **High** | Core | Wind-up can freeze positive loan cash while senior liability remains outstanding | run | Post-S5 |
+| ✅ [F-44](#f-44--capitalised-interest-is-never-scheduled-for-catch-up) | **High** | Core | Capitalised interest grows the liability but is never scheduled for catch-up repayment | src, run | Post-S5 |
 | ✅ [F-43](#f-43--demand-growth-was-applied-after-production) | Medium | Core | Backlog subtracted production before growth, contrary to R-7.1 | src | Post-S5 |
 | ✅ [F-42](#f-42--explicit-zero-write-downs-were-replaced-by-non-zero-defaults) | **High** | Core | Valid 0% write-down inputs silently became 5%/10% | run | Post-S5 |
 | ✅ [F-41](#f-41--malawi-impact-and-market-defaults-made-unsupported-claims) | **High** | Assumptions | Malawi defaults mixed stale observations, invented impact values, and uncited market assumptions | src, source audit | Post-S5 |
@@ -960,15 +960,15 @@ Following that advice makes the outcome worse. The advisor was written against a
 
 ### F-44 — Capitalised interest is never scheduled for catch-up
 
-**High — open.** Missed current interest is added to `loanFundLiability` and `accruedInvestorInt`, but later debt service schedules only current-period interest plus original principal and principal arrears. Paying current interest does not reduce the capitalised balance, so `accruedInvestorInt` can never fall. This contradicts R-4.5's claim that arrears catch up once cash permits.
+**High — fixed.** Missed current interest was added to `loanFundLiability` and `accruedInvestorInt`, but later debt service scheduled only current-period interest plus original principal and principal arrears. Paying current interest did not reduce the capitalised balance, so `accruedInvestorInt` could never fall. This contradicted R-4.5's claim that arrears catch up once cash permits.
 
-**Required decision/fix:** define the ordering between past-due capitalised interest and current interest, reduce liability when capitalised interest is paid, and add a scenario with a temporary shortfall followed by recoverable cash. This touches an `[AS-BUILT]` debt rule and needs its own ADR; it was not folded into the assumptions audit.
+**Fix:** ADR-0036 defines one directly tested waterfall: old capitalised interest, current interest, then original principal. Paying old interest reduces arrears and liability. Cumulative capitalisation, capitalised interest repaid, and the outstanding balance are reported separately; INV-20 reconciles them to original principal flows. Resolution commit pending.
 
 ### F-45 — Wind-up can freeze cash before settling investor liability
 
-**High — open.** Wind-up tests portfolio, production, and lendable cash but not investor liability. It then freezes debt service. A reproduced no-demand scenario can wind up with positive loan cash and senior principal still outstanding, making the reported result depend on the terminal-state shortcut rather than the contractual waterfall.
+**High — fixed.** Wind-up tested portfolio, production, and lendable cash but not investor liability. It then froze debt service. A reproduced no-demand scenario wound up with $172,237 of positive loan cash and $592,593 still owed, making the reported result depend on the terminal-state shortcut rather than the contractual waterfall.
 
-**Required decision/fix:** specify a terminal settlement step that pays available loan cash to the investor before freezing the ledger, while preserving INV-14's horizon independence. This needs an ADR coordinated with F-44.
+**Fix:** in the wind-up month, no new interest or operations accrue; remaining original principal accelerates and positive loan cash is applied through the investor waterfall before the ledger freezes. Grant cash remains ring-fenced. The no-demand regression now ends with zero loan cash, $420,355 liability, and unchanged net assets; INV-21 guards the rule. Resolution commit pending.
 
 ---
 

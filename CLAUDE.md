@@ -23,6 +23,7 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | S4 — decision support (partial) | Replaced monotonic binary-search assumptions with grid-then-bisect typed solver results. | Solver failure is not the numeric answer zero. Caching, sensitivity, and scenario comparison remain open. |
 | S5 — structure | Split the 4,028-line app into `src/model/`, `src/ui/`, `src/data/`, and the controller, with byte-identical goldens. | `src/model/` is pure and DOM-free. `tools/app-source.js` and `index.html` load order must match. |
 | Post-S5 audit — 2026-10-20 | Recalibrated Malawi defaults from primary evidence; restricted country loading to dated observations; stopped local CPI, commercial lending, poverty, governance, and third-party district data from silently setting programme assumptions; honored explicit 0% write-downs; corrected demand recurrence order. | API data writes only target population, population growth, and income. Missing essentials clear fields and pause. DALYs/carbon default to zero without evidence. |
+| S6 debt robustness — 2026-10-21 | Completed capitalised-interest catch-up and terminal senior settlement; added direct waterfall tests and liability reconciliation. | Pay old capitalised interest, then current interest, then original principal. At wind-up use loan cash only, never grant cash; freeze after the terminal transfer. INV-20/21 must remain green. |
 
 The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) and [docs/adr/](docs/adr/). Never edit an accepted ADR; supersede it.
 
@@ -50,6 +51,7 @@ CPI, commercial lending, poverty, Gini, and sanitation levels are context. Do no
 - `0` is a valid rate. Use nullish/presence checks, not `x || default`.
 - Demand recurrence is grow carried backlog, then subtract current production. INV-19 pins it through `dataMonthlyBacklog`.
 - `MODEL_SPEC.md` R-7.6 remains an explicit open question about constraint reporting. Do not resolve it in code without the model owner.
-- The post-S5 audit registered unresolved investor-settlement defects; read `STATUS.md` before touching debt service or wind-up.
+- Senior debt must reconcile as initial principal − principal repaid + interest capitalised − capitalised interest repaid. INV-20 pins this identity.
+- Wind-up accelerates original principal and applies positive loan-ledger cash before freezing. The grant ledger remains ring-fenced. INV-21 pins this rule.
 
 This model informs funding decisions. A plausible wrong number is worse than an obvious crash.

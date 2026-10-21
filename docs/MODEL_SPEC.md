@@ -142,12 +142,14 @@ A grace period defers **principal only**. Interest **accrues from month 1** rega
 Previously both principal and interest were gated on `m > investorGracePeriod`, silently forgiving $68,408 of interest on a 6-month grace at 8%. See [ADR-0007](adr/0007-investor-arrears-and-grace.md).
 
 ### R-4.4 Cash-aware service **[AS-BUILT]**
-The fund never pays more than it holds. Interest ranks ahead of principal:
+The fund never pays more than it holds. Older capitalised interest ranks ahead
+of current interest, and all interest ranks ahead of principal ([ADR-0036](adr/0036-complete-investor-debt-waterfall.md)):
 
 ```
-available = max(0, loanCash)
-actualInt  = min(scheduledInt, available)
-actualPrin = min(scheduledPrin, max(0, available - actualInt))
+available        = max(0, loanCash)
+paidOldInterest  = min(accruedInvestorInt, available)
+paidCurrentInt   = min(currentInterest, available - paidOldInterest)
+paidPrincipal    = min(principalDue, available - paidOldInterest - paidCurrentInt)
 ```
 
 ### R-4.5 Arrears **[AS-BUILT]** (was F-06, fixed 2026-08-20)
@@ -155,10 +157,15 @@ Unpaid amounts must not evaporate. Required behaviour:
 
 1. Unpaid interest **capitalises** into `loanFundLiability` at the end of the month it was missed.
 2. Unpaid principal remains in `loanFundLiability` (already true by construction).
-3. Arrears rank **ahead of new lending** in the waterfall (R-5.1) — they are caught up automatically once cash allows, because scheduled interest is computed on the now-larger liability.
-4. `investorLiabilityEnd` must be the **tracked** `loanFundLiability`, not the reconstruction `investLoan - totalRepaidPrincipal`, which ignores capitalised interest and overstates net assets.
+3. Past-due capitalised interest is explicitly scheduled ahead of current interest; paying it reduces both `accruedInvestorInt` and `loanFundLiability`.
+4. Past-due and current original principal is paid after interest. It cannot exceed the original principal still outstanding.
+5. All debt service ranks **ahead of new lending** in the waterfall (R-5.1).
+6. `investorLiabilityEnd` must be the **tracked** `loanFundLiability`, not the reconstruction `investLoan - totalRepaidPrincipal`, which ignores capitalised interest and overstates net assets.
 
-`capitalisedInterest` is tracked separately and surfaced as the `INTEREST_CAPITALISED` viability issue, so a fund borrowing from its own lender to stay afloat is visible rather than silent.
+`capitalisedInterest` is the cumulative amount ever rolled up and remains the
+`INTEREST_CAPITALISED` viability signal. `capitalisedInterestRepaid` is the
+cumulative amount later cured; `accruedInvestorInt` is the amount still unpaid.
+Together they reconcile the ending liability under INV-20.
 
 ### R-4.6 There is exactly one interest calculation **[AS-BUILT]** (was F-06, fixed 2026-08-20)
 `calculateInvestorSchedule` returns principal only. Interest is computed in the loop against the live, arrears-adjusted liability.
@@ -421,7 +428,13 @@ lendable == 0                          // gate closed, no capital to redeploy
 ```
 
 ### R-9.2 Wind-up behaviour **[AS-BUILT]**
-From the wind-up month onward: no ops cost accrues, no ledger changes, `windUpMonth` is recorded, and remaining months are emitted as flat carry-forward rows clearly flagged as post-wind-up.
+In the wind-up month, no new interest or operating cost accrues. All remaining
+original senior principal becomes due, and every positive dollar in the loan ledger
+is applied through R-4.4: old capitalised interest first, then original principal.
+Grant cash remains ring-fenced and is not used for repayment. This terminal transfer
+is the only permitted wind-up ledger movement. After it, the ledger freezes and
+remaining months are emitted as flat carry-forward rows. See
+[ADR-0036](adr/0036-complete-investor-debt-waterfall.md).
 
 ### R-9.3 Reporting **[AS-BUILT]**
 `cashEnd`, `netAssets`, `fundHealth` and `opsRunway` are measured **at wind-up**, not at the arbitrary end of the requested horizon. Extending `duration` must not change any of them.
@@ -457,7 +470,7 @@ A run is viable only if **all** hold:
 |---|---|
 | V1 | `min(cashBalance) >= 0` — never insolvent |
 | V2 | `totalRepaidPrincipal >= investLoan - $1,000` — senior debt repaid in full |
-| V3 | `accruedInvestorInt + accruedInvestorPrin < $1,000` — no arrears outstanding |
+| V3 | `capitalisedInterest < $1,000` — no investor interest had to be rolled up when due; the warning also reports the amount still outstanding |
 | V4 | `OSS >= 1.0` at steady state — operations cover themselves |
 
 ### R-10.3 Reporting rules **[AS-BUILT]**
@@ -514,6 +527,9 @@ These must hold for **every** run. They are the contract that makes the model au
 | **INV-16** | `requiredReserves` includes the next 3 months of scheduled investor principal, not just ops cost | AS-BUILT — [ADR-0027](adr/0027-debt-service-lookahead-reserve.md), resolves F-10 |
 | **INV-17** | `grantExhaustedMonth` responds to `grantSupportPct` (pacing) far more than `reach.grantToilets` does (volume) | AS-BUILT — [ADR-0029](adr/0029-grant-support-relabel-and-runway.md), resolves F-30 |
 | **INV-18** | The month-0 loan, the in-loop expansion loan, and the affordability check all price one ME identically via `meCapitalRequirement(inputs)` | AS-BUILT — [ADR-0031](adr/0031-unify-me-capital-requirement.md), resolves F-21 |
+| **INV-19** | Demand grows before current production is subtracted from the backlog | AS-BUILT — [ADR-0035](adr/0035-zero-writedowns-and-demand-order.md), resolves F-43 |
+| **INV-20** | `investorLiabilityEnd = investLoan - principalRepaid + capitalisedInterest - capitalisedInterestRepaid`, and outstanding interest arrears cannot exceed the liability | AS-BUILT — [ADR-0036](adr/0036-complete-investor-debt-waterfall.md), resolves F-44 |
+| **INV-21** | A wound-up fund cannot retain positive loan-ledger cash while senior liability remains | AS-BUILT — [ADR-0036](adr/0036-complete-investor-debt-waterfall.md), resolves F-45 |
 
 **INV-8 deserves special emphasis.** A `NaN` slips past every other check in this list, because `NaN != NaN` and `Math.abs(NaN) > 1` is `false`. It is checked explicitly and first, and short-circuits the rest — everything downstream is meaningless once `NaN` is loose.
 
@@ -521,7 +537,9 @@ These must hold for **every** run. They are the contract that makes the model au
 
 ## 13. Modelling decisions
 
-Every modelling question this specification has raised has been decided by the model owner and recorded as an ADR. **None are currently open.** If a new one comes up, it gets the next free `Qn` and goes in this table — do not resolve one by writing code; it needs a human decision, recorded as an ADR, first.
+One modelling question remains open: R-7.6/Q14 on whether the headline constraint
+label should come directly from the production minimum. Do not resolve it by writing
+code; it needs the model owner's decision and an ADR first.
 
 | # | Question | Decision |
 |---|---|---|

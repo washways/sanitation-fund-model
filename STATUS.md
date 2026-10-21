@@ -6,21 +6,19 @@
 
 | | |
 |---|---|
-| **Release** | 0.6.0 — evidence-based Malawi defaults and observations-only country loading |
+| **Release** | 0.7.0 — complete investor debt settlement |
 | **Stages complete** | S0, S1, S2, S3, S5; S4 solver correctness complete, other S4 work and S6 remain |
-| **Tests** | ✅ 83 pass, 0 todo, 0 fail (`npm test`, ~1s) |
+| **Tests** | ✅ 89 pass, 0 todo, 0 fail (`npm test`, ~1s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
-| **Findings register** | 43 of 45 resolved; F-44 and F-45 remain open |
+| **Findings register** | ✅ 45 of 45 resolved |
 | **Open modelling question** | MODEL_SPEC R-7.6: whether the headline constraint label should derive directly from the production minimum |
 
 ## What remains unresolved
 
 | What | Why it matters | Recommended next action |
 |---|---|---|
-| **F-44 — capitalised-interest catch-up** | Missed interest increases investor liability but is not separately scheduled for later repayment. | High priority: write one debt-waterfall ADR defining arrears ordering and repayment. |
-| **F-45 — terminal investor settlement** | Wind-up can freeze loan cash while investor liability remains outstanding. | Fix with F-44: pay available loan cash through a specified terminal waterfall before freezing state. |
 | **R-7.6 constraint label** | The displayed dominant constraint is recomputed separately from actual production limits and can disagree. | Decide the reporting convention before changing code. |
 | Solver caching, sensitivity analysis, scenario save/load | S4 items 2–4 remain. | Sensitivity analysis is the most useful next robustness feature. |
 | Real-browser chart/advisor click-through | Headless tests cover startup, calculation, export, and wiring, but not visual chart interaction. | Add a browser smoke pass during S6 accessibility/mobile work. |
@@ -51,6 +49,13 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 - Malawi references are documented in [docs/PARAMETERS.md](docs/PARAMETERS.md): 4.4 people/household, 28 districts, $100 toilet planning cost, $3,000 enterprise capital, 12-month loan terms, 0.25 hours saved/day, and a 50% time-value factor.
 - Financing, operating, write-down, capacity, contingency, and grant-pacing defaults remain illustrative programme assumptions. They must be calibrated before an investment decision.
 
+## Investor debt contract
+
+- Debt service pays old capitalised interest, current interest, then original principal.
+- Paying old interest reduces both outstanding interest arrears and the senior liability; cumulative capitalisation and later cures remain separately auditable.
+- In the wind-up month, remaining original principal accelerates and positive loan-ledger cash is paid before the ledger freezes. Grant cash remains ring-fenced.
+- INV-20 reconciles the liability; INV-21 prevents stranded terminal loan cash. See [ADR-0036](docs/adr/0036-complete-investor-debt-waterfall.md).
+
 ## Environment
 
 Node is not on `PATH` on the maintainer's machine:
@@ -68,4 +73,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-20 the post-S5 review added F-38–F-45. F-38–F-43 were fixed under [ADR-0034](docs/adr/0034-observations-only-country-data.md) and [ADR-0035](docs/adr/0035-zero-writedowns-and-demand-order.md). The review made startup listener behavior browser-faithful, removed policy-generating API heuristics and mixed-level administrative data, recalibrated Malawi defaults from primary evidence, preserved explicit zero write-downs, and corrected demand recurrence order. F-44/F-45 are intentionally visible follow-up work.
+On 2026-10-21 release 0.7.0 closed F-44/F-45 under [ADR-0036](docs/adr/0036-complete-investor-debt-waterfall.md). Capitalised interest is now payable, terminal loan cash is settled before freeze, and the senior balance has two new integrity checks. The five-year Malawi reference headlines are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

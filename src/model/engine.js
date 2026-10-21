@@ -72,6 +72,68 @@ const ModelModule = {
         return schedule;
     },
 
+    // One cash-aware senior-debt waterfall (ADR-0036, F-44/F-45). Keeping this
+    // arithmetic in a pure helper makes the payment order directly testable instead
+    // of asking an end-state KPI to prove that arrears were actually serviced.
+    serviceInvestorDebt({
+        loanCash,
+        liability,
+        accruedInterest,
+        accruedPrincipal,
+        currentInterest,
+        scheduledPrincipal,
+        acceleratePrincipal = false,
+    }) {
+        // Default only absent values. Deliberately let NaN propagate so INV-8 catches
+        // corrupted inputs; `value || 0` would silently turn NaN into plausible zero.
+        const nonNegative = value => value === null || value === undefined
+            ? 0
+            : Math.max(0, value);
+        const openingLiability = nonNegative(liability);
+        const interestArrearsDue = Math.min(
+            nonNegative(accruedInterest),
+            openingLiability
+        );
+        const originalPrincipalOutstanding = Math.max(0, openingLiability - interestArrearsDue);
+        const regularPrincipalDue = nonNegative(scheduledPrincipal)
+            + nonNegative(accruedPrincipal);
+        const principalDue = acceleratePrincipal
+            ? originalPrincipalOutstanding
+            : Math.min(originalPrincipalOutstanding, regularPrincipalDue);
+
+        let available = nonNegative(loanCash);
+        const paidArrearsInterest = Math.min(interestArrearsDue, available);
+        available -= paidArrearsInterest;
+
+        const currentInterestDue = nonNegative(currentInterest);
+        const paidCurrentInterest = Math.min(currentInterestDue, available);
+        available -= paidCurrentInterest;
+
+        const paidPrincipal = Math.min(principalDue, available);
+        const missedCurrentInterest = currentInterestDue - paidCurrentInterest;
+        const endingAccruedInterest = Math.max(
+            0,
+            interestArrearsDue - paidArrearsInterest + missedCurrentInterest
+        );
+        const endingAccruedPrincipal = Math.max(0, principalDue - paidPrincipal);
+        const totalPaid = paidArrearsInterest + paidCurrentInterest + paidPrincipal;
+        const endingLiability = Math.max(
+            0,
+            openingLiability - paidArrearsInterest - paidPrincipal + missedCurrentInterest
+        );
+
+        return {
+            loanCash: loanCash - totalPaid,
+            liability: endingLiability,
+            accruedInterest: endingAccruedInterest,
+            accruedPrincipal: endingAccruedPrincipal,
+            paidArrearsInterest,
+            paidCurrentInterest,
+            paidPrincipal,
+            missedCurrentInterest,
+        };
+    },
+
     calculate(inputs) {
         // --- 1. Configuration & Standardization ---
         const durationMonths = inputs.duration * 12;
@@ -128,6 +190,7 @@ const ModelModule = {
         let accruedInvestorInt = 0;
         let accruedInvestorPrin = 0;
         let capitalisedInterest = 0;
+        let capitalisedInterestRepaid = 0;
 
         // Wind-up (R-9). Once the portfolio is empty, production has stopped and the
         // solvency gate is shut, the fund is finished. Without this the loop keeps
@@ -195,6 +258,9 @@ const ModelModule = {
         const dataMonthlyFees = []; // Variable
         const dataMonthlyFundPrincipal = [];
         const dataMonthlyFundInt = [];
+        const dataMonthlyInvestorLiability = [];
+        const dataMonthlyInvestorInterestArrears = [];
+        const dataMonthlyInvestorPrincipalArrears = [];
         const dataMonthlyNewLoansHhVal = [];
         const dataMonthlyNewLoansMeVal = [];
         const dataMonthlyGrantDisbursed = [];
@@ -376,6 +442,7 @@ const ModelModule = {
             // only within the repayment term.
             let scheduledPrin = 0;
             let scheduledInt = 0;
+            const isTerminalSettlement = windUpMonth === m;
             // A wound-up fund is finished: the ledger is frozen (R-9.2), so no further
             // interest accrues or capitalises. Without this the liability compounds for
             // as long as the simulation happens to run, and net assets — unlike cash —
@@ -386,29 +453,29 @@ const ModelModule = {
                 if (m <= inputs.fundRepaymentTerm * 12 && m > inputs.investorGracePeriod) {
                     scheduledPrin = investorSchedule[m]?.principal || 0;
                 }
-                // Catch up any principal the fund could not pay earlier, once it can.
-                scheduledPrin += accruedInvestorPrin;
-                if (scheduledPrin > loanFundLiability) scheduledPrin = loanFundLiability;
             }
 
-            // Cash-aware: never pay out money the fund does not hold. Interest ranks
-            // ahead of principal.
-            const canPayDebt = Math.max(0, loanCash);
-            const actualInt = Math.min(scheduledInt, canPayDebt);
-            const actualPrin = Math.min(scheduledPrin, Math.max(0, canPayDebt - actualInt));
-            outflows.investInt = actualInt;
-            outflows.investPrin = actualPrin;
-
-            // Unpaid interest CAPITALISES into the liability rather than evaporating.
-            const missedInt = scheduledInt - actualInt;
-            accruedInvestorPrin = Math.max(0, scheduledPrin - actualPrin);
-            accruedInvestorInt += missedInt;
-            capitalisedInterest += missedInt;
-
-            loanCash -= (actualInt + actualPrin);
-            loanFundLiability -= actualPrin;
-            loanFundLiability += missedInt;
-            const debtService = actualInt + actualPrin;
+            // Old capitalised interest ranks first, followed by current interest and
+            // then original principal. In the wind-up month all remaining original
+            // principal becomes due, but no new interest accrues (ADR-0036).
+            const debt = this.serviceInvestorDebt({
+                loanCash,
+                liability: loanFundLiability,
+                accruedInterest: accruedInvestorInt,
+                accruedPrincipal: accruedInvestorPrin,
+                currentInterest: scheduledInt,
+                scheduledPrincipal: scheduledPrin,
+                acceleratePrincipal: isTerminalSettlement,
+            });
+            outflows.investInt = debt.paidArrearsInterest + debt.paidCurrentInterest;
+            outflows.investPrin = debt.paidPrincipal;
+            capitalisedInterest += debt.missedCurrentInterest;
+            capitalisedInterestRepaid += debt.paidArrearsInterest;
+            accruedInvestorInt = debt.accruedInterest;
+            accruedInvestorPrin = debt.accruedPrincipal;
+            loanCash = debt.loanCash;
+            loanFundLiability = debt.liability;
+            const debtService = outflows.investInt + outflows.investPrin;
 
             // 6. Outflows: Operations (Survival floor if insolvent or winding down)
             // Suppressed entirely once the fund is wound up (R-9.2) — a dead fund with
@@ -639,6 +706,9 @@ const ModelModule = {
             dataMonthlyDefaultsMe.push(outflows.defaultsMe);
             dataMonthlyFundPrincipal.push(outflows.investPrin);
             dataMonthlyFundInt.push(outflows.investInt);
+            dataMonthlyInvestorLiability.push(loanFundLiability);
+            dataMonthlyInvestorInterestArrears.push(accruedInvestorInt);
+            dataMonthlyInvestorPrincipalArrears.push(accruedInvestorPrin);
             dataMonthlyOps.push(outflows.fixed);
             dataMonthlyFees.push(outflows.varFees);
 
@@ -720,6 +790,9 @@ const ModelModule = {
             dataMonthlyDefaultsMe,
             dataMonthlyFundPrincipal,
             dataMonthlyFundInt,
+            dataMonthlyInvestorLiability,
+            dataMonthlyInvestorInterestArrears,
+            dataMonthlyInvestorPrincipalArrears,
             dataMonthlyOps,
             dataMonthlyFees, // Variable Ops
             dataLoansHh,
@@ -763,6 +836,7 @@ const ModelModule = {
             accruedInvestorInt,
             accruedInvestorPrin,
             capitalisedInterest,
+            capitalisedInterestRepaid,
             investorLiabilityEnd: loanFundLiability,
             windUpMonth,
 

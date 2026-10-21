@@ -11,6 +11,28 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.7.0] — 2026-10-21 — Complete investor debt settlement
+
+### Fixed
+
+- **Capitalised investor interest can now be repaid.** Previously it increased the senior liability and an arrears counter that could never fall. The waterfall now pays old capitalised interest, current interest, then original principal; paying old interest reduces both arrears and the liability. ([ADR-0036](docs/adr/0036-complete-investor-debt-waterfall.md), F-44)
+- **Wind-up now settles available loan cash before freezing.** Remaining original principal accelerates, positive loan-ledger cash goes to the senior investor, and any unpaid balance stays visible. Grant cash remains ring-fenced. A no-demand regression now transfers $172,237 at wind-up instead of reporting it as idle fund cash. Net assets are unchanged because cash and liability fall together. ([ADR-0036](docs/adr/0036-complete-investor-debt-waterfall.md), F-45)
+- **The senior balance is now self-reconciling.** INV-20 checks principal and capitalised-interest flows; INV-21 rejects stranded terminal loan cash. Six focused regressions exercise non-finite propagation, payment ordering, new arrears, terminal acceleration, reconciliation, and wind-up settlement.
+
+### Golden movement
+
+The Malawi baseline and all headline results are unchanged. Four stressed scenarios move as predicted by the new ordering or gain more honest arrears reporting:
+
+- At 8% cost of capital, $297 of old interest is cured but the same cash constraint rolls a similar amount of current interest; cumulative capitalisation rises 4.5% while ending cash, liability, net assets, principal repaid, and interest paid are unchanged.
+- The demand-constrained case redirects $537 from original principal to older interest. Total principal falls 0.01%, investor interest rises 0.24%, and cost per latrine rises 0.01%; ending cash, liability, and net assets are unchanged.
+- High-default and capital-constrained wind-ups now classify all unpaid accelerated original principal as principal arrears. Their cash, liability, net assets, reach, and viability do not change.
+
+### User-facing record
+
+The model links directly to `changelog.html`. The page uses simple release bullets and lists remaining limitations without requiring GitHub access.
+
+---
+
 ## [0.6.0] — 2026-10-21 — Evidence-based Malawi defaults and safe country loading
 
 A post-S5 review found six new defects in the assumptions, country-data path, and two core edge cases. F-38–F-43 are fixed; two investor-settlement defects found during the review (F-44/F-45) are registered and deliberately left for a separate debt-waterfall ADR.
