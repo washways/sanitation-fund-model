@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.11.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.12.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.12.0 — Zero capacity is now honored</h2>
+        <ul>
+            <li>Entering zero for <strong>Micro-enterprises / Unit</strong> now creates a genuine no-network stress case.</li>
+            <li>The old calculation silently changed zero back to the default of 20, making the adverse scenario look identical to the healthy Malawi reference run.</li>
+            <li>With zero capacity, the model now launches no enterprises, builds no toilets, and reports the resulting senior-debt shortfall instead of a viable verdict.</li>
+            <li>Missing or malformed inputs still stop before calculation; only an explicit, valid zero is preserved.</li>
+            <li>F-50 is resolved. The default Malawi result and all 21 recorded scenarios are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.11.0 — Monthly implementation table corrected</h2>
         <ul>
             <li>Every monthly figure now appears under the correct heading. A missing header previously shifted ME finance, operating-cost, investor-payment, net-cash, and ending-cash values one column to the right.</li>

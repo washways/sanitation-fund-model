@@ -28,6 +28,7 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | S6 export integrity — 2026-10-21 | Bound CSV/clipboard reports to each successful run's input snapshot and canonical liability/leverage KPIs. | Exports never reread the live form or reconstruct a KPI. Add a canonical model/KPI field first, then report it. |
 | S6 advice integrity — 2026-10-21 | Removed the legacy rule-of-thumb advisor and routed the visible control through current-scenario recalculation plus model-tested options. | One advice path only. Every recommendation must carry a simulated result; never label deterministic rules as AI or suggest an untested lever. |
 | S6 reporting integrity — 2026-10-21 | Added the exact monthly ME-launch series and realigned the implementation table's count/value headings. | `New MEs` comes from `dataMonthlyNewMes`; never reconstruct it from loan value or setup cost. Every row must match the header width. |
+| S6 zero-input fidelity — 2026-10-21 | Removed the `mePerDistrict || 20` fallback that turned an explicit zero-capacity stress into the default Malawi network. | After `validateInputs()`, use supplied values directly. Never use truthiness to default a numeric input for which zero is valid. |
 
 The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) and [docs/adr/](docs/adr/). Never edit an accepted ADR; supersede it.
 
@@ -61,5 +62,6 @@ CPI, commercial lending, poverty, Gini, and sanitation levels are context. Do no
 - `UI.lastResults.inputs` is the reporting provenance for a successful run. Exporting current DOM values can silently combine one scenario's assumptions with another scenario's results.
 - `ModelModule.suggestSolvencyFix()` is the only financial-advice engine. The visible button calls `runCalculation(true)`; do not recreate `UI.generateSuggestions()` or rule-of-thumb recommendations.
 - The monthly ME loan includes setup plus working capital. Use `series.dataMonthlyNewMes` for launch counts; dividing by `meSetupCost` overstates them and shifts reporting logic outside the model.
+- `mePerDistrict = 0` is valid and means no enterprise network. The pure model has no hidden default after validation; use nullish/presence logic only at boundaries where absence is actually permitted.
 
 This model informs funding decisions. A plausible wrong number is worse than an obvious crash.

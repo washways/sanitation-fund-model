@@ -38,7 +38,7 @@ Every numeric input must be finite before the simulation starts. Blank or malfor
 | id | Label | Default | Entered / model unit | Source | Meaning |
 |---|---|---:|---|---|---|
 | `districts` | Administrative Units | 28 | count / count | Malawi reference: official district count | With enterprises per unit, sets the network ceiling. It is not fetched because third-party administrative-unit data mixed districts and regions. |
-| `mePerDistrict` | Micro-enterprises / Unit | 20 | count / count | programme assumption | Capacity ceiling, not an observed country statistic. |
+| `mePerDistrict` | Micro-enterprises / Unit | 20 | count / count | programme assumption | Capacity ceiling, not an observed country statistic. Zero is valid and disables the enterprise network and production. |
 | `toiletsPerMeMonth` | Toilets / ME / Month | 7 | count/month / count/month | programme assumption | Flat productivity; no learning, seasonality, or supply-chain lag. |
 | `meSetupCost` | ME Setup Cost | 3,000 | USD / USD | Malawi reference: [UNICEF Malawi sanitation revolving funds](https://www.unicef.org/malawi/media/3886/file/Sanitation%2520Revolving%2520Funds%2520for%2520Rural%2520and%2520Peri-Urban%2520Communities%2520in%2520Malawi.pdf) | Approximate enterprise-loan size, added to working capital by `meCapitalRequirement()`. |
 

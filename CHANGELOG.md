@@ -11,6 +11,20 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.12.0] — 2026-10-21 — Zero capacity means zero capacity
+
+### Fixed
+
+- **An explicit zero enterprise-capacity input is no longer replaced by the default.** `Micro-enterprises / Unit` is a non-negative whole-number assumption, but the engine used `value || 20`; JavaScript therefore treated 0 as absent and silently restored 20. In the Malawi reference scenario, entering 0 previously produced the same 285 startup enterprises, 345 ending enterprises, 118,509 toilets, and viable verdict as entering 20. ([ADR-0041](docs/adr/0041-honor-zero-enterprise-capacity.md), F-50)
+- **The validated model now honors the supplied value directly.** A zero-capacity stress now has no enterprise cohort, no production, about 87.8% of senior principal repaid, and a non-viable verdict. Missing or malformed values still fail at the input boundary rather than receiving a hidden fallback.
+- **A regression pins the adverse scenario.** It requires zero startup and active enterprises, zero toilets, and a non-viable result when the user explicitly enters zero.
+
+### Golden movement
+
+None expected. None of the 21 recorded scenarios or the Malawi startup uses zero enterprises per unit. The default remains 20 and its headline results are unchanged.
+
+---
+
 ## [0.11.0] — 2026-10-21 — Accurate monthly implementation table
 
 ### Fixed

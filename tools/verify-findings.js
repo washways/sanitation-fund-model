@@ -400,12 +400,26 @@ console.log('='.repeat(80));
     `${money(capitalPerMe)} per enterprise; the setup-cost-only UI reconstruction is absent.`);
 }
 
+// F-50 — zero is a valid enterprise-capacity ceiling, not an alias for the default.
+{
+  const zeroCapacity = run({ mePerDistrict: 0, verify: true });
+  const zs = zeroCapacity.series;
+  const noEnterpriseNetwork = zs.startMEs === 0
+    && zs.dataMonthlyMes.every(value => value === 0)
+    && zeroCapacity.kpis.reach.toilets === 0;
+  check('F-50', 'an explicit zero enterprise capacity remains zero',
+    noEnterpriseNetwork && !zeroCapacity.viability.ok,
+    `Zero capacity now starts ${zs.startMEs} MEs, ends with ` +
+    `${zeroCapacity.kpis.reach.mes}, builds ${zeroCapacity.kpis.reach.toilets} toilets, ` +
+    `and reports viability ${zeroCapacity.viability.ok ? 'OK' : 'NOT OK'} instead of restoring 20 MEs/unit.`);
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 49 of 49 resolved.');
+console.log('Findings register: 50 of 50 resolved.');
 console.log('Open modelling question: MODEL_SPEC R-7.6/Q14 (headline constraint reporting).');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

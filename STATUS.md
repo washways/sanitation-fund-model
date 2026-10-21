@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.11.0 — accurate monthly implementation table |
+| **Release** | 0.12.0 — explicit zero enterprise capacity honored |
 | **Stages complete** | S0, S1, S2, S3, S5; S4 solver correctness complete, other S4 work and S6 remain |
-| **Tests** | ✅ 98 pass, 0 todo, 0 fail (`npm test`, ~2s) |
+| **Tests** | ✅ 99 pass, 0 todo, 0 fail (`npm test`, ~2s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
-| **Findings register** | ✅ 49 of 49 resolved |
+| **Findings register** | ✅ 50 of 50 resolved |
 | **Open modelling question** | MODEL_SPEC R-7.6: whether the headline constraint label should derive directly from the production minimum |
 
 ## What remains unresolved
@@ -62,6 +62,7 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 - Blank and malformed form values remain invalid; they never restore a hidden fallback.
 - A failed browser rerun reports all detected fields together, clears the prior result, and leaves no scenario available for export or advice.
 - Bounds are mathematical or definitional only. Do not add unsupported policy caps. See [ADR-0037](docs/adr/0037-fail-fast-input-validation.md).
+- Valid zero values remain zero. In particular, `mePerDistrict = 0` disables the delivery network; the model must not restore a default after validation. See [ADR-0041](docs/adr/0041-honor-zero-enterprise-capacity.md).
 
 ## Export contract
 
@@ -98,4 +99,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.11.0 closed F-49 under [ADR-0040](docs/adr/0040-report-exact-me-launches.md). The monthly table now has aligned headings and uses the exact simulated enterprise-launch count instead of a setup-cost-only reconstruction that overstated Malawi expansion by 3.8x. Cashflows and headline results are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.12.0 closed F-50 under [ADR-0041](docs/adr/0041-honor-zero-enterprise-capacity.md). An explicit zero enterprise-capacity assumption now produces no enterprises or toilets and exposes the resulting debt shortfall; it is no longer silently replaced by the healthy default of 20. The standard Malawi scenario is unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

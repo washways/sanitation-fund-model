@@ -254,6 +254,8 @@ startLoanVolume      = startMEs * meCapitalRequirement   // was meSetupCost alon
 
 `meCapitalRequirement(inputs)` is now a single function (`ModelModule.meCapitalRequirement`), used here, in R-6.2's expansion budget, and in the loan R-6.2 books — the same number decides how many MEs the fund can afford and how much it lends them. Before this, the loan booked used setup cost alone — 7.3x less than the affordability check's own number at the shipped defaults — so the fund decided how many enterprises it could afford using the realistic figure, then only lent them a seventh of it.
 
+`mePerDistrict = 0` is a valid zero-capacity stress case: `maxTotalMEs` is then zero and the model starts and expands no enterprises. The validated model uses the value directly and never replaces zero with the default ([ADR-0041](adr/0041-honor-zero-enterprise-capacity.md), F-50).
+
 ### R-6.2 In-loop expansion **[AS-BUILT]** (constants exposed 2026-08-21, [ADR-0019](adr/0019-expose-me-growth-constants.md); cost unified same day, [ADR-0031](adr/0031-unify-me-capital-requirement.md))
 
 ```

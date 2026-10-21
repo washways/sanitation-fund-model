@@ -436,7 +436,10 @@ const ModelModule = {
         let startLoanVolume = 0;
         let startMEs = 0;
 
-        const maxTotalMEs = inputs.districts * (inputs.mePerDistrict || 20); // Cap
+        // Inputs are complete and finite after validateInputs(). Honor an explicit
+        // zero capacity; `|| 20` silently restored the default and made a no-network
+        // stress case look identical to the healthy Malawi scenario (F-50).
+        const maxTotalMEs = inputs.districts * inputs.mePerDistrict; // Cap
         // R-6.1, ADR-0031: the SAME capital requirement decides both how many MEs the
         // fund can afford to start AND how big the loan it books for them is. Until
         // 2026-08-21 these were two different numbers (F-21) — the loan booked used

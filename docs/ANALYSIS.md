@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 49 of 49 findings resolved as of 2026-10-21. F-49 was fixed under ADR-0040. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 50 of 50 findings resolved as of 2026-10-21. F-50 was fixed under ADR-0041. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -998,6 +998,14 @@ Following that advice makes the outcome worse. The advisor was written against a
 That count is calculated as `new ME loan value / meSetupCost`, even though ADR-0031 made each enterprise loan include setup cost plus working capital. With the current Malawi defaults, the table divides by $3,000 instead of the $11,400 actually lent per enterprise and therefore reports 3.8 times the true launch count in expansion months.
 
 **Fix:** `dataMonthlyNewMes` exposes the exact simulated monthly launch count; the table labels count and value separately, and a render-path regression requires every row to match the header width. [ADR-0040](adr/0040-report-exact-me-launches.md). Resolved in `e9e038b`.
+
+### F-50 — An explicit zero enterprise-capacity input restores the default
+
+**Critical — fixed.** `mePerDistrict` is a non-negative whole-number input, but the engine calculated its enterprise ceiling with `inputs.mePerDistrict || 20`. An explicit zero therefore became 20. In the Malawi reference scenario, entering 0 and entering 20 both produced 285 startup enterprises, 345 enterprises at the horizon, 118,509 toilets, and a viable verdict.
+
+The equivalent genuine zero-cap run produces no enterprises or toilets and is not viable, with about 87.8% of senior principal repaid. This is a silent replacement of a user-entered stress assumption with the healthy default.
+
+**Fix:** use the validated input directly; missing or malformed inputs already fail at the F-46 boundary. The regression requires zero capacity to produce zero enterprises and production. [ADR-0041](adr/0041-honor-zero-enterprise-capacity.md). Resolved in `pending`.
 
 ---
 

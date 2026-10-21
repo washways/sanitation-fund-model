@@ -56,5 +56,15 @@ describe('model input validation (F-46)', () => {
     assert.deepStrictEqual([...ModelModule.validateInputs(inputs)], []);
     assert.doesNotThrow(() => ModelModule.calculate(inputs));
   });
+
+  test('an explicit zero enterprise capacity is honored, not replaced by the default (F-50, ADR-0041)', () => {
+    const result = ModelModule.calculate({ ...BASE, mePerDistrict: 0, verify: true });
+
+    assert.strictEqual(result.series.startMEs, 0);
+    assert.ok(result.series.dataMonthlyMes.every(value => value === 0));
+    assert.strictEqual(result.kpis.reach.toilets, 0);
+    assert.strictEqual(result.viability.ok, false,
+      'a no-delivery scenario must not inherit the default scenario\'s viable verdict');
+  });
 });
 
