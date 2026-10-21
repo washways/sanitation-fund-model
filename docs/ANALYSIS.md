@@ -982,7 +982,7 @@ Following that advice makes the outcome worse. The advisor was written against a
 
 **High — fixed.** Both export paths reread the live form rather than retaining the inputs that produced `UI.lastResults`. A valid edit made immediately before export could therefore put new assumptions above old monthly results. The clipboard analysis also reconstructed investor liability as initial loan minus original principal repaid, omitting capitalised interest, and recomputed leverage with a formula different from the canonical KPI. In the audit stress, liability was understated by $1,327,694 and leverage was shown as 0.8x instead of 2.9x.
 
-**Fix:** every successful controller run retains its input snapshot; both exports use it. The clipboard report takes ending investor liability and leverage directly from their canonical KPIs. Two regressions pin edit-before-export provenance and the stressed balance sheet. [ADR-0038](adr/0038-export-the-calculated-scenario.md). Resolution commit pending.
+**Fix:** every successful controller run retains its input snapshot; both exports use it. The clipboard report takes ending investor liability and leverage directly from their canonical KPIs. Two regressions pin edit-before-export provenance and the stressed balance sheet. [ADR-0038](adr/0038-export-the-calculated-scenario.md). Resolved in `14e1895`.
 
 ---
 
