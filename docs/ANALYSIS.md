@@ -1017,7 +1017,7 @@ The equivalent genuine zero-cap run produces no enterprises or toilets and is no
 
 **High — fixed.** Duration accepts any whole number of months, but annual aggregates were pushed only when `month % 12 === 0`. A valid 6-month Malawi run built 12,814 toilets while returning zero annual labels and rows, causing `renderCharts()` to exit and leave every chart blank. A valid 18-month run built 43,802 toilets but its annual table and charts omitted months 13–18.
 
-**Fix:** record a labelled final partial period after the loop, using the same aggregation path as complete years, and test both pure series reconciliation and the 6-month chart render. [ADR-0043](adr/0043-report-final-partial-year.md). Resolved in `pending`.
+**Fix:** record a labelled final partial period after the loop, using the same aggregation path as complete years, and test both pure series reconciliation and the 6-month chart render. [ADR-0043](adr/0043-report-final-partial-year.md). Resolved in `e226cbb`.
 
 ---
 

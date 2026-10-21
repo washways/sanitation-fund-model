@@ -54,6 +54,11 @@ partial period instead of assuming every element covers 12 months.
 
 ## Verification
 
-Pending implementation. Tests will reconcile the partial grant flow to its monthly
-series, require the final cumulative-toilet snapshot, and capture a rendered chart for
-the 6-month scenario.
+- `npm test`: 102 pass. Pure regressions reconcile 6- and 18-month period flows and
+  final reach to monthly data; the smoke regression captures chart configurations for
+  the 6-month scenario.
+- `npm run golden:diff`: no behaviour change across all 21 scenarios.
+- `npm run lint`: zero errors and zero warnings.
+- `node tools/verify-findings.js`: 6 months reports `Year 1 (6 months)` and 12,814
+  toilets; 18 months reports `Year 1`, `Year 2 (6 months)`, and 43,802 toilets; F-52
+  fixed.
