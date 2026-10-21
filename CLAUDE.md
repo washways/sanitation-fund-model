@@ -34,6 +34,7 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | S4 constraint reporting — 2026-10-21 | Resolved R-7.6/Q14: monthly and headline constraints now derive from actual foregone production, retain mixed causes, and expose grant and loan capital separately. | `capacity + loanCapital` must reconcile demand to production. Grant-capital recovery overlaps loan-capital loss and must never be added to that partition. Viability remains a separate verdict. |
 | S4 sensitivity — 2026-10-21 | Added a pure, deterministic one-at-a-time engine and JSON CLI for up to eight evidence-bounded parameters. | Every low/high pair must bracket base, pass normal validation, and carry a source. Never add built-in generic shocks, undocumented country ranges, timestamps, network fetches, or mutation. |
 | S6 country provenance — 2026-10-21 | Gave the three World Bank-derived model inputs one blue, dated source state and made real user edits clear it. | Only `popReqToilets`, `popGrowthRate`, and `avgAnnualIncome` may receive `country-observation`. Programme assumptions never do; extend the startup regression if the API boundary changes. |
+| S3 rollout realism — 2026-10-21 | Replaced the cash-maximising month-zero cohort with an explicit 15% pilot share of the target ME network. | Opening enterprises are `min(target share, affordable, network cap)`. The pilot share is a visible programme assumption, never country-derived; zero must seed no hidden cohort. |
 
 The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) and [docs/adr/](docs/adr/). Never edit an accepted ADR; supersede it.
 
@@ -43,6 +44,8 @@ The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) a
 - Evidence-backed programme references: 4.4 people/household, 28 districts, $100 toilet planning cost, $3,000 enterprise capital, 12-month household and enterprise terms, 0.25 hours saved/person/day, 50% time-value factor.
 - Unsupported health and carbon claims are off: DALYs/person = 0, DALY value = 0, CO2e/toilet = 0.
 - Financing rates, write-downs, operating costs, capacity/productivity, contingency, and grant pacing are illustrative editable assumptions — not facts about Malawi and never country-derived.
+- The opening ME cohort is an illustrative 15% of the target network: 84 enterprises in Malawi,
+  capped by available loan capital. It scales through the separate monthly growth controls.
 - The model is USD-labelled. `inflationRate` means forward cost escalation in the model currency; local CPI is display-only without an FX path.
 
 ## Country-data contract

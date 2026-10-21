@@ -239,7 +239,7 @@ console.log('='.repeat(80));
 {
   // The shipped defaults are viable and still lending at the horizon, so they never
   // wind up. Use a fund that dies, which is the case the defect applied to.
-  const dying = { annualFixedOpsCost: 400000, loanInterestRate: 0.05 };
+  const dying = { popReqToilets: 0 };
   const short = run({ ...dying, duration: 5 });
   const long = run({ ...dying, duration: 20 });
   check('F-31', 'a dead fund winds up instead of billing operations forever',
@@ -467,12 +467,30 @@ console.log('='.repeat(80));
     'programme rates remain unmarked; one CSS rule and an on-page legend define the visual state.');
 }
 
+// F-54 — month zero is a visible rollout target, not the largest cash-funded cohort.
+{
+  const targetNetwork = BASE.districts * BASE.mePerDistrict;
+  const targetPilot = Math.ceil(targetNetwork * BASE.initialMeNetworkShare);
+  const monthOneInterest = s.dataMonthlyRevenueMe[0];
+  const explicitControl = /id="initialMeNetworkShare"[^>]*value="15"/.test(HTML_SRC)
+    && !/id="opsReserveCap"/.test(HTML_SRC);
+  const gradual = s.startMEs === targetPilot
+    && s.startMEs === 84
+    && s.dataMonthlyMes[11] > s.startMEs
+    && monthOneInterest < 10000;
+  check('F-54', 'month zero starts an explicit affordable pilot network',
+    explicitControl && gradual && base.viability.ok && k.financials.investorRepaidPct >= 0.999999,
+    `The 15% Malawi pilot starts ${s.startMEs} of ${targetNetwork} target enterprises, ` +
+    `records ${money(monthOneInterest)} month-one ME interest, reaches ` +
+    `${Math.round(s.dataMonthlyMes[11])} enterprises by month 12, and fully repays senior principal.`);
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 53 of 53 resolved.');
+console.log('Findings register: 54 of 54 resolved.');
 console.log('Open modelling questions: none. R-7.6/Q14 was resolved by ADR-0044.');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

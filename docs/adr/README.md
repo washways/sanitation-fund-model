@@ -51,3 +51,4 @@ For the short version of what each one decided, [CHANGELOG.md](../../CHANGELOG.m
 | [0044](0044-report-actual-production-constraints.md) | Rank constraints from actual foregone production and expose secondary causes |
 | [0045](0045-require-evidence-bounded-sensitivity.md) | Require sourced or user-supplied bounds for one-at-a-time sensitivity |
 | [0046](0046-mark-country-derived-inputs-consistently.md) | Mark every country-derived model input consistently and truthfully |
+| [0047](0047-start-with-a-pilot-enterprise-network.md) | Start with an explicit pilot share of the enterprise network |

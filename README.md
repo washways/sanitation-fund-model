@@ -10,11 +10,16 @@ It answers three questions:
 
 ---
 
+The default rollout starts with an explicit 15% pilot share of the target enterprise network and
+then expands under the monthly growth and budget controls. It does not assume that all affordable
+enterprises have been recruited and capitalised before month one. The pilot share is editable and
+must be replaced with the programme's implementation plan.
+
 ## Status
 
-Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **110 automated tests and 21 characterisation scenarios.** Known limitations are listed in [STATUS.md](STATUS.md) and the on-site [changelog](changelog.html).
+Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **114 automated tests and 21 characterisation scenarios.** Known limitations are listed in [STATUS.md](STATUS.md) and the on-site [changelog](changelog.html).
 
-**What's genuinely unresolved:** all 52 registered defects and all 14 modelling questions are resolved. Scenario comparison, solver caching, and real-browser chart/advisor checks remain roadmap work. Evidence-bounded sensitivity is available through the deterministic JSON CLI. See [STATUS.md](STATUS.md).
+**What's genuinely unresolved:** all 54 registered defects and all 14 modelling questions are resolved. Scenario comparison, solver caching, and real-browser chart/advisor checks remain roadmap work. Evidence-bounded sensitivity is available through the deterministic JSON CLI. See [STATUS.md](STATUS.md).
 
 **If you have output from before 2026-08-21, re-run it.** Several corrections that session moved real numbers (see the changelog); a result generated earlier is not comparable to one generated now.
 
@@ -51,7 +56,7 @@ npm ci            # installs ESLint, the one devDependency — needed once
 npm test
 ```
 
-Thirteen suites, zero flakiness, about four seconds: **constraint reporting**, **debt waterfall**, **export**, **golden**, **input validation**, **invariants**, **purity**, **sensitivity**, **smoke**, **solver**, **startup**, **wiring**, and **write-down**.
+Fourteen suites, zero flakiness, about four seconds: **constraint reporting**, **debt waterfall**, **export**, **golden**, **input validation**, **invariants**, **purity**, **sensitivity**, **smoke**, **solver**, **startup scale**, **startup**, **wiring**, and **write-down**.
 
 ```bash
 npm run golden:diff   # would any model output change, without writing anything?
@@ -120,7 +125,7 @@ methodology.html     user-facing methodology note
 server.js             dev static server
 eslint.config.js      3 rules: no-dupe-keys, no-undef, no-unused-vars
 
-tests/                13 suites, 110 tests, 21 recorded golden scenarios
+tests/                14 suites, 114 tests, 21 recorded golden scenarios
 vendor/                pinned Chart.js, for offline use
 tools/                 headless model loader, app-source file list, audit verification
 docs/                  spec, parameters, architecture, testing, roadmap, ADRs, audit

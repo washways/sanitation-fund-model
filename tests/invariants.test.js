@@ -239,7 +239,9 @@ describe('ledger invariants', () => {
     // 5-year mark legitimately does more in 20 years, so comparing those two is
     // meaningless. Use a scenario that reliably dies early, and assert both that it
     // winds up and that nothing moves after it does.
-    const dying = { annualFixedOpsCost: 400000, loanInterestRate: 0.05 };
+    // Zero demand gives the opening ME portfolio time to run off and then reaches a
+    // deterministic terminal state inside five years, independent of rollout pacing.
+    const dying = { popReqToilets: 0 };
 
     const short = run({ ...dying, duration: 5 });
     const long = run({ ...dying, duration: 20 });
@@ -304,7 +306,7 @@ describe('ledger invariants', () => {
 
       // The reserve must not apply after wind-up (R-9.2): a dead fund does no further
       // lending, so reserving against it is meaningless. Use a fund that dies early.
-      const dying = run({ annualFixedOpsCost: 400000, loanInterestRate: 0.05 });
+      const dying = run({ popReqToilets: 0 });
       assert.ok(dying.series.windUpMonth !== null, 'this scenario should wind up for the check below to mean anything');
     });
 

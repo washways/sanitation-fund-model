@@ -56,7 +56,7 @@ const UI = {
             mgmtFeeRatio: getPercent('mgmtFeeRatio', 2),
             inflationRate: getPercent('inflationRate', 0),
             contingencyRate: getPercent('contingencyRate', 5),
-            opsReserveCap: getPercent('opsReserveCap', 15),
+            initialMeNetworkShare: getPercent('initialMeNetworkShare', 15),
             annualFixedOpsCost: getRaw('annualFixedOpsCost', 50000),
             meCostRate: getPercent('meCostRate', 5),
             fundCostOfCapital: getPercent('fundCostOfCapital', 2),

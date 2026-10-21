@@ -39,6 +39,7 @@ Every numeric input must be finite before the simulation starts. Blank or malfor
 |---|---|---:|---|---|---|
 | `districts` | Administrative Units | 28 | count / count | Malawi reference: official district count | With enterprises per unit, sets the network ceiling. It is not fetched because third-party administrative-unit data mixed districts and regions. |
 | `mePerDistrict` | Micro-enterprises / Unit | 20 | count / count | programme assumption | Capacity ceiling, not an observed country statistic. Zero is valid and disables the enterprise network and production. |
+| `initialMeNetworkShare` | Initial ME Network (% of Target) | 15 | percent / decimal | programme assumption | Share of the target network launched at month zero, capped by affordable enterprise capital. Illustrative pilot assumption; replace with the implementation plan. |
 | `toiletsPerMeMonth` | Toilets / ME / Month | 7 | count/month / count/month | programme assumption | Flat productivity; no learning, seasonality, or supply-chain lag. |
 | `meSetupCost` | ME Setup Cost | 3,000 | USD / USD | Malawi reference: [UNICEF Malawi sanitation revolving funds](https://www.unicef.org/malawi/media/3886/file/Sanitation%2520Revolving%2520Funds%2520for%2520Rural%2520and%2520Peri-Urban%2520Communities%2520in%2520Malawi.pdf) | Approximate enterprise-loan size, added to working capital by `meCapitalRequirement()`. |
 
@@ -65,7 +66,6 @@ Every numeric input must be finite before the simulation starts. Blank or malfor
 | `mgmtFeeRatio` | Mgmt Fee Ratio | 1 | percent / decimal | programme assumption | Variable fee charged on each disbursement. |
 | `meCostRate` | M&E Cost | 2 | percent / decimal | programme assumption | Monitoring-and-evaluation cost charged on each disbursement. |
 | `contingencyRate` | Cost Contingency | 5 | percent / decimal | programme assumption | Per-unit delivery-cost mark-up, not a reserve and not a governance-index transform. |
-| `opsReserveCap` | Starting Capacity Throttle | 15 | percent / decimal | programme assumption | Sizes only the month-0 enterprise cohort. The rolling solvency reserve is separately derived as three months of full fixed ops plus the next three months of scheduled investor principal. |
 | `inflationRate` | Annual Cost Escalation in Model Currency | 3.32 | percent / decimal | programme assumption | Escalates USD-labelled unit and fixed operating costs. Local-currency CPI is displayed as context but is not applied without an exchange-rate path. |
 
 ## Impact

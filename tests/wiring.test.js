@@ -157,7 +157,7 @@ describe('input wiring', () => {
       mePerDistrict: 'mePerDistrict', toiletsPerMeMonth: 'toiletsPerMeMonth',
       meSetupCost: 'meSetupCost', annualFixedOpsCost: 'annualFixedOpsCost',
       fundRepaymentTerm: 'fundRepaymentTerm', termHh: 'termHh', termMe: 'termMe',
-      investorGracePeriod: 'investorGracePeriod', opsReserveCap: 'opsReserveCap',
+      investorGracePeriod: 'investorGracePeriod', initialMeNetworkShare: 'initialMeNetworkShare',
       'wiz-duration-sidebar': 'duration',
       'wiz-invest-grant-sidebar': 'investGrant',
       'wiz-invest-loan-sidebar': 'investLoan',
@@ -182,7 +182,7 @@ describe('input wiring', () => {
     const PERCENT_FIELDS = new Set([
       'popGrowthRate', 'grantSupportPct', 'inflationRate', 'hhDefaultRate',
       'meDefaultRate', 'mgmtFeeRatio', 'meCostRate', 'contingencyRate',
-      'opsReserveCap', 'fundCostOfCapital', 'meExitRate', 'timeValueFactor',
+      'initialMeNetworkShare', 'fundCostOfCapital', 'meExitRate', 'timeValueFactor',
       'meExpansionBudgetShare', 'meMaxMonthlyGrowthRate',
     ]);
 

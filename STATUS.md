@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.17.0 — consistent country-input provenance |
-| **Stages complete** | S0, S1, S2, S3, S5; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance complete; caching/scenario comparison and remaining S6 work remain |
-| **Tests** | ✅ 111 pass, 0 todo, 0 fail (`npm test`, ~4s) |
+| **Release** | 0.18.0 — gradual enterprise rollout |
+| **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance complete; caching/scenario comparison and remaining S6 work remain |
+| **Tests** | ✅ 114 pass, 0 todo, 0 fail (`npm test`, ~4s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
-| **Findings register** | ✅ 53 of 53 resolved |
+| **Findings register** | ✅ 54 of 54 resolved |
 | **Open modelling questions** | None — all 14 owner decisions are recorded |
 
 ## What remains unresolved
@@ -28,18 +28,18 @@ Static defaults and the recorded post-fetch Malawi startup now agree on the mode
 
 | Measure | Current result |
 |---|---:|
-| Toilets built | 118,509 |
-| People reached | 521,440 (~5.6% of the target population) |
-| Micro-enterprises at horizon | 345 |
-| Ending / minimum cash | +$17,898 |
-| Net assets | +$472,563 |
+| Toilets built | 83,350 |
+| People reached | 366,740 (~4.0% of the target population) |
+| Micro-enterprises at horizon | 267 |
+| Ending / minimum cash | +$17,842 |
+| Net assets | +$176,782 |
 | Senior debt | Repaid in full |
-| OSS / FSS | 1.83 / 1.19 |
-| SROI | 4.09 (time value only by default; unsupported DALY and carbon inputs are zero) |
+| OSS / FSS | 1.65 / 1.06 |
+| SROI | 2.73 (time value only by default; unsupported DALY and carbon inputs are zero) |
 | Production constraints | ME capacity primary; loan and grant capital secondary |
 | Verdict | Integrity OK; viability OK |
 
-The 20-year stress scenario is **not viable** under the same assumptions: 164,749 toilets, -$11,751 net assets, and 40 insolvent months. This is accepted and disclosed rather than hidden by inventing a higher portfolio rate or lower operating cost. The sourced 12-month Malawi household term turns capital faster but earns less interest per loan, so the illustrative 40% portfolio rate does not sustain indefinite operations.
+The 20-year stress scenario is **not viable** under the same assumptions: it winds up in month 101 after 86,076 toilets and ends with -$11,038 net assets. This is accepted and disclosed rather than hidden by inventing a higher portfolio rate or lower operating cost. The sourced 12-month Malawi household term turns capital faster but earns less interest per loan, so the illustrative 40% portfolio rate does not sustain indefinite operations.
 
 ## Assumptions and country data
 
@@ -49,6 +49,7 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 - Missing essential observations clear the field and pause automatic calculation; another country's value is never retained.
 - Malawi references are documented in [docs/PARAMETERS.md](docs/PARAMETERS.md): 4.4 people/household, 28 districts, $100 toilet planning cost, $3,000 enterprise capital, 12-month loan terms, 0.25 hours saved/day, and a 50% time-value factor.
 - Financing, operating, write-down, capacity, contingency, and grant-pacing defaults remain illustrative programme assumptions. They must be calibrated before an investment decision.
+- The opening enterprise network is an explicit 15% pilot share: 84 of Malawi's 560-enterprise target, capped by available loan capital. It is not an observed country value and must be replaced with the recruitment plan.
 - The engine remains explicitly USD-only. Do not apply a live spot rate to multi-year cashflows; a later dated, user-supplied reporting conversion needs an ADR.
 - The adverse 20-year Malawi result stays visible as a stress finding. Assumptions will not be tuned merely to force viability.
 
@@ -58,6 +59,13 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 - Capacity loss plus loan-capital loss reconciles whole-toilet demand to production. Grant-capital recovery overlaps the loan-capital loss and must not be added to it.
 - The horizon headline ranks summed foregone monthly output, lists secondary causes, and uses `Mixed` when multiple causes suppress a month. It does not substitute insolvency for a production bottleneck; viability remains separate.
 - Q14 / R-7.6 is resolved by [ADR-0044](docs/adr/0044-report-actual-production-constraints.md), with three dedicated regressions.
+
+## Enterprise-rollout contract
+
+- `initialMeNetworkShare` sets the month-zero pilot as a share of `districts * mePerDistrict`; the affordable cohort and network ceiling remain hard caps.
+- The 15% interim default starts 84 Malawi enterprises, records about $7,603 of month-one enterprise interest, and grows through the separate monthly expansion controls.
+- The former `opsReserveCap` / `Starting Capacity Throttle` is removed. It was a one-use cross-ledger holdback, not a liquidity reserve.
+- A positive share uses `ceil` to seed small networks; explicit zero starts no enterprise and cannot create hidden percentage growth. See [ADR-0047](docs/adr/0047-start-with-a-pilot-enterprise-network.md).
 
 ## Sensitivity contract
 
@@ -130,4 +138,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.17.0 fixed inconsistent country-input provenance under [ADR-0046](docs/adr/0046-mark-country-derived-inputs-consistently.md). All three API-driven inputs now share one blue, dated source state; user edits clear it; programme terms are not mislabelled as API fields. The startup harness now tracks browser-like class state and formatted-input listeners, closing the test gap that hid the problem. All 21 golden scenarios and Malawi startup numbers remain unchanged. Transparent JSON scenario save/load/compare is the next planned S4 feature; initial enterprise deployment pacing is under active assumptions review. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.18.0 replaced the cash-maximising month-zero enterprise cohort with an explicit 15% pilot share under [ADR-0047](docs/adr/0047-start-with-a-pilot-enterprise-network.md). Malawi now starts 84 rather than 285 enterprises; month-one ME interest falls from about $25,800 to $7,600. The five-year reference remains viable and fully repays senior debt, with 83,350 toilets and FSS of 1.06. All 559 intentional golden movements were reviewed and recorded; 114 tests, lint, and the findings verifier pass. Transparent JSON scenario save/load/compare is the next planned S4 feature. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

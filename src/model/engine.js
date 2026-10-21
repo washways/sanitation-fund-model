@@ -162,7 +162,7 @@ const ModelModule = {
             mgmtFeeRatio: 'Mgmt Fee Ratio',
             meCostRate: 'M&E Cost',
             contingencyRate: 'Cost Contingency',
-            opsReserveCap: 'Starting Capacity Throttle',
+            initialMeNetworkShare: 'Initial ME Network Share',
             dalyPerPerson: 'DALYs Averted per Person',
             dalyValue: 'Value per DALY',
             avgAnnualIncome: 'Avg Annual Income',
@@ -204,7 +204,7 @@ const ModelModule = {
 
         requireWhenFinite([
             'grantSupportPct', 'hhDefaultRate', 'meDefaultRate', 'meExitRate',
-            'meExpansionBudgetShare', 'opsReserveCap', 'carbonCreditShare',
+            'meExpansionBudgetShare', 'initialMeNetworkShare', 'carbonCreditShare',
             'timeValueFactor',
         ], value => value >= 0 && value <= 1, 'must be between 0% and 100%.');
 
@@ -290,15 +290,6 @@ const ModelModule = {
             inputs.fundRepaymentTerm,
             inputs.investorGracePeriod || 0
         );
-
-        // Starting capacity throttle (R-6.1) — sizes the month-0 ME cohort only, and
-        // does nothing after. Relabelled from "Liquidity Buffer" 2026-08-21 (F-10,
-        // ADR-0027) — it is not the fund's ongoing solvency reserve; that is
-        // `requiredReserves`, computed fresh every month below (R-5.4).
-        // Already a decimal - converted once at the input boundary (R-2.3).
-        const opsReserveRate = inputs.opsReserveCap !== undefined ? inputs.opsReserveCap : 0.15;
-        const totalOpsReserve = (inputs.investGrant + inputs.investLoan) * opsReserveRate;
-        let currentReserve = totalOpsReserve; // Simplified Reserve Logic
 
         // Arrears (R-4.5). Unpaid interest capitalises into the liability; unpaid
         // principal stays in it by construction. These accumulators are the audit
@@ -466,10 +457,15 @@ const ModelModule = {
         // one ME actually costs.
         const startupCostPerMe = this.meCapitalRequirement(inputs);
 
-        const lendableStart = Math.max(0, loanCash - currentReserve);
-        const affordableStartMEs = Math.floor(lendableStart / startupCostPerMe);
+        const affordableStartMEs = Math.floor(Math.max(0, loanCash) / startupCostPerMe);
+        // F-54 / ADR-0047: month zero is a pilot, not an instantaneous cash-maximising
+        // national rollout. `ceil` lets a positive share seed a small non-zero network;
+        // an explicit zero remains zero and therefore disables later percentage growth.
+        const targetStartMEs = inputs.initialMeNetworkShare === 0
+            ? 0
+            : Math.ceil(maxTotalMEs * inputs.initialMeNetworkShare);
 
-        startMEs = Math.min(maxTotalMEs, affordableStartMEs); // Use Max Cap
+        startMEs = Math.min(maxTotalMEs, affordableStartMEs, targetStartMEs);
 
         if (startMEs > 0) {
             startLoanVolume = startMEs * startupCostPerMe;
