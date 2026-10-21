@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.18.0 — gradual enterprise rollout |
-| **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance complete; caching/scenario comparison and remaining S6 work remain |
-| **Tests** | ✅ 114 pass, 0 todo, 0 fail (`npm test`, ~4s) |
+| **Release** | 0.18.1 — responsive programme summary |
+| **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance and responsive results complete; caching/scenario comparison and remaining S6 work remain |
+| **Tests** | ✅ 116 pass, 0 todo, 0 fail (`npm test`, ~4s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
-| **Findings register** | ✅ 54 of 54 resolved |
+| **Findings register** | ✅ 55 of 55 resolved |
 | **Open modelling questions** | None — all 14 owner decisions are recorded |
 
 ## What remains unresolved
@@ -120,6 +120,7 @@ The 20-year stress scenario is **not viable** under the same assumptions: it win
 - `series.dataGrants` contains annual flows, not cumulative balances. The annual cash-flow chart negates each value once and never differences adjacent years.
 - Chart inflows are positive and outflows are negative. The smoke harness captures the Chart.js configuration and reconciles the `Grants` dataset to the engine series. See [ADR-0042](docs/adr/0042-chart-annual-grants-as-flows.md).
 - Month-granular horizons always retain a final partial reporting period, labelled with its month count. A sub-year scenario must still render charts. See [ADR-0043](docs/adr/0043-report-final-partial-year.md).
+- Programme-summary cards use an auto-fitting grid and wrapping cells. Only the 22-column monthly audit table retains no-wrap cells, contained by its own horizontal scroller. See [ADR-0048](docs/adr/0048-fit-programme-summary-to-viewport.md).
 
 ## Environment
 
@@ -138,4 +139,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.18.0 replaced the cash-maximising month-zero enterprise cohort with an explicit 15% pilot share under [ADR-0047](docs/adr/0047-start-with-a-pilot-enterprise-network.md). Malawi now starts 84 rather than 285 enterprises; month-one ME interest falls from about $25,800 to $7,600. The five-year reference remains viable and fully repays senior debt, with 83,350 toilets and FSS of 1.06. All 559 intentional golden movements were reviewed and recorded; 114 tests, lint, and the findings verifier pass. Transparent JSON scenario save/load/compare is the next planned S4 feature. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.18.1 fixed programme-summary overflow under [ADR-0048](docs/adr/0048-fit-programme-summary-to-viewport.md). The three cards now reflow to the available width and wrap their contents; only the 22-column monthly audit table scrolls horizontally inside its own container. Model outputs and all 21 golden scenarios are unchanged. The suite now has 116 passing tests. Country-derived health estimates and the jobs/carbon impact displays are the next active assumptions review. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 54 of 55 findings resolved as of 2026-10-21. F-55 is under active correction. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 55 of 55 findings resolved as of 2026-10-21. F-55 was fixed under ADR-0048. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,7 +54,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
-| [F-55](#f-55--programme-summary-tables-overflow-the-page) | Medium | UI | Summary cards are fixed to three columns while all cells are forced not to wrap | src | S6 |
+| ✅ [F-55](#f-55--programme-summary-tables-overflow-the-page) | Medium | UI | Summary cards are fixed to three columns while all cells are forced not to wrap | src | S6 |
 | ✅ [F-54](#f-54--month-zero-launches-half-the-national-enterprise-network) | **High** | Assumptions | Month zero cash-maximises the startup cohort, creating $25.8k of ME interest in month one | run | S3 |
 | ✅ [F-53](#f-53--country-derived-input-highlighting-contradicts-its-own-source-state) | Medium | UI | API provenance disappears immediately on some fields and remains falsely on edited values | run | S6 |
 | ✅ [F-48](#f-48--the-visible-advisor-bypasses-model-tested-advice) | **High** | Advice | The visible advisor calls legacy rules that repeat recommendations already proved unsafe | src | S6 |
@@ -1038,9 +1038,9 @@ The `Starting Capacity Throttle` did not state an operational target. It subtrac
 
 ### F-55 — Programme summary tables overflow the page
 
-**Medium — open.** The results grid below “Programme Summary (End of Project Estimation)” is fixed to three columns in an inline style. A later global `.summary-table th, .summary-table td` rule also applies a 100px minimum width and `white-space: nowrap` to both the compact summary cards and the 22-column monthly audit table. With the fixed sidebar, ordinary laptop and tablet widths cannot accommodate the minimum content width, so cards and tables extend beyond the visible main panel.
+**Medium — fixed.** The results grid below “Programme Summary (End of Project Estimation)” was fixed to three columns in an inline style. A later global `.summary-table th, .summary-table td` rule also applied a 100px minimum width and `white-space: nowrap` to both the compact summary cards and the 22-column monthly audit table. With the fixed sidebar, ordinary laptop and tablet widths could not accommodate the minimum content width, so cards and tables extended beyond the visible main panel.
 
-**Planned fix:** use a CSS auto-fitting results grid, allow compact summary cells to wrap, and scope wide no-wrap cells to the monthly audit table inside its existing horizontal scroll container. [ADR-0048](adr/0048-fit-programme-summary-to-viewport.md).
+**Fix:** the summary now uses a CSS auto-fitting grid, compact summary cells wrap, and wide no-wrap cells are scoped to the monthly audit table inside its local horizontal scroll container. [ADR-0048](adr/0048-fit-programme-summary-to-viewport.md). Resolved in `ffff787`.
 
 ---
 
