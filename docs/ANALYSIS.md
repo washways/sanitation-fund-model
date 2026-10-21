@@ -1087,7 +1087,7 @@ country-specific derivation still failed at the model boundary or violated a led
 the full model for every complete live country observation set, and fail the audit on any runtime or
 integrity problem. Add CI regressions for the derivation, incomplete evidence, and 384 deterministic
 valid parameter combinations. The 2026-10-21 live audit completed integrity-clean runs for all 44
-selector countries. Resolved in `[implementation commit]`.
+selector countries. Resolved in `627c090`.
 
 ---
 
