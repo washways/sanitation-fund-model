@@ -46,9 +46,9 @@ describe('input wiring', () => {
   test('the current changelog and known limitations are visible from the model', () => {
     assert.match(htmlSrc, /href="changelog\.html"/,
       'the dashboard must link to the on-site change record');
-    assert.match(changelogSrc, /Version 0\.8\.0/,
+    assert.match(changelogSrc, /Version 0\.9\.0/,
       'the on-site change record must identify the current release');
-    assert.match(changelogSrc, /<li>Blank, malformed, infinite[\s\S]*F-46 is resolved/,
+    assert.match(changelogSrc, /<li>CSV and clipboard reports[\s\S]*F-47 is resolved/,
       'the on-site change record must give users a simple bullet summary of the current release');
     assert.match(changelogSrc, /Known limitations requiring follow-up[\s\S]*Long-horizon warning[\s\S]*Constraint label question/,
       'remaining limitations must be visible, not buried in developer docs');

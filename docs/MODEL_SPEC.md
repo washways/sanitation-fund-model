@@ -491,6 +491,10 @@ A run is viable only if **all** hold:
 
 ## 11. KPI definitions
 
+### R-11.1 Export consistency **[AS-BUILT]** (F-47)
+
+Every export must describe one successfully calculated scenario. Its parameter block uses the input snapshot retained with that result, never the current form state. Reported investor liability and leverage use the canonical KPI values defined below; export code must not reconstruct them with parallel formulas.
+
 All computed in `ModelModule.computeKPIs`, which must be **pure**: no DOM access, no mutation of its arguments. (Today `UI.updateKPIs` mutates the returned object — see F-14.)
 
 | KPI | Definition | Status |

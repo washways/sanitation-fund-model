@@ -11,6 +11,20 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.9.0] — 2026-10-21 — Trustworthy scenario exports
+
+### Fixed
+
+- **Exports now describe the run that produced their results.** Every successful calculation retains an input snapshot. CSV and clipboard reports use it instead of rereading a form that may have been edited during the recalculation debounce. A pending edit can no longer relabel an older result. ([ADR-0038](docs/adr/0038-export-the-calculated-scenario.md), F-47)
+- **The copied balance sheet now reports the tracked senior liability.** It previously reconstructed liability as original loan minus principal repaid and omitted capitalised interest. In the audit stress run it reported $2.741m instead of $4.068m, a $1.328m understatement.
+- **Copied leverage now matches the canonical KPI and dashboard.** The stress report previously showed 0.8x from an unrelated formula; it now reports the model's 2.9x definition. Export code no longer maintains parallel formulas for either measure.
+
+### Golden movement
+
+None. The model, KPI definitions, all 21 recorded scenarios, and the post-fetch Malawi startup are unchanged; only exported provenance and reporting are corrected.
+
+---
+
 ## [0.8.0] — 2026-10-21 — Fail-fast input validation
 
 ### Fixed

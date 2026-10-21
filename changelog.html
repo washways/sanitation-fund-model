@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.8.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.9.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.9.0 — Scenario exports made self-consistent</h2>
+        <ul>
+            <li>CSV and clipboard reports now retain the exact assumptions used by the successful calculation, even if the form is edited before export.</li>
+            <li>The copied balance sheet now uses the model's tracked senior liability, including capitalised interest, instead of reconstructing a smaller number.</li>
+            <li>The copied leverage ratio now uses the same definition as the dashboard and canonical KPI.</li>
+            <li>Two new export regressions verify the scenario snapshot, senior liability, and leverage.</li>
+            <li>F-47 is resolved. Model outputs and the five-year Malawi reference result are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.8.0 — Invalid inputs stop before calculation</h2>
         <ul>
             <li>Blank, malformed, infinite, and mathematically invalid inputs now produce no model result instead of allowing NaN, Infinity, a crash, or a plausible-looking answer.</li>

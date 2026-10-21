@@ -358,12 +358,25 @@ console.log('='.repeat(80));
     'Zero household size, negative cost, 150% write-down, negative duration, and grace beyond term all return field-specific INVALID_INPUTS errors.');
 }
 
+// F-47 — exports must bind to the calculated scenario and canonical KPIs.
+{
+  const hasSnapshot = /results\.inputs = \{ \.\.\.inputs \}/.test(APP_SRC);
+  const usesSnapshot = /const inputs = this\.lastResults\.inputs/.test(APP_SRC)
+    && /const inputs = UI\.lastResults\.inputs/.test(APP_SRC);
+  const usesCanonicalLiability = /investorLiabilityEnd: k\.sustainability\.investorLiabilityEnd/.test(APP_SRC)
+    && /Investor Liability,\$\$\{stats\.investorLiabilityEnd\.toLocaleString\(\)\}/.test(APP_SRC);
+  const usesCanonicalLeverage = /Leverage Ratio,\$\{\(stats\.leverageRatio \|\| 0\)\.toFixed\(1\)\}x/.test(APP_SRC);
+  check('F-47', 'exports retain calculated inputs and canonical liability/leverage',
+    hasSnapshot && usesSnapshot && usesCanonicalLiability && usesCanonicalLeverage,
+    'Both export paths use lastResults.inputs; the clipboard report reads the tracked liability and canonical leverage KPI.');
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 46 of 46 resolved.');
+console.log('Findings register: 47 of 47 resolved.');
 console.log('Open modelling question: MODEL_SPEC R-7.6/Q14 (headline constraint reporting).');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

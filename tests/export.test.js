@@ -73,6 +73,8 @@ function makeApp() {
   };
 
   const alerts = [];
+  const clipboardWrites = [];
+  class BlobStub {}
   const sandbox = {
     document,
     window: { addEventListener() {} },
@@ -82,13 +84,23 @@ function makeApp() {
     structuredClone, Intl,
     Event: function Event() {},
     alert: (m) => alerts.push(String(m)),
+    Blob: BlobStub,
+    URL: { createObjectURL: () => 'blob:test' },
+    navigator: {
+      clipboard: {
+        writeText(text) {
+          clipboardWrites.push(String(text));
+          return Promise.resolve();
+        },
+      },
+    },
     Chart: function Chart() { return { destroy() {}, update() {} }; },
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(src + '\n;globalThis.__x = { UI, ModelModule, runCalculation };', sandbox, { filename: 'app-bundle.js' });
 
-  return { ...sandbox.__x, alerts, createdLinks };
+  return { ...sandbox.__x, alerts, createdLinks, clipboardWrites, el };
 }
 
 describe('CSV export (F-36)', () => {
@@ -123,6 +135,39 @@ describe('CSV export (F-36)', () => {
     const inputs = app.UI.getInputs();
     assert.ok(csv.includes(`GrantFund,$${inputs.investGrant}`),
       'CSV parameter block should show the real grant capital, not $undefined');
+  });
+
+  test('exports retain the input snapshot that produced the stored result (F-47)', () => {
+    const app = makeApp();
+    app.runCalculation(true);
+    const calculatedGrant = app.UI.lastResults.inputs.investGrant;
+
+    app.el('wiz-invest-grant-sidebar').value = '123';
+    app.UI.downloadCSV();
+    const href = app.createdLinks[0].attrs.href;
+    const csv = decodeURIComponent(href.replace('data:text/csv;charset=utf-8,', ''));
+
+    assert.ok(csv.includes(`GrantFund,$${calculatedGrant}`),
+      'the export must retain the grant capital used by the calculation');
+    assert.ok(!csv.includes('GrantFund,$123'),
+      'a pending form edit must not relabel an older result');
+  });
+
+  test('the copied balance sheet uses canonical liability and leverage KPIs (F-47)', () => {
+    const app = makeApp();
+    app.el('fundCostOfCapital').value = '20';
+    app.el('annualFixedOpsCost').value = '900000';
+    app.runCalculation(true);
+
+    const kpis = app.UI.lastResults.kpis;
+    assert.ok(kpis.sustainability.capitalisedInterest > 0,
+      'control scenario must capitalise interest so the old liability reconstruction differs');
+    app.UI.copyAnalysisReport();
+
+    assert.strictEqual(app.clipboardWrites.length, 1);
+    const report = app.clipboardWrites[0];
+    assert.ok(report.includes(`  Investor Liability,$${kpis.sustainability.investorLiabilityEnd.toLocaleString()}`));
+    assert.ok(report.includes(`Leverage Ratio,${kpis.financials.leverage.toFixed(1)}x`));
   });
 
   test('UI.downloadCSV() is defined exactly once', () => {

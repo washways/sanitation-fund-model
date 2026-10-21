@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.8.0 — fail-fast input validation |
+| **Release** | 0.9.0 — trustworthy scenario exports |
 | **Stages complete** | S0, S1, S2, S3, S5; S4 solver correctness complete, other S4 work and S6 remain |
-| **Tests** | ✅ 94 pass, 0 todo, 0 fail (`npm test`, ~1s) |
+| **Tests** | ✅ 96 pass, 0 todo, 0 fail (`npm test`, ~1s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
-| **Findings register** | ✅ 46 of 46 resolved |
+| **Findings register** | ✅ 47 of 47 resolved |
 | **Open modelling question** | MODEL_SPEC R-7.6: whether the headline constraint label should derive directly from the production minimum |
 
 ## What remains unresolved
@@ -63,6 +63,12 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 - A failed browser rerun reports all detected fields together, clears the prior result, and leaves no scenario available for export or advice.
 - Bounds are mathematical or definitional only. Do not add unsupported policy caps. See [ADR-0037](docs/adr/0037-fail-fast-input-validation.md).
 
+## Export contract
+
+- Every successful run retains the input snapshot that produced it; exports never reread a possibly edited form.
+- Clipboard liability and leverage come directly from their canonical KPIs. Do not reconstruct model measures inside export code.
+- The stressed export regression catches the former $1.328m liability understatement. See [ADR-0038](docs/adr/0038-export-the-calculated-scenario.md).
+
 ## Environment
 
 Node is not on `PATH` on the maintainer's machine:
@@ -80,4 +86,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.8.0 closed F-46 under [ADR-0037](docs/adr/0037-fail-fast-input-validation.md). Invalid scenarios now stop before simulation, all detected fields are reported together, and a failed rerun cannot leave an older result exportable. All valid goldens and the five-year Malawi reference headlines are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.9.0 closed F-47 under [ADR-0038](docs/adr/0038-export-the-calculated-scenario.md). CSV and clipboard reports now retain the calculated assumptions and use canonical senior-liability and leverage figures. All model outputs and the five-year Malawi reference headlines are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

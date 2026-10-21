@@ -100,7 +100,7 @@ Start with **[STATUS.md](STATUS.md)** — it's the one-page current snapshot, an
 | **[docs/TESTING.md](docs/TESTING.md)** | How the test suite is built and how to extend it. |
 | **[docs/ROADMAP.md](docs/ROADMAP.md)** | Remaining stages (S4 items 2-4, S6), each with an entry and exit gate. |
 | **[docs/adr/](docs/adr/README.md)** | One decision record per behaviour change or modelling choice — the *why* behind the changelog's *what*. Indexed. |
-| **[docs/ANALYSIS.md](docs/ANALYSIS.md)** | The audit register: 46 findings with evidence and resolutions. Historical record — for current behaviour, use `MODEL_SPEC.md`. |
+| **[docs/ANALYSIS.md](docs/ANALYSIS.md)** | The audit register: 47 findings with evidence and resolutions. Historical record — for current behaviour, use `MODEL_SPEC.md`. |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | Mechanics of making a change: branch, test, commit. |
 | **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** | How to release, and what breaks under a subpath. |
 | `methodology.html` | User-facing explainer, served with the app, kept in step with `MODEL_SPEC.md`. |
@@ -119,7 +119,7 @@ methodology.html     user-facing methodology note
 server.js             dev static server
 eslint.config.js      3 rules: no-dupe-keys, no-undef, no-unused-vars
 
-tests/                11 suites, 94 tests, 21 recorded golden scenarios
+tests/                11 suites, 96 tests, 21 recorded golden scenarios
 vendor/                pinned Chart.js, for offline use
 tools/                 headless model loader, app-source file list, audit verification
 docs/                  spec, parameters, architecture, testing, roadmap, ADRs, audit

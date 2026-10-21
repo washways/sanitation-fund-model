@@ -354,6 +354,10 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
         let inputs = UI.getInputs();
         let results = ModelModule.calculate(inputs);
 
+        // Bind reporting to the scenario that actually ran. Export code must not
+        // reread a form that may have been edited since this calculation (F-47).
+        results.inputs = { ...inputs };
+
         // --- Execute Solvers (If Enabled) ---
         if (inputs.enableBreakEvenSolver) {
             results.breakEvenRate = ModelModule.solveBreakEven(inputs);

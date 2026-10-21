@@ -25,6 +25,7 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | Post-S5 audit — 2026-10-20 | Recalibrated Malawi defaults from primary evidence; restricted country loading to dated observations; stopped local CPI, commercial lending, poverty, governance, and third-party district data from silently setting programme assumptions; honored explicit 0% write-downs; corrected demand recurrence order. | API data writes only target population, population growth, and income. Missing essentials clear fields and pause. DALYs/carbon default to zero without evidence. |
 | S6 debt robustness — 2026-10-21 | Completed capitalised-interest catch-up and terminal senior settlement; added direct waterfall tests and liability reconciliation. | Pay old capitalised interest, then current interest, then original principal. At wind-up use loan cash only, never grant cash; freeze after the terminal transfer. INV-20/21 must remain green. |
 | S6 input boundary — 2026-10-21 | Added pure fail-fast validation and one combined browser message; blank fields no longer restore hidden defaults, and failed reruns clear stale results. | Invalid inputs never enter month 1. Preserve `NaN` from blank/malformed fields until validation; never clamp, silently fall back, or add unsupported policy caps. |
+| S6 export integrity — 2026-10-21 | Bound CSV/clipboard reports to each successful run's input snapshot and canonical liability/leverage KPIs. | Exports never reread the live form or reconstruct a KPI. Add a canonical model/KPI field first, then report it. |
 
 The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) and [docs/adr/](docs/adr/). Never edit an accepted ADR; supersede it.
 
@@ -55,5 +56,6 @@ CPI, commercial lending, poverty, Gini, and sanitation levels are context. Do no
 - Senior debt must reconcile as initial principal − principal repaid + interest capitalised − capitalised interest repaid. INV-20 pins this identity.
 - Wind-up accelerates original principal and applies positive loan-ledger cash before freezing. The grant ledger remains ring-fenced. INV-21 pins this rule.
 - `ModelModule.validateInputs()` owns structural validation. It rejects invalid scenarios before allocation; the UI must surface every field together and clear `UI.lastResults` on failure. Do not turn validation into an assumptions engine.
+- `UI.lastResults.inputs` is the reporting provenance for a successful run. Exporting current DOM values can silently combine one scenario's assumptions with another scenario's results.
 
 This model informs funding decisions. A plausible wrong number is worse than an obvious crash.

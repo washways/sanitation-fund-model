@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 46 of 46 findings resolved as of 2026-10-21. F-38–F-43 were fixed with ADR-0034/0035; F-44/F-45 were fixed together under ADR-0036; F-46 was fixed under ADR-0037. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 47 of 47 findings resolved as of 2026-10-21. F-47 was fixed under ADR-0038. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,6 +54,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
+| ✅ [F-47](#f-47--exports-can-describe-a-different-scenario-and-liability) | **High** | Export | Exports reread live inputs and the copied report misstates senior liability and leverage | src, run | S6 |
 | ✅ [F-46](#f-46--invalid-inputs-enter-the-loop-and-can-look-plausible) | **Critical** | Inputs | Invalid or blank inputs can create NaN, Infinity, crashes, or plausible-looking output | run | S6 |
 | ✅ [F-45](#f-45--wind-up-can-freeze-cash-before-settling-investor-liability) | **High** | Core | Wind-up can freeze positive loan cash while senior liability remains outstanding | run | Post-S5 |
 | ✅ [F-44](#f-44--capitalised-interest-is-never-scheduled-for-catch-up) | **High** | Core | Capitalised interest grows the liability but is never scheduled for catch-up repayment | src, run | Post-S5 |
@@ -976,6 +977,12 @@ Following that advice makes the outcome worse. The advisor was written against a
 **Critical — fixed.** The UI silently replaced blank or malformed values with hidden defaults, while the pure calculation accepted values outside the domain of its equations. Reproduced cases included a 150% annual write-down producing dozens of `NaN` values while viability remained true, zero household size producing an infinite demand backlog beside plausible finances, a negative toilet cost passing integrity, negative duration crashing with `Invalid array length`, and grace longer than the debt term silently scheduling no principal.
 
 **Fix:** `ModelModule.validateInputs()` now applies the mathematical and definitional contract before arrays are allocated or month 1 runs. It reports every invalid field, throws the typed `INVALID_INPUTS` error, and deliberately avoids unsupported policy caps. Blank/malformed browser values remain invalid, the controller reports all problems together, and a failed rerun clears the prior result. Four pure-boundary tests and one controller regression pin the behavior. [ADR-0037](adr/0037-fail-fast-input-validation.md). Resolved in `5757dd0`.
+
+### F-47 — Exports can describe a different scenario and liability
+
+**High — fixed.** Both export paths reread the live form rather than retaining the inputs that produced `UI.lastResults`. A valid edit made immediately before export could therefore put new assumptions above old monthly results. The clipboard analysis also reconstructed investor liability as initial loan minus original principal repaid, omitting capitalised interest, and recomputed leverage with a formula different from the canonical KPI. In the audit stress, liability was understated by $1,327,694 and leverage was shown as 0.8x instead of 2.9x.
+
+**Fix:** every successful controller run retains its input snapshot; both exports use it. The clipboard report takes ending investor liability and leverage directly from their canonical KPIs. Two regressions pin edit-before-export provenance and the stressed balance sheet. [ADR-0038](adr/0038-export-the-calculated-scenario.md). Resolution commit pending.
 
 ---
 

@@ -16,7 +16,8 @@ Object.assign(UI, {
         }
 
         // Phase 35: Enhanced Export (Parameters)
-        const inputs = UI.getInputs();
+        const inputs = this.lastResults.inputs;
+        if (!inputs) throw new Error('Calculated input snapshot is unavailable. Re-run the model.');
         const s = this.lastResults.series;
         const paramRows = [
             `Parameter,Value`,
@@ -137,7 +138,8 @@ Object.assign(UI, {
                 return;
             }
 
-            const inputs = UI.getInputs();
+            const inputs = UI.lastResults.inputs;
+            if (!inputs) throw new Error('Calculated input snapshot is unavailable. Re-run the model.');
             const s = UI.lastResults.series;
 
             // ROBUST DATA SOURCE
@@ -175,6 +177,7 @@ Object.assign(UI, {
                 capitalPreserved: k.financials.capitalPreservedPct, // Legacy 
                 grantEquityMultiple: k.financials.grantEquityMultiple,
                 investorRepaidPct: k.financials.investorRepaidPct,
+                investorLiabilityEnd: k.sustainability.investorLiabilityEnd,
 
                 minCash: Math.min(...UI.lastResults.series.dataMonthlyCashBalance),
                 insolvencyMonths: k.sustainability.monthsInsolvent,
@@ -311,7 +314,7 @@ Object.assign(UI, {
             lines.push(`  Gross Portfolio (Loans),$${(stats.portfolio?.outstanding || 0).toLocaleString()}`);
             lines.push(`  Total Assets,$${((stats.fundBalance || 0) + (stats.portfolio?.outstanding || 0)).toLocaleString()}`);
             lines.push(`Liabilities`);
-            lines.push(`  Investor Liability,$${((inputs.investLoan || 0) - (stats.principalRepaid || 0)).toLocaleString()}`);
+            lines.push(`  Investor Liability,$${stats.investorLiabilityEnd.toLocaleString()}`);
             lines.push(`Net Equity`);
             lines.push(`  Net Assets,$${(stats.financials?.netAssets || 0).toLocaleString()}`);
 
@@ -320,7 +323,7 @@ Object.assign(UI, {
             lines.push(`Total Cash Deployed / Latrine,$${(stats.costPerLatrine || 0).toFixed(2)}`);
             lines.push(`Economic Cost / Latrine,$${(stats.economicCostPerLatrine || 0).toFixed(2)}`);
             lines.push(`Effective Cost / Latrine,$${(stats.effectiveCostPerLatrine || 0).toFixed(2)}`);
-            lines.push(`Leverage Ratio,${(inputs.investGrant > 0 ? (((stats.loanToiletsVal || 0) + (stats.grantToiletsVal || 0)) / (inputs.investGrant + (inputs.investLoan || 0))).toFixed(1) : "Infinite")}x`);
+            lines.push(`Leverage Ratio,${(stats.leverageRatio || 0).toFixed(1)}x`);
             lines.push(`SROI Ratio,${(stats.sroi || 0).toFixed(1)}x`);
 
             // Copy

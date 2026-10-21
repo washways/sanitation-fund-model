@@ -42,3 +42,4 @@ For the short version of what each one decided, [CHANGELOG.md](../../CHANGELOG.m
 | [0035](0035-zero-writedowns-and-demand-order.md) | Honor zero write-downs and the specified demand recurrence |
 | [0036](0036-complete-investor-debt-waterfall.md) | Pay interest arrears and settle available loan cash at wind-up |
 | [0037](0037-fail-fast-input-validation.md) | Reject invalid inputs before simulation instead of producing plausible corruption |
+| [0038](0038-export-the-calculated-scenario.md) | Export the calculated input snapshot and canonical KPIs |
