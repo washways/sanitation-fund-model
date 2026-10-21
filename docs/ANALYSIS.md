@@ -926,37 +926,37 @@ Following that advice makes the outcome worse. The advisor was written against a
 
 **Critical — fixed.** The DOM stub stored one handler per event while a browser stores all of them. Later handlers replaced earlier ones, so the test never exercised the complete startup path. With browser-faithful listener arrays, the real handler was seen setting grant pacing to Malawi's 75.4% poverty observation despite ADR-0018.
 
-**Fix:** the harness retains and dispatches every listener. `tests/startup.test.js` now pins the exact post-fetch programme assumptions as well as viability. [ADR-0034](adr/0034-observations-only-country-data.md).
+**Fix:** the harness retains and dispatches every listener. `tests/startup.test.js` now pins the exact post-fetch programme assumptions as well as viability. [ADR-0034](adr/0034-observations-only-country-data.md). Resolved in `f38abc3`.
 
 ### F-39 — Country observations were converted into programme policy
 
 **Critical — fixed.** The loader converted local CPI and commercial lending into loan pricing, poverty into grant pacing and write-downs, `PV.EST` into contingency, income into cost tiers, and country identity into fixed operating-cost formulas. Several mappings were dimensionally wrong: local-currency CPI was applied to USD-labelled cashflows, and the approximately -2.5-to-2.5 WGI estimate was treated as a 0-to-100 percentile.
 
-**Fix:** API values now populate only directly observed target population, population growth, and income. Dated CPI, lending, poverty, Gini, and sanitation values are context. Financing, policy, loss, cost, and capacity assumptions remain editable programme choices. [ADR-0034](adr/0034-observations-only-country-data.md).
+**Fix:** API values now populate only directly observed target population, population growth, and income. Dated CPI, lending, poverty, Gini, and sanitation values are context. Financing, policy, loss, cost, and capacity assumptions remain editable programme choices. [ADR-0034](adr/0034-observations-only-country-data.md). Resolved in `f38abc3`.
 
 ### F-40 — Country data could be stale, mixed-level, or carried between countries
 
 **High — fixed.** `MRV=5` requested five calendar periods rather than the latest non-empty observation, losing Malawi's latest 2019 poverty and Gini values. The administrative-unit service returned 27 districts plus three regions while omitting Neno, producing 30 instead of Malawi's official 28. If a new country lacked an indicator, the prior country's form value could survive.
 
-**Fix:** World Bank requests use `mrnev=1`, observation labels/years are retained, the mixed-level administrative API was removed, stale requests cannot win a race, and missing essentials clear fields and pause automatic calculation. A live audit of all 44 selector countries showed why this matters: core coverage is not universal and lending, poverty, and Gini are missing for many countries. [ADR-0034](adr/0034-observations-only-country-data.md).
+**Fix:** World Bank requests use `mrnev=1`, observation labels/years are retained, the mixed-level administrative API was removed, stale requests cannot win a race, and missing essentials clear fields and pause automatic calculation. A live audit of all 44 selector countries showed why this matters: core coverage is not universal and lending, poverty, and Gini are missing for many countries. [ADR-0034](adr/0034-observations-only-country-data.md). Resolved in `f38abc3`.
 
 ### F-41 — Malawi impact and market defaults made unsupported claims
 
 **High — fixed.** The reference scenario combined stale population/income values, five people per rural household, 50 administrative units, a $2,000 enterprise loan, an 18-month household term, and non-zero DALY assumptions without a cited Malawi programme basis.
 
-**Fix:** Malawi now uses dated World Bank observations and primary programme evidence for household size, 28 districts, enterprise capital, 12-month terms, toilet cost, time saved, and value of time. Unsupported DALY and carbon impacts default to zero. Remaining financing, operating, loss, and capacity values are labelled illustrative rather than presented as country facts. [ADR-0034](adr/0034-observations-only-country-data.md).
+**Fix:** Malawi now uses dated World Bank observations and primary programme evidence for household size, 28 districts, enterprise capital, 12-month terms, toilet cost, time saved, and value of time. Unsupported DALY and carbon impacts default to zero. Remaining financing, operating, loss, and capacity values are labelled illustrative rather than presented as country facts. [ADR-0034](adr/0034-observations-only-country-data.md). Resolved in `f38abc3`.
 
 ### F-42 — Explicit zero write-downs were replaced by non-zero defaults
 
 **High — fixed.** `inputs.hhDefaultRate || 0.05` and its enterprise equivalent treat a valid zero as missing. The golden scenario named “zero defaults” therefore still wrote down both portfolios; its old test reimplemented the formula rather than executing `calculate()`.
 
-**Fix:** nullish fallbacks preserve 0%, and a full-model regression requires both write-off series to sum to exactly zero. [ADR-0035](adr/0035-zero-writedowns-and-demand-order.md).
+**Fix:** nullish fallbacks preserve 0%, and a full-model regression requires both write-off series to sum to exactly zero. [ADR-0035](adr/0035-zero-writedowns-and-demand-order.md). Resolved in `f38abc3`.
 
 ### F-43 — Demand growth was applied after production
 
 **Medium — fixed.** R-7.1 specifies `prior backlog × growth − current production`; the loop did `(prior backlog − current production) × growth`. It understated demand by `current production × monthly growth` every month.
 
-**Fix:** growth is applied before production and `dataMonthlyBacklog` exposes the recurrence for INV-19. [ADR-0035](adr/0035-zero-writedowns-and-demand-order.md).
+**Fix:** growth is applied before production and `dataMonthlyBacklog` exposes the recurrence for INV-19. [ADR-0035](adr/0035-zero-writedowns-and-demand-order.md). Resolved in `f38abc3`.
 
 ### F-44 — Capitalised interest is never scheduled for catch-up
 
