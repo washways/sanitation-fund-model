@@ -21,7 +21,7 @@ Progress is tracked in [STATUS.md](../STATUS.md), which is the first file to rea
 | **S1** | Silent-wrongness fixes | ✅ Complete — 9 findings closed | Low | S0 |
 | **S2** | Give the user back control | ✅ Complete — 8 findings closed | Medium | S1 |
 | **S3** | Model correctness | ✅ Complete — 12 findings closed | High | S2 |
-| **S4** | Decision support | In progress — solvers and actual constraint reporting done; items 2-4 remain | Medium | S3 |
+| **S4** | Decision support | In progress — solvers, constraint reporting and sensitivity done; items 2 and 4 remain | Medium | S3 |
 | **S5** | Structure | ✅ Done — enables everything after (2 files exceed 500 lines, documented) | Medium | S3 |
 | **S6** | Presentation and reach | In progress — public changelog, advice and monthly-table integrity landed | Low | S5 |
 
@@ -56,10 +56,10 @@ The one thing worth restating because it shaped everything after it: **S2 had to
 | 1 | ✅ **Robust solvers.** Grid scan for the true extremum, then bisect the adjacent cell; return `{ ok, value, reason }`; never report failure as a value. Done 2026-08-25, [ADR-0032](adr/0032-grid-then-bisect-solvers.md). | **F-27** |
 | 1b | ✅ **Actual production constraints.** Rank primary and secondary bottlenecks from foregone output in the production allocation itself; retain mixed months and separate grant-capital pressure. Done 2026-10-21, [ADR-0044](adr/0044-report-actual-production-constraints.md). | Q14 / R-7.6 |
 | 2 | **Cache/debounce solvers.** ADR-0032 roughly doubled simulation cost while fixing correctness (22 → up to 47 per recalc with the solver panel on). Still cheap in absolute terms at the shipped horizon, but caching across recalculations is not written. | F-27 |
-| 3 | **Evidence-bounded sensitivity analysis.** One-at-a-time tornado over the top 8 parameters. Use only documented source ranges or explicit user-supplied low/high values; do not invent a uniform percentage shock. This approach was selected by the model owner on 2026-10-21. | — |
+| 3 | ✅ **Evidence-bounded sensitivity analysis.** Pure one-at-a-time engine and deterministic JSON CLI for up to eight sourced or user-supplied ranges; invalid and undocumented bounds are refused. Done 2026-10-21, [ADR-0045](adr/0045-require-evidence-bounded-sensitivity.md). | — |
 | 4 | **Scenario save/load/compare** as transparent JSON. Reproducibility for board papers; selected as the next user-facing feature after sensitivity analysis on 2026-10-21. | — |
 
-**Exit gate:** solvers return typed results and are tested against known-non-monotonic scenarios — done, see `tests/solver.test.js` and ADR-0032's measured sweep. Sensitivity output is reproducible from the CLI (items 2-4 still open).
+**Exit gate:** solvers return typed results and are tested against known-non-monotonic scenarios — done, see `tests/solver.test.js` and ADR-0032's measured sweep. Sensitivity output is reproducible from the CLI — done, see `npm run sensitivity -- <bounds.json>` and ADR-0045. Items 2 and 4 remain.
 
 ---
 

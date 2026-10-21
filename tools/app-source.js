@@ -6,7 +6,7 @@
  * the browser's Script Environment Record — the same way one big app.js already worked,
  * just spread across files now instead of one. index.html's `<script>` tags MUST appear
  * in this exact order, and if you add, remove or reorder a file here, update index.html
- * to match (there is no test that can see both — index.html is HTML, this is JS).
+ * to match. tests/wiring.test.js parses both lists and enforces the equality.
  *
  * Every test harness that used to do `fs.readFileSync('app.js')` reads this list instead,
  * via `concatenated()` — that reproduces exactly what the browser sees: one script's worth
@@ -23,6 +23,7 @@ const FILES = [
   'src/data/stakeholders.js',
   'src/model/engine.js',
   'src/model/kpis.js',
+  'src/model/sensitivity.js',
   'src/model/solvers.js',
   'src/model/invariants.js',
   'src/ui/inputs.js',

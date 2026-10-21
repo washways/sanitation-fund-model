@@ -49,3 +49,4 @@ For the short version of what each one decided, [CHANGELOG.md](../../CHANGELOG.m
 | [0042](0042-chart-annual-grants-as-flows.md) | Chart annual grant spending as flows, not cumulative balances |
 | [0043](0043-report-final-partial-year.md) | Retain the final partial year in reporting |
 | [0044](0044-report-actual-production-constraints.md) | Rank constraints from actual foregone production and expose secondary causes |
+| [0045](0045-require-evidence-bounded-sensitivity.md) | Require sourced or user-supplied bounds for one-at-a-time sensitivity |

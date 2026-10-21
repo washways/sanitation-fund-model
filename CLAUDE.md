@@ -32,6 +32,7 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | S6 chart integrity — 2026-10-21 | Corrected annual grant bars that differenced yearly flows and created fictitious positive income. The smoke harness now captures Chart.js configs. | `dataGrants` is an annual flow: negate once. Reconcile chart datasets to canonical model series rather than inferring their semantics from comments. |
 | S6 partial-period reporting — 2026-10-21 | Added one canonical annual-period recorder for complete years and the final partial year; sub-year scenarios now render charts. | Duration is month-granular. Never drop months after the last 12-month boundary; label partial periods explicitly and reconcile them to monthly series. |
 | S4 constraint reporting — 2026-10-21 | Resolved R-7.6/Q14: monthly and headline constraints now derive from actual foregone production, retain mixed causes, and expose grant and loan capital separately. | `capacity + loanCapital` must reconcile demand to production. Grant-capital recovery overlaps loan-capital loss and must never be added to that partition. Viability remains a separate verdict. |
+| S4 sensitivity — 2026-10-21 | Added a pure, deterministic one-at-a-time engine and JSON CLI for up to eight evidence-bounded parameters. | Every low/high pair must bracket base, pass normal validation, and carry a source. Never add built-in generic shocks, undocumented country ranges, timestamps, network fetches, or mutation. |
 
 The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) and [docs/adr/](docs/adr/). Never edit an accepted ADR; supersede it.
 
@@ -56,7 +57,7 @@ CPI, commercial lending, poverty, Gini, and sanitation levels are context. Do no
 ## Owner decisions — 2026-10-21
 
 - R-7.6/Q14 is closed by [ADR-0044](docs/adr/0044-report-actual-production-constraints.md): rank actual foregone monthly output, show secondary causes, and use `Mixed` when constraints apply together.
-- Build sensitivity analysis as evidence-bounded one-at-a-time comparisons. A bound must come from a documented source or explicit user input; never invent one uniform percentage shock.
+- Sensitivity is evidence-bounded one-at-a-time analysis, implemented in [ADR-0045](docs/adr/0045-require-evidence-bounded-sensitivity.md). A bound must come from a documented source or explicit user input; never invent one uniform percentage shock.
 - Keep the adverse 20-year Malawi result visible as a stress finding. Do not tune assumptions merely to force long-run viability.
 - Keep the engine explicitly USD-only for now. Any later local-currency display needs dated user-supplied conversion logic and an ADR; never apply a live spot rate to the whole multi-year path.
 - After sensitivity analysis, prioritize transparent JSON scenario save/load/compare before board-paper PDF or offline/mobile expansion.
@@ -67,6 +68,7 @@ CPI, commercial lending, poverty, Gini, and sanitation levels are context. Do no
 - `0` is a valid rate. Use nullish/presence checks, not `x || default`.
 - Demand recurrence is grow carried backlog, then subtract current production. INV-19 pins it through `dataMonthlyBacklog`.
 - Constraint reporting is production diagnostics, not viability. Do not restore the old ending-cash/insolvency heuristic or collapse secondary causes into one forced label.
+- Sensitivity specifications are data provenance. Do not silently fill a missing source or range, and do not treat the synthetic test fixture as a Malawi assumption.
 - Senior debt must reconcile as initial principal − principal repaid + interest capitalised − capitalised interest repaid. INV-20 pins this identity.
 - Wind-up accelerates original principal and applies positive loan-ledger cash before freezing. The grant ledger remains ring-fenced. INV-21 pins this rule.
 - `ModelModule.validateInputs()` owns structural validation. It rejects invalid scenarios before allocation; the UI must surface every field together and clear `UI.lastResults` on failure. Do not turn validation into an assumptions engine.

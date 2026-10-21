@@ -12,9 +12,9 @@ It answers three questions:
 
 ## Status
 
-Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **105 automated tests and 21 characterisation scenarios.** Known limitations are listed in [STATUS.md](STATUS.md) and the on-site [changelog](changelog.html).
+Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **110 automated tests and 21 characterisation scenarios.** Known limitations are listed in [STATUS.md](STATUS.md) and the on-site [changelog](changelog.html).
 
-**What's genuinely unresolved:** all 52 registered defects and all 14 modelling questions are resolved. Evidence-bounded sensitivity analysis, scenario comparison, and real-browser chart/advisor checks remain roadmap work. See [STATUS.md](STATUS.md).
+**What's genuinely unresolved:** all 52 registered defects and all 14 modelling questions are resolved. Scenario comparison, solver caching, and real-browser chart/advisor checks remain roadmap work. Evidence-bounded sensitivity is available through the deterministic JSON CLI. See [STATUS.md](STATUS.md).
 
 **If you have output from before 2026-08-21, re-run it.** Several corrections that session moved real numbers (see the changelog); a result generated earlier is not comparable to one generated now.
 
@@ -51,12 +51,13 @@ npm ci            # installs ESLint, the one devDependency — needed once
 npm test
 ```
 
-Twelve suites, zero flakiness, about four seconds: **constraint reporting**, **debt waterfall**, **golden** (did any of 21 recorded scenarios move), **input validation**, **invariants** (does the ledger stay internally consistent, across a scenario matrix), **purity** (is the model DOM-free), **smoke** (does the whole app run end to end without throwing), **solver**, **startup** (what does a user opening the page actually get once the country fetch has run), **wiring**, **write-down**, and **export**.
+Thirteen suites, zero flakiness, about four seconds: **constraint reporting**, **debt waterfall**, **export**, **golden**, **input validation**, **invariants**, **purity**, **sensitivity**, **smoke**, **solver**, **startup**, **wiring**, and **write-down**.
 
 ```bash
 npm run golden:diff   # would any model output change, without writing anything?
 npm run verify        # re-run the audit's original measurements against the live model
 npm run lint           # ESLint
+npm run sensitivity -- tests/fixtures/sensitivity-bounds-test.json  # synthetic CLI example only
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of the above on every push and PR against `main`, on Node 20 and 22.
@@ -98,7 +99,7 @@ Start with **[STATUS.md](STATUS.md)** — it's the one-page current snapshot, an
 | **[docs/PARAMETERS.md](docs/PARAMETERS.md)** | Every input: unit, range, source, meaning. Check before touching a field. |
 | **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | Current code shape, the target shape, and the constraints that keep it buildless. |
 | **[docs/TESTING.md](docs/TESTING.md)** | How the test suite is built and how to extend it. |
-| **[docs/ROADMAP.md](docs/ROADMAP.md)** | Remaining stages (S4 items 2-4, S6), each with an entry and exit gate. |
+| **[docs/ROADMAP.md](docs/ROADMAP.md)** | Remaining stages (S4 solver caching and scenario comparison, plus S6), each with an entry and exit gate. |
 | **[docs/adr/](docs/adr/README.md)** | One decision record per behaviour change or modelling choice — the *why* behind the changelog's *what*. Indexed. |
 | **[docs/ANALYSIS.md](docs/ANALYSIS.md)** | The audit register: 52 findings with evidence and resolutions. Historical record — for current behaviour, use `MODEL_SPEC.md`. |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | Mechanics of making a change: branch, test, commit. |
@@ -108,9 +109,9 @@ Start with **[STATUS.md](STATUS.md)** — it's the one-page current snapshot, an
 ## Repository layout
 
 ```
-index.html          the form and dashboard — loads src/ as 14 classic <script> tags
+index.html          the form and dashboard — loads src/ as 15 classic <script> tags
 src/                 model + KPIs + solvers + UI + controller, split S5 (ADR-0033)
-  model/               pure — no DOM. engine.js, kpis.js, solvers.js, invariants.js
+  model/               pure — engine, KPIs, sensitivity, solvers, invariants; no DOM
   ui/                  inputs.js, kpis.js, charts.js, tables.js, export.js, advisor.js
   data/                worldbank.js, countries.js, stakeholders.js
   app.js               controller and wiring only
@@ -119,7 +120,7 @@ methodology.html     user-facing methodology note
 server.js             dev static server
 eslint.config.js      3 rules: no-dupe-keys, no-undef, no-unused-vars
 
-tests/                12 suites, 105 tests, 21 recorded golden scenarios
+tests/                13 suites, 110 tests, 21 recorded golden scenarios
 vendor/                pinned Chart.js, for offline use
 tools/                 headless model loader, app-source file list, audit verification
 docs/                  spec, parameters, architecture, testing, roadmap, ADRs, audit

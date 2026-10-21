@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.15.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.16.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.16.0 — Evidence-bounded sensitivity analysis</h2>
+        <ul>
+            <li>A reproducible one-at-a-time sensitivity tool now compares low, base, and high cases for up to eight parameters and ranks them by the selected outcome swing.</li>
+            <li>Every range must include an explicit source, bracket the base value, and pass the same validation as an ordinary model run. Invalid or undocumented ranges are refused.</li>
+            <li>No generic percentage shock, undocumented Malawi range, probability distribution, or live data fetch is built in.</li>
+            <li>Every case reports net assets, ending and minimum cash, toilets, senior repayment, SROI, and viability in deterministic JSON suitable for audit.</li>
+            <li>The base model is unchanged: all 21 recorded scenarios and the standard Malawi result retain exactly the same values.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.15.0 — Production constraints follow actual output</h2>
         <ul>
             <li>The production-constraint headline now uses the same demand, enterprise-capacity, grant, loan, and final-output quantities as the monthly production calculation.</li>
@@ -154,7 +165,7 @@
         <h2>Known limitations requiring follow-up</h2>
         <ul>
             <li><strong>Long-horizon warning:</strong> the sourced 12-month Malawi household term makes the five-year reference run viable, but the current 20-year stress scenario eventually becomes insolvent because lower interest earned per loan does not cover indefinite operating costs. This result is disclosed rather than tuned away.</li>
-            <li><strong>Decision-support roadmap:</strong> evidence-bounded sensitivity analysis and transparent JSON scenario comparison remain to be built. Generic percentage shocks will not be presented as evidence.</li>
+            <li><strong>Decision-support roadmap:</strong> sensitivity is currently a deterministic JSON tool; an on-page sensitivity view and transparent JSON scenario save/load/compare remain to be built.</li>
             <li><strong>Currency:</strong> the model remains explicitly USD-only. It does not apply a spot exchange rate to multi-year cashflows or model exchange-rate risk.</li>
             <li><strong>Calibration:</strong> financing, operating-cost, loss, capacity, contingency, and subsidy assumptions remain illustrative until replaced with programme evidence.</li>
         </ul>

@@ -3,7 +3,7 @@
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # Node is not on PATH
 npm ci                 # installs ESLint, the one devDependency — needed once
-npm test              # 105 tests, ~4s
+npm test              # 110 tests, ~4s
 npm run test:watch    # re-run on change
 npm run golden:diff   # what would move, without writing
 npm run verify        # reproduce the audit findings
@@ -13,7 +13,7 @@ No test framework, no bundler, no `node_modules`. The suite uses Node's built-in
 
 ---
 
-## Why twelve kinds of test
+## Why thirteen kinds of test
 
 This codebase's git history contains eight "Fix TypeError" commits from before the suite existed — each a defect found by a user in a browser. The suite is shaped around the distinct ways this particular model goes wrong; no one suite subsumes another.
 
@@ -31,6 +31,7 @@ This codebase's git history contains eight "Fix TypeError" commits from before t
 | `solver.test.js` | A solver silently converging on a wrong or fake-zero answer where the model isn't monotone | *When there's no feasible answer, does the tool say so instead of guessing?* |
 | `purity.test.js` | A DOM or browser dependency leaking into `src/model/` | *Can the model run as a pure calculation with no stub?* |
 | `constraint-reporting.test.js` | A headline constraint drifting away from the production allocation it explains | *Do monthly losses reconcile demand to production, and does the headline rank those actual losses?* |
+| `sensitivity.test.js` | Undocumented ranges, mutation, non-reproducible ranking, or sensitivity output that disagrees with direct runs | *Does every low/high result come from a valid, explicitly sourced scenario?* |
 
 A historical example of why this matters: an early defect made the fund's cost of capital permanently zero, yet it passed every invariant and every golden test — the model was perfectly self-consistent and perfectly stable at the wrong answer. Only a wiring-style check finds that class of bug. Equally, several of this project's early crashes were in the render path, where the model was fine and the UI reading it was not; only a smoke test finds those.
 
@@ -40,12 +41,13 @@ A historical example of why this matters: an early defect made the fund's cost o
 
 The failure mode: `getRaw()` returns its default when `document.getElementById()` returns `null`. A renamed or deleted input silently becomes a hardcoded constant. Nothing throws, nothing warns, the model runs, the answer is wrong.
 
-Four checks:
+Five checks:
 
 1. Every id read by `UI.getInputs()` exists in `index.html`.
 2. Every id touched anywhere in the app (`src/`, see `tools/app-source.js`) exists in `index.html`.
 3. No parameter is collected from the user and then never read by `ModelModule`.
 4. `tools/baseline-inputs.js` still mirrors the `value=""` attributes in `index.html`.
+5. The `src/` script tags in `index.html` exactly match `tools/app-source.js`, in order.
 
 Check 4 matters more than it looks: if the golden scenarios drift from the shipped defaults, the whole golden suite is measuring a scenario no user will ever see.
 

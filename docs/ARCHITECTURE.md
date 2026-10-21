@@ -21,6 +21,7 @@ index.html ──▶ style.css
            ──▶ src/data/stakeholders.js   static reference data (unused, F-19 baseline)
            ──▶ src/model/engine.js        ModelModule core — rate/annuity helpers, the month loop. Pure.
            ──▶ src/model/kpis.js          computeKPIs. Pure.
+           ──▶ src/model/sensitivity.js   evidence-bounded one-at-a-time analysis. Pure.
            ──▶ src/model/solvers.js       break-even rate, max sustainable grant. Pure.
            ──▶ src/model/invariants.js    integrity/viability checks, solvency advice. Pure.
            ──▶ src/ui/inputs.js           UI core — getInputs, init, formatting
@@ -35,7 +36,7 @@ server.js                dev static server
 favicon.png
 ```
 
-Split from a single 4,028-line `app.js` in stage S5 — see [ADR-0033](adr/0033-s5-structural-split.md) for what moved where and three deliberate deviations from this file's original S5 sketch. `tools/app-source.js` is the single source of truth for the file list and load order; `index.html`'s `<script>` tags must match it exactly, by hand — nothing can check the two against each other automatically, since one is markup and the other is code.
+Split from a single 4,028-line `app.js` in stage S5 — see [ADR-0033](adr/0033-s5-structural-split.md) for what moved where and three deliberate deviations from this file's original S5 sketch. `tools/app-source.js` is the single source of truth for the file list and load order; `index.html`'s `<script>` tags must match it exactly. Since ADR-0045, `tests/wiring.test.js` parses both and enforces that equality.
 
 | Concern | Files | Pure? |
 |---|---|---|
@@ -144,6 +145,7 @@ src/
   model/            ← pure. No document, no window, no Chart. Enforced by tests/purity.test.js.
     engine.js         rate/annuity helpers + the month loop (790 lines — one function, see above)
     kpis.js           computeKPIs — flat output shape
+    sensitivity.js    sourced/user-bounded one-at-a-time analysis
     solvers.js        break-even, max-grant
     invariants.js     INV-1..INV-18, viability, solvency advice
   ui/

@@ -17,7 +17,7 @@ const { test, describe } = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
-const { concatenated } = require('../tools/app-source');
+const { concatenated, FILES } = require('../tools/app-source');
 const { version } = require('../package.json');
 
 const ROOT = path.join(__dirname, '..');
@@ -44,14 +44,20 @@ function getInputsBody() {
 }
 
 describe('input wiring', () => {
+  test('index.html loads the same application files in the canonical order', () => {
+    const htmlAppScripts = [...htmlSrc.matchAll(/<script src="(src\/[^"]+)"/g)].map(match => match[1]);
+    assert.deepStrictEqual(htmlAppScripts, FILES,
+      'index.html script order must match tools/app-source.js exactly');
+  });
+
   test('the current changelog and known limitations are visible from the model', () => {
     assert.match(htmlSrc, /href="changelog\.html"/,
       'the dashboard must link to the on-site change record');
     assert.match(changelogSrc, new RegExp(`Version ${version.replaceAll('.', '\\.')}\\b`),
       'the on-site change record must identify the current release');
-    assert.match(changelogSrc, /<li>The production-constraint headline now uses[\s\S]*Q14 is resolved/,
+    assert.match(changelogSrc, /<li>A reproducible one-at-a-time sensitivity tool now compares[\s\S]*standard Malawi result retain exactly the same values/,
       'the on-site change record must give users a simple bullet summary of the current release');
-    assert.match(changelogSrc, /Known limitations requiring follow-up[\s\S]*Long-horizon warning[\s\S]*Decision-support roadmap[\s\S]*Currency/,
+    assert.match(changelogSrc, /Known limitations requiring follow-up[\s\S]*Long-horizon warning[\s\S]*on-page sensitivity view[\s\S]*Currency/,
       'remaining limitations must be visible, not buried in developer docs');
   });
 

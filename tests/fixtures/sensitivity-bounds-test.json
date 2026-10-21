@@ -1,0 +1,18 @@
+{
+  "_note": "TEST FIXTURE ONLY. These synthetic cases are not Malawi programme assumptions.",
+  "metric": "netAssets",
+  "parameters": [
+    {
+      "id": "annualFixedOpsCost",
+      "low": 50000,
+      "high": 70000,
+      "source": "Synthetic test fixture: explicit operating-cost cases"
+    },
+    {
+      "id": "loanInterestRate",
+      "low": 0.35,
+      "high": 0.45,
+      "source": "Synthetic test fixture: explicit household-rate cases"
+    }
+  ]
+}
