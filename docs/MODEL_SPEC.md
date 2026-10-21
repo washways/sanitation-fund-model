@@ -1,7 +1,7 @@
 # Model Specification
 
 **Status:** Normative. This document, not the code (`src/model/`), is the source of truth for the financial mathematics.
-**Version:** 1.0 (2026-08-20) — describes commit `2d81863` and the agreed target behaviour.
+**Version:** 1.1 (2026-10-20) — includes the post-S5 assumptions and country-data audit.
 
 ---
 
@@ -68,11 +68,18 @@ Canonical unit for every parameter: [PARAMETERS.md](PARAMETERS.md).
 ### R-2.4 Currency **[AS-BUILT]**
 Single nominal currency, labelled USD in the UI. All values are **nominal** (inflation-inclusive), not real. There is no discounting anywhere in the model — NPV and IRR are deliberately absent. See [ADR-0003](adr/0003-nominal-cashflows-no-discounting.md).
 
+The `inflationRate` input is therefore **forward cost escalation in the model currency**, not automatically local CPI. A local-currency CPI observation cannot consistently escalate USD cashflows without an exchange-rate path. CPI is shown as dated country context only; see [ADR-0034](adr/0034-observations-only-country-data.md).
+
 ### R-2.5 Fractional units **[AS-BUILT]**
 Toilets are integers (`Math.floor` at the point of production, R-7.5). Micro-enterprises are integers. Money, loan balances and demand backlog are continuous.
 
 ### R-2.6 Rounding tolerance **[AS-BUILT]**
 Invariant checks tolerate $1.00 of floating-point drift per month. Never compare money with `===`.
+
+### R-2.7 Country observations **[AS-BUILT]**
+The country loader requests the World Bank API's latest non-empty observation and preserves its year. It may populate only directly observed model inputs: rural population without basic sanitation, population growth, and GNI per capita (falling back to GDP per capita). CPI, commercial lending, poverty, Gini, and sanitation coverage are dated context. They do not set financing terms, subsidy policy, write-downs, costs, or capacity.
+
+If any essential observation for the target population, growth, or income is unavailable, the related field is cleared and automatic calculation pauses. A value from the previous country must never survive as if it belonged to the new one. See [ADR-0034](adr/0034-observations-only-country-data.md).
 
 ---
 
@@ -102,7 +109,7 @@ For each cohort, in this exact order:
 Cohorts with `termRemaining <= 0` are dropped at the start of the next month.
 
 ### R-3.4 Default convention **[AS-BUILT — documented by F-26]**
-The annual default input is converted to a **monthly hazard on outstanding balance**:
+The annual default input is converted to a **monthly hazard on outstanding balance**. An explicit 0% remains zero; it must not be replaced by a fallback rate:
 
 ```
 probDefault_monthly = 1 - (1 - defaultRate_annual)^(1/12)
@@ -127,7 +134,7 @@ Write-offs reduce cohort balances and are reported in `dataMonthlyDefaults*`, bu
 A single senior loan of `investLoan`, drawn in full at month 0, with **flat principal amortisation** over `fundRepaymentTerm * 12 - investorGracePeriod` months, plus interest on the outstanding balance.
 
 ### R-4.2 Cost of capital **[AS-BUILT]** (was F-01, fixed 2026-08-20)
-`fundCostOfCapital` is an annual rate, converted per R-2.2, applied to `loanFundLiability`. The control exists in `index.html` and is auto-filled from the World Bank `FR.INR.LEND` indicator on country fetch. **The static default is 0, pending Q12** — see [ADR-0004](adr/0004-cost-of-capital-input.md) for why no rate was invented.
+`fundCostOfCapital` is an annual rate, converted per R-2.2, applied to `loanFundLiability`. The control exists in `index.html` and defaults to the agreed 2% illustrative concessional term (Q12). A dated World Bank commercial lending rate may be shown as context, but it must never overwrite the term sheet. See [ADR-0004](adr/0004-cost-of-capital-input.md) and [ADR-0034](adr/0034-observations-only-country-data.md).
 
 ### R-4.3 Grace period **[AS-BUILT]** (was F-06, fixed 2026-08-20)
 A grace period defers **principal only**. Interest **accrues from month 1** regardless of grace.
@@ -271,7 +278,7 @@ The backlog grows with population, net of production:
 backlog[m] = backlog[m-1] * (1 + popGrowthRate)^(1/12) - production[m]
 ```
 
-`popGrowthRate` used to be collected, auto-filled from the World Bank, and used nowhere — runs at 0% and 10% growth produced byte-identical output (F-09). Over a 10-year run at 2.5%/year the backlog grows about 28%, which changes whether the fund is demand-constrained at all. See [ADR-0010](adr/0010-wire-up-collected-inputs.md).
+`popGrowthRate` used to be collected, auto-filled from the World Bank, and used nowhere — runs at 0% and 10% growth produced byte-identical output (F-09). The recurrence was also implemented in the reverse order until F-43: it subtracted production and then grew the remainder, understating demand by `production × monthlyGrowth`. `dataMonthlyBacklog` is now an audit series and INV-19 pins the specified order. See [ADR-0010](adr/0010-wire-up-collected-inputs.md) and [ADR-0035](adr/0035-zero-writedowns-and-demand-order.md).
 
 ### R-7.2 Unit cost **[AS-BUILT]**
 
@@ -336,11 +343,11 @@ revenue[m]   = newTonnes[m] * co2Value * carbonCreditShare      // share is a de
 
 Credits accrue **annually against toilets in service**, matching the input's own label of "Tonnes/Yr". Previously the input was divided by 1000 as if it were kilograms (F-33), the fund's share was divided by 100 a second time having already been normalised (F-02), and the credit was granted once at construction rather than each year the toilet operates — together understating carbon revenue by roughly **250,000x**.
 
-**[OPEN — Q11]** Credits currently accrue for as long as the simulation runs. Whether to cap that with a `toiletLifespanYears` input is undecided. See [ADR-0005](adr/0005-carbon-units-and-accrual.md).
+Crediting is capped by the configurable `toiletLifespanYears` input (Q11, resolved by [ADR-0016](adr/0016-toilet-service-life.md)).
 
 Revenue accrues to `grantCash`, on the reasoning that carbon finance is concessional. Gated on `co2PerToilet > 0`.
 
-The path went unexercised for a long time because `co2PerToilet` is overridden to `0.0` at startup. With carbon priced correctly, the `carbon enabled` scenario flips from *Capital Depleted (Insolvent)* to *Supply Chain (ME Capacity)* — a substantive change in what the model says about carbon-financed sanitation.
+The default is `0.0` because the model has no programme-specific carbon evidence. With carbon priced correctly, the explicit `carbon enabled` scenario flips from *Capital Depleted (Insolvent)* to *Supply Chain (ME Capacity)* — a substantive change in what the model says about carbon-financed sanitation.
 
 ### R-8.2 Time saved **[AS-BUILT]** (was F-07, fixed 2026-08-20; gated by service life 2026-08-21, [ADR-0025](adr/0025-service-life-gates-all-impact.md), resolves Q13)
 **One** definition, computed monthly in the loop:
@@ -358,7 +365,7 @@ totalHoursSaved = sum(hoursSaved)
 dalys[m] = creditingToilets[m] * avgHHSize * dalyPerPerson / 12
 ```
 
-Accumulated monthly — an area-under-curve measure, so a toilet built in month 1 accrues more DALYs than one built in month 100, **while it remains in service.** `activeToilets[m]` here means `creditingToilets[m]` (R-8.5), same as R-8.2 — a retired toilet stops averting DALYs.
+Accumulated monthly — an area-under-curve measure, so a toilet built in month 1 accrues more DALYs than one built in month 100, **while it remains in service.** `activeToilets[m]` here means `creditingToilets[m]` (R-8.5), same as R-8.2 — a retired toilet stops averting DALYs. Both Malawi impact inputs default to zero because no approved programme estimate or valuation was identified; this keeps an unsupported health claim out of headline SROI ([ADR-0034](adr/0034-observations-only-country-data.md)).
 
 ### R-8.4 Social value and SROI **[AS-BUILT]** (was F-08; Q1 resolved 2026-08-20, Q2 accepted 2026-08-21)
 ```
@@ -370,7 +377,7 @@ SROI is **social value only**. DALY value is included; ending cash is not. Finan
 
 Previously the DALY term was computed, displayed prominently, and then silently excluded — so the screen contradicted itself — while ending cash sat in a *social* numerator, letting a fund that hoards capital and builds nothing score well.
 
-**Q2 accepted 2026-08-21, [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md).** The *method* for the value of an hour is settled (R-8.6, derived from local income, not the inherited uncited `$0.50`). The **0.30 factor** — the share of the wage at which non-market time is valued — remains a conventional round number, not sourced against current published guidance; the model owner has accepted it as the working default rather than leaving it undecided. Treat it as provisional: confirm against your programme's own guidance before publishing an SROI derived from it.
+The *method* for the value of an hour is settled (R-8.6, derived from local income, not the inherited uncited `$0.50`). The Malawi reference factor is **0.50**, following the conservative opportunity-cost convention used in the World Bank Lilongwe Water and Sanitation Project appraisal. It remains editable and must be recalibrated when a programme reports against different guidance. [ADR-0034](adr/0034-observations-only-country-data.md) supersedes the 0.30 default accepted in [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md).
 
 ### R-8.5 Toilet service life **[AS-BUILT]** (2026-08-20)
 
@@ -390,11 +397,11 @@ Only `creditingToilets` earn carbon (R-8.1). `dataMonthlyCreditingToilets` is ex
 hourValue = (avgAnnualIncome / 2080) * timeValueFactor
 ```
 
-Derived from the country's own income rather than a global constant, and discounted below the market wage because the hour saved is household time, not forgone paid work. `timeValueFactor` defaults to 0.30.
+Derived from the country's own income rather than a global constant, and discounted below the market wage because the hour saved is household time, not forgone paid work. `timeValueFactor` defaults to 0.50 for the Malawi reference scenario.
 
 This replaces a hardcoded `$0.50` of unknown provenance — almost certainly Malawi's income per working hour at the full wage rate, frozen into a multi-country tool. It also closes F-25: `avgAnnualIncome` was collected and never used.
 
-The 0.30 factor is a convention, accepted as the working default rather than verified against current published guidance — see [ADR-0015](adr/0015-value-of-saved-time.md) (method) and [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md) (factor).
+The 0.50 Malawi factor and 0.25 hours saved per person per day are sourced to the World Bank Lilongwe appraisal; see [ADR-0015](adr/0015-value-of-saved-time.md) (method) and [ADR-0034](adr/0034-observations-only-country-data.md) (Malawi calibration).
 
 ---
 
@@ -519,7 +526,7 @@ Every modelling question this specification has raised has been decided by the m
 | # | Question | Decision |
 |---|---|---|
 | Q1 | Does SROI include financial return, or social value only? | Social value only — DALYs in, ending cash out, financial return reported separately. [ADR-0011](adr/0011-sroi-is-social-value-only.md) |
-| Q2 | Is 0.30 the right share of the wage at which to value saved household time? | Accepted as the working default; method is sourced, the factor is a documented convention — confirm against your own programme's guidance before publishing. [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md) |
+| Q2 | What share of the wage should value saved household time? | 50% for the Malawi reference scenario, following the World Bank Lilongwe appraisal; recalibrate for other programme guidance. [ADR-0034](adr/0034-observations-only-country-data.md), superseding the 30% default in ADR-0030. |
 | Q3 | Should grant support be means-tested, or a flat share of production? | Stays flat — means-testing would need a household-level income distribution the model doesn't have. [ADR-0021](adr/0021-grant-support-stays-flat-rate.md) |
 | Q4 | Should ME closure and loan write-down be the same parameter? | No — separate parameters, separate events. [ADR-0014](adr/0014-me-attrition-is-separate-from-write-down.md) |
 | Q5 | Is cost contingency a mark-up or a drawable reserve? | A mark-up. [ADR-0017](adr/0017-contingency-is-a-cost-mark-up.md) |

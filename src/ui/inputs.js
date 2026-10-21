@@ -159,45 +159,25 @@ Object.assign(UI, {
     },
 
     calculateAffordability(data, toiletCost) {
-        if (!data || !data.gdp) return;
+        const income = Number.isFinite(data?.gni) ? data.gni : data?.gdp;
+        if (!Number.isFinite(income) || income <= 0) return;
 
-        const costRatio = toiletCost / data.gdp;
-        let estimatedGrantPct = 0.2; // Base 20%
-
-        if (costRatio > 0.05) estimatedGrantPct += 0.2; // Expensive relative to income
-        if (costRatio > 0.10) estimatedGrantPct += 0.2; // Very expensive
-
-        if (data.gini && data.gini > 45) estimatedGrantPct += 0.1; // High inequality
-
-        // Clamp
-        estimatedGrantPct = Math.min(0.9, Math.max(0.1, estimatedGrantPct));
-
-        const grantInput = document.getElementById('grantSupportPct');
-        if (grantInput && !grantInput.dataset.manual) {
-            grantInput.value = (estimatedGrantPct * 100).toFixed(0);
-            grantInput.classList.add('auto-filled');
-        }
+        const costRatio = toiletCost / income;
 
         const helpEl = document.getElementById('affordability-help');
         if (helpEl) {
-            let reason = "<strong>Base Grant (20%)</strong>: Standard subsidy floor.";
-            if (costRatio > 0.05) reason += "<br>+ <strong>High Cost Burden</strong>: Toilet > 5% of GDP/Cap.";
-            if (costRatio > 0.10) reason += "<br>+ <strong>Extreme Burden</strong>: Toilet > 10% of GDP/Cap.";
-            if (data.gini && data.gini > 45) reason += "<br>+ <strong>Inequality Adjustment</strong>: Gini > 45.";
-
             helpEl.innerHTML = `
                  <div style="background:#f0f9ff; padding:8px; border-radius:4px; border:1px solid #bae6fd; font-size:0.9em;">
-                     <strong>Affordability Analysis</strong>
+                     <strong>Affordability context (does not change subsidy policy)</strong>
                      <ul style="list-style:disc; margin-left:1rem; margin-top:4px; margin-bottom:4px;">
-                         ${grantInput.dataset.manual ? '<li><span style="color:#ef4444; font-weight:bold;">Manual Override Active</span> (API ignored)</li>' : ''}
                          <li><strong>Toilet Cost:</strong> $${toiletCost}</li>
-                         <li><strong>GDP/Capita:</strong> $${data.gdp.toFixed(0)}</li>
+                         <li><strong>GNI/GDP per capita:</strong> $${income.toFixed(0)}</li>
                          <li><strong>Cost Burden:</strong> ${(costRatio * 100).toFixed(1)}% of annual income.</li>
-                         <li><strong>Gini Index:</strong> ${data.gini ? data.gini.toFixed(1) : 'N/A'}</li>
+                         <li><strong>Gini Index:</strong> ${Number.isFinite(data.gini) ? data.gini.toFixed(1) : 'N/A'}</li>
+                         <li><strong>Poverty:</strong> ${Number.isFinite(data.poverty) ? data.poverty.toFixed(1) + '%' : 'N/A'}</li>
                      </ul>
                      <div style="margin-top:6px; border-top:1px solid #bae6fd; padding-top:4px;">
-                         <em>Methodology:</em><br>
-                         ${reason}
+                         Set grant pacing from the programme's approved subsidy policy and affordability study.
                      </div>
                  </div>`;
         }

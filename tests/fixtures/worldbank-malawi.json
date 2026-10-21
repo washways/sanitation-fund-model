@@ -1,6 +1,6 @@
 {
-  "_comment": "Recorded from the World Bank Indicators API for Malawi (MWI). Tests must never hit the network; re-record deliberately, and expect scenario numbers to move when you do.",
-  "recordedAt": "2026-08-20",
+  "_comment": "Recorded from the World Bank Indicators API for Malawi (MWI). Country loading uses latest non-empty observations, preserves dates, and changes observations only. Tests must never hit the network.",
+  "recordedAt": "2026-10-20",
   "country": "MWI",
   "indicators": {
     "SP.RUR.TOTL": {
@@ -41,47 +41,8 @@
     },
     "SI.POV.DDAY": {
       "value": 75.4,
-      "year": "2019"
-    },
-    "PV.EST": {
-      "value": null,
-      "year": null
+      "year": "2019",
+      "label": "Poverty headcount ratio at $3.00 a day (2021 PPP) (% of population)"
     }
-  },
-  "administrativeUnits": {
-    "source": "countriesnow.space",
-    "count": 30,
-    "names": [
-      "Balaka District",
-      "Blantyre District",
-      "Central Region",
-      "Chikwawa District",
-      "Chiradzulu District",
-      "Chitipa district",
-      "Dedza District",
-      "Dowa District",
-      "Karonga District",
-      "Kasungu District",
-      "Likoma District",
-      "Lilongwe District",
-      "Machinga District",
-      "Mangochi District",
-      "Mchinji District",
-      "Mulanje District",
-      "Mwanza District",
-      "Mzimba District",
-      "Nkhata Bay District",
-      "Nkhotakota District",
-      "Northern Region",
-      "Nsanje District",
-      "Ntcheu District",
-      "Ntchisi District",
-      "Phalombe District",
-      "Rumphi District",
-      "Salima District",
-      "Southern Region",
-      "Thyolo District",
-      "Zomba District"
-    ]
   }
 }

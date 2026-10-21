@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 37 of 37 findings resolved as of 2026-08-25 (F-37 was found and fixed the same day it was added — see its entry). Rows below marked ✅ are closed; the finding text is preserved as the historical record and must not be deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 43 of 45 findings resolved as of 2026-10-20. F-38–F-43 were found in the post-S5 assumptions audit and fixed with ADR-0034/0035; F-44 and F-45 remain open. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,6 +54,14 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
+| [F-45](#f-45--wind-up-can-freeze-cash-before-settling-investor-liability) | **High** | Core | Wind-up can freeze positive loan cash while senior liability remains outstanding | run | Post-S5 |
+| [F-44](#f-44--capitalised-interest-is-never-scheduled-for-catch-up) | **High** | Core | Capitalised interest grows the liability but is never scheduled for catch-up repayment | src, run | Post-S5 |
+| ✅ [F-43](#f-43--demand-growth-was-applied-after-production) | Medium | Core | Backlog subtracted production before growth, contrary to R-7.1 | src | Post-S5 |
+| ✅ [F-42](#f-42--explicit-zero-write-downs-were-replaced-by-non-zero-defaults) | **High** | Core | Valid 0% write-down inputs silently became 5%/10% | run | Post-S5 |
+| ✅ [F-41](#f-41--malawi-impact-and-market-defaults-made-unsupported-claims) | **High** | Assumptions | Malawi defaults mixed stale observations, invented impact values, and uncited market assumptions | src, source audit | Post-S5 |
+| ✅ [F-40](#f-40--country-data-could-be-stale-mixed-level-or-carried-between-countries) | **High** | Data | API selection used calendar windows, mixed admin levels, and retained stale country values | src, API audit | Post-S5 |
+| ✅ [F-39](#f-39--country-observations-were-converted-into-programme-policy) | **Critical** | Data | CPI, lending, poverty, governance, and income silently set terms, policy, and costs | src, run | Post-S5 |
+| ✅ [F-38](#f-38--the-startup-harness-discarded-browser-event-listeners) | **Critical** | Tests | The DOM stub retained one event listener, masking the real startup overwrite path | run | Post-S5 |
 | ✅ [F-34](#f-34--the-tested-scenario-is-not-the-scenario-that-runs) | **Critical** | Infra | The startup fetch overwrites the shipped defaults, so every test measured a state no user runs | run | S2 |
 | ✅ [F-35](#f-35--r-34s-always-less-than-headline-claim-is-wrong-past-about-18-months) | Low | Docs | `MODEL_SPEC.md`'s "realised loss is always less than headline" claim is wrong past ~18 months | doc | S3 |
 | ✅ [F-36](#f-36--csv-export-is-completely-broken-both-copies) | **Critical** | UI | `UI.downloadCSV()` is defined twice; the copy that runs throws, and the copy that doesn't run also throws | src | S2 |
@@ -909,6 +917,58 @@ This directly contradicts the advice the tool gives. `generateSuggestions` tells
 Following that advice makes the outcome worse. The advisor was written against an intuition about how amortisation works, and never checked against the model.
 
 **Fix:** two parts. (a) Fix the underlying cause — arrears must persist and be repaid from later surplus (**F-06**), and the fund must have a defined terminal state (**F-31**). (b) Ground the advisor in the model: each recommendation should be *computed* by re-running the simulation with the proposed change and confirming it improves the objective, rather than asserted from a rule of thumb. That is what the solver infrastructure already exists to do.
+
+---
+
+## 4A. Post-S5 assumptions and country-data audit — 2026-10-20
+
+### F-38 — The startup harness discarded browser event listeners
+
+**Critical — fixed.** The DOM stub stored one handler per event while a browser stores all of them. Later handlers replaced earlier ones, so the test never exercised the complete startup path. With browser-faithful listener arrays, the real handler was seen setting grant pacing to Malawi's 75.4% poverty observation despite ADR-0018.
+
+**Fix:** the harness retains and dispatches every listener. `tests/startup.test.js` now pins the exact post-fetch programme assumptions as well as viability. [ADR-0034](adr/0034-observations-only-country-data.md).
+
+### F-39 — Country observations were converted into programme policy
+
+**Critical — fixed.** The loader converted local CPI and commercial lending into loan pricing, poverty into grant pacing and write-downs, `PV.EST` into contingency, income into cost tiers, and country identity into fixed operating-cost formulas. Several mappings were dimensionally wrong: local-currency CPI was applied to USD-labelled cashflows, and the approximately -2.5-to-2.5 WGI estimate was treated as a 0-to-100 percentile.
+
+**Fix:** API values now populate only directly observed target population, population growth, and income. Dated CPI, lending, poverty, Gini, and sanitation values are context. Financing, policy, loss, cost, and capacity assumptions remain editable programme choices. [ADR-0034](adr/0034-observations-only-country-data.md).
+
+### F-40 — Country data could be stale, mixed-level, or carried between countries
+
+**High — fixed.** `MRV=5` requested five calendar periods rather than the latest non-empty observation, losing Malawi's latest 2019 poverty and Gini values. The administrative-unit service returned 27 districts plus three regions while omitting Neno, producing 30 instead of Malawi's official 28. If a new country lacked an indicator, the prior country's form value could survive.
+
+**Fix:** World Bank requests use `mrnev=1`, observation labels/years are retained, the mixed-level administrative API was removed, stale requests cannot win a race, and missing essentials clear fields and pause automatic calculation. A live audit of all 44 selector countries showed why this matters: core coverage is not universal and lending, poverty, and Gini are missing for many countries. [ADR-0034](adr/0034-observations-only-country-data.md).
+
+### F-41 — Malawi impact and market defaults made unsupported claims
+
+**High — fixed.** The reference scenario combined stale population/income values, five people per rural household, 50 administrative units, a $2,000 enterprise loan, an 18-month household term, and non-zero DALY assumptions without a cited Malawi programme basis.
+
+**Fix:** Malawi now uses dated World Bank observations and primary programme evidence for household size, 28 districts, enterprise capital, 12-month terms, toilet cost, time saved, and value of time. Unsupported DALY and carbon impacts default to zero. Remaining financing, operating, loss, and capacity values are labelled illustrative rather than presented as country facts. [ADR-0034](adr/0034-observations-only-country-data.md).
+
+### F-42 — Explicit zero write-downs were replaced by non-zero defaults
+
+**High — fixed.** `inputs.hhDefaultRate || 0.05` and its enterprise equivalent treat a valid zero as missing. The golden scenario named “zero defaults” therefore still wrote down both portfolios; its old test reimplemented the formula rather than executing `calculate()`.
+
+**Fix:** nullish fallbacks preserve 0%, and a full-model regression requires both write-off series to sum to exactly zero. [ADR-0035](adr/0035-zero-writedowns-and-demand-order.md).
+
+### F-43 — Demand growth was applied after production
+
+**Medium — fixed.** R-7.1 specifies `prior backlog × growth − current production`; the loop did `(prior backlog − current production) × growth`. It understated demand by `current production × monthly growth` every month.
+
+**Fix:** growth is applied before production and `dataMonthlyBacklog` exposes the recurrence for INV-19. [ADR-0035](adr/0035-zero-writedowns-and-demand-order.md).
+
+### F-44 — Capitalised interest is never scheduled for catch-up
+
+**High — open.** Missed current interest is added to `loanFundLiability` and `accruedInvestorInt`, but later debt service schedules only current-period interest plus original principal and principal arrears. Paying current interest does not reduce the capitalised balance, so `accruedInvestorInt` can never fall. This contradicts R-4.5's claim that arrears catch up once cash permits.
+
+**Required decision/fix:** define the ordering between past-due capitalised interest and current interest, reduce liability when capitalised interest is paid, and add a scenario with a temporary shortfall followed by recoverable cash. This touches an `[AS-BUILT]` debt rule and needs its own ADR; it was not folded into the assumptions audit.
+
+### F-45 — Wind-up can freeze cash before settling investor liability
+
+**High — open.** Wind-up tests portfolio, production, and lendable cash but not investor liability. It then freezes debt service. A reproduced no-demand scenario can wind up with positive loan cash and senior principal still outstanding, making the reported result depend on the terminal-state shortcut rather than the contractual waterfall.
+
+**Required decision/fix:** specify a terminal settlement step that pays available loan cash to the investor before freezing the ledger, while preserving INV-14's horizon independence. This needs an ADR coordinated with F-44.
 
 ---
 

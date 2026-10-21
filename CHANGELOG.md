@@ -11,6 +11,38 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.6.0] — 2026-10-21 — Evidence-based Malawi defaults and safe country loading
+
+A post-S5 review found six new defects in the assumptions, country-data path, and two core edge cases. F-38–F-43 are fixed; two investor-settlement defects found during the review (F-44/F-45) are registered and deliberately left for a separate debt-waterfall ADR.
+
+### Fixed
+
+- **Country observations no longer become programme policy.** The loader now changes only rural population without basic sanitation, population growth, and GNI per capita (GDP fallback). Dated CPI, commercial lending, poverty, Gini, and sanitation remain visible context. It no longer derives loan pricing, grant pacing, write-downs, contingency, costs, operating budgets, or delivery capacity from unrelated indicators. ([ADR-0034](docs/adr/0034-observations-only-country-data.md), F-38–F-40)
+- **Country switching cannot silently reuse another country's data.** World Bank requests use latest-non-empty observations (`mrnev=1`), retain years and labels, ignore stale async responses, and clear essential fields plus pause automatic calculation when data are missing. The mixed-level `countriesnow.space` dependency was removed. ([ADR-0034](docs/adr/0034-observations-only-country-data.md), F-40)
+- **Explicit 0% household and enterprise write-downs now remain zero.** Falsy fallbacks previously changed them to 5% and 10%, so the “zero defaults” scenario was not zero. A full-model regression now checks the actual write-off series. ([ADR-0035](docs/adr/0035-zero-writedowns-and-demand-order.md), F-42)
+- **Demand now grows before current production is subtracted, as R-7.1 specifies.** The monthly backlog is exported as an audit series and INV-19 pins the recurrence. ([ADR-0035](docs/adr/0035-zero-writedowns-and-demand-order.md), F-43)
+- **The startup test now behaves like a browser with multiple event listeners.** Its prior one-handler stub masked the real poverty-to-grant overwrite. It now pins exact post-fetch observations, exact preservation of programme assumptions, the 44-country selector, and the missing-data stop. (F-38)
+
+### Changed
+
+- **Malawi defaults are evidence-aligned.** The reference scenario now uses 9,244,139 rural people without basic sanitation, 2.56% population growth, $600 GNI per capita, 4.4 people per rural household, 28 districts, $3,000 enterprise capital, 12-month household and enterprise terms, 15 minutes saved per person per day, and a 50% time-value factor. The $100 toilet cost is retained with a UNICEF Malawi price basis. ([ADR-0034](docs/adr/0034-observations-only-country-data.md), F-41)
+- **Unsupported health and carbon claims are off by default.** DALYs per person, DALY value, and CO2e per toilet default to zero until programme evidence is supplied. Financing, operating, write-down, capacity, and subsidy values are explicitly labelled illustrative assumptions rather than Malawi facts. (F-41)
+- **Cost escalation is named honestly.** Local CPI is not applied to USD-labelled cashflows without an FX path; the input is now “Annual Cost Escalation in Model Currency.”
+- **The release history and known limitations are now visible in the app.** The dashboard links to `changelog.html`, which summarizes the current numerical movement, earlier stages, the long-horizon warning, and open findings F-44/F-45.
+
+### Golden movement
+
+The combined movement matches the prewritten ADRs. Baseline reach rises **97,744 → 118,509 toilets (+21.2%)**, chiefly because the sourced 12-month household term releases working capital faster. Net assets fall **$914,174 → $472,563 (-48.3%)** and SROI falls **4.46 → 4.09**; DALYs fall **7,082 → 0** because the unsupported default is disabled. The fund remains viable and repays senior debt in full. In the corrected zero-write-down scenario, write-offs are exactly zero, reach is **140,766**, and net assets are **$1,273,743**.
+
+### Known open findings
+
+- **F-44:** capitalised interest grows the liability but is never scheduled for catch-up repayment.
+- **F-45:** wind-up can freeze available loan cash before settling an outstanding investor liability.
+
+Both require a coordinated debt-waterfall decision; they were not hidden inside this assumptions change.
+
+---
+
 ## [0.5.0] — 2026-08-25 — Stage S5: app.js split into src/
 
 `app.js` (4,028 lines) split into 14 files under `src/` — `src/model/` (pure, no DOM), `src/ui/`, `src/data/`, `src/app.js` (controller). Zero behaviour change: `golden.json` byte-identical. See [ADR-0033](docs/adr/0033-s5-structural-split.md) for the full reasoning and three deliberate deviations from the original plan in `docs/ARCHITECTURE.md`/`docs/ROADMAP.md` (classic scripts instead of ES modules, for test-harness compatibility; two files — the month loop and the DOMContentLoaded handler — stay over 500 lines because each is a single function; `tools/load-model.js` was kept, not deleted).

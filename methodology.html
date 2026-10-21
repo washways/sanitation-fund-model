@@ -234,13 +234,14 @@
 <body>
     <div class="nav">
         <a href="index.html">&larr; Back to Model</a>
+        <a href="changelog.html">Changes &amp; known limitations</a>
     </div>
 
     <div class="container">
         <h1>Methodology &amp; Technical Note</h1>
         <p class="lead">How this model calculates what it calculates &mdash; the financial mechanics, the impact
             assumptions, and the things it deliberately does not attempt.</p>
-        <p class="meta">Last revised 2026-08-21. This note is kept in step with the model specification in
+        <p class="meta">Last revised 2026-10-20. This note is kept in step with the model specification in
             <code>docs/MODEL_SPEC.md</code>; where the two disagree, the specification is authoritative and this page
             is out of date.
         </p>
@@ -621,14 +622,14 @@ hourValue = (avgAnnualIncome / 2,080) × timeValueFactor</div>
             <li>The tool models many countries. A single global constant is right for at most one of them.</li>
             <li>The hour saved is household time &mdash; walking to, queueing for, or managing sanitation &mdash; not
                 forgone paid employment. Valuing non-market time below the market wage is standard practice in both WASH
-                and transport cost&ndash;benefit analysis. The default factor is 30%.</li>
+                and transport cost&ndash;benefit analysis. The Malawi reference factor is 50%.</li>
         </ul>
 
         <div class="alert-box">
             <p><strong>Check this factor before publishing.</strong> The method &mdash; derive from local income,
-                discount below the wage &mdash; is well founded. The specific 30% is a conventional round number rather
-                than a figure verified against current published guidance. Confirm it against whichever cost&ndash;
-                benefit guidance your programme reports against, and set the input accordingly.</p>
+                discount below the wage &mdash; is well founded. The 50% Malawi reference follows the conservative
+                opportunity-cost convention in the World Bank Lilongwe Water and Sanitation Project appraisal.
+                Confirm it against whichever cost&ndash;benefit guidance your programme reports against.</p>
             <p>It replaces a hardcoded $0.50/hour whose origin nobody could reconstruct. The arithmetic suggests it was
                 Malawi's income per working hour at the <em>full</em> wage rate, frozen into a multi-country tool.</p>
         </div>
@@ -739,8 +740,8 @@ capitalPreservation = netAssets   / capitalInvested</div>
                     <td>%</td>
                     <td>Annual interest paid to senior investors. <strong>This control did not exist before
                             2026-08-20</strong>, so the value defaulted to zero and the fund paid its investors nothing
-                        in every result the tool ever produced. Auto-filled from the World Bank commercial lending rate
-                        on country load; default 2%, representing concessional senior debt.</td>
+                        in every result the tool ever produced. The default is an illustrative 2% concessional term;
+                        the dated World Bank commercial lending rate is context only and never overwrites it.</td>
                 </tr>
                 <tr>
                     <td colspan="3"><span class="tag">Market context</span></td>
@@ -771,9 +772,10 @@ capitalPreservation = netAssets   / capitalInvested</div>
                     <td>From GNI per capita. Now sets the value of time saved; previously collected and unused.</td>
                 </tr>
                 <tr>
-                    <td>Annual Inflation</td>
+                    <td>Annual Cost Escalation in Model Currency</td>
                     <td>%</td>
-                    <td>Applies to unit costs and fixed operating costs. <strong>Not</strong> to household incomes.</td>
+                    <td>Applies to unit costs and fixed operating costs. <strong>Not</strong> to household incomes.
+                        Local-currency CPI is context only because the model is USD-labelled and has no FX path.</td>
                 </tr>
                 <tr>
                     <td colspan="3"><span class="tag">Delivery network</span></td>
@@ -852,8 +854,8 @@ capitalPreservation = netAssets   / capitalInvested</div>
                     <td>Cost Contingency</td>
                     <td>%</td>
                     <td>A <strong>per-unit mark-up on delivery cost</strong> reflecting fragility and delivery risk
-                        &mdash; not a reserve held back and drawn on. Auto-set from the political-stability indicator:
-                        5% base, 7% below the 50th percentile, 10% below the 25th.</td>
+                        &mdash; not a reserve held back and drawn on. It is a programme assumption and is never generated
+                        from a governance index.</td>
                 </tr>
                 <tr>
                     <td>Starting Capacity Throttle</td>
@@ -869,12 +871,14 @@ capitalPreservation = netAssets   / capitalInvested</div>
                 <tr>
                     <td>DALYs Averted / Person</td>
                     <td>DALY/yr</td>
-                    <td>Per person per year of toilet service.</td>
+                    <td>Per person per year of toilet service. Defaults to zero until an approved programme impact
+                        study supplies a value.</td>
                 </tr>
                 <tr>
                     <td>Value per DALY</td>
                     <td>USD</td>
-                    <td>Included in SROI since 2026-08-20.</td>
+                    <td>Included in SROI when supplied; defaults to zero so the model makes no unsupported health-value
+                        claim.</td>
                 </tr>
                 <tr>
                     <td>Toilet Service Life</td>
@@ -890,7 +894,7 @@ capitalPreservation = netAssets   / capitalInvested</div>
                 <tr>
                     <td>Value of Saved Time</td>
                     <td>% of wage</td>
-                    <td>Applied to income per working hour. Default 30%.</td>
+                    <td>Applied to income per working hour. Malawi reference default 50%.</td>
                 </tr>
                 <tr>
                     <td>CO<sub>2</sub>e / Toilet</td>
@@ -908,8 +912,9 @@ capitalPreservation = netAssets   / capitalInvested</div>
         <!-- ================================================================ -->
         <h2 id="data">11. Data sources</h2>
 
-        <p>Country context is fetched from the <strong>World Bank Indicators API</strong>. Every fetched value is a
-            starting suggestion and is fully editable.</p>
+        <p>Country context is fetched from the <strong>World Bank Indicators API</strong>. The client asks for each
+            indicator's latest non-empty observation and shows its year. Only observed population, population growth,
+            and income populate model inputs; other indicators are dated context.</p>
 
         <div class="table-scroll">
             <table class="param-table">
@@ -934,9 +939,9 @@ capitalPreservation = netAssets   / capitalInvested</div>
                     <td>Affordability, and the value of time saved</td>
                 </tr>
                 <tr>
-                    <td>Inflation (CPI)</td>
+                    <td>Inflation (local-currency CPI)</td>
                     <td><code>FP.CPI.TOTL.ZG</code></td>
-                    <td>Cost escalation</td>
+                    <td>Context only; does not escalate USD-labelled cashflows without an FX path</td>
                 </tr>
                 <tr>
                     <td>Population growth</td>
@@ -946,23 +951,19 @@ capitalPreservation = netAssets   / capitalInvested</div>
                 <tr>
                     <td>Commercial lending rate</td>
                     <td><code>FR.INR.LEND</code></td>
-                    <td>Benchmark rate; seeds the fund's cost of capital</td>
+                    <td>Context only; does not set the fund's negotiated cost of capital</td>
                 </tr>
                 <tr>
                     <td>Poverty headcount</td>
                     <td><code>SI.POV.DDAY</code></td>
-                    <td>Suggested grant support level</td>
-                </tr>
-                <tr>
-                    <td>Political stability</td>
-                    <td><code>PV.EST</code></td>
-                    <td>Cost contingency mark-up</td>
+                    <td>Context only; does not set subsidy policy or write-down assumptions</td>
                 </tr>
             </table>
         </div>
 
-        <p>Administrative units come from <code>countriesnow.space</code>. Where an indicator is unavailable the most
-            recent non-null value within five years is used; where none exists, the field keeps its default.</p>
+        <p>Administrative units, programme costs, capacity, financing terms, write-downs and subsidy policy are not
+            inferred from APIs. Where an essential observation is unavailable, the related field is cleared and
+            automatic calculation pauses; a previous country's value is never silently retained.</p>
 
         <!-- ================================================================ -->
         <h2 id="limits">12. Assumptions and limitations</h2>
@@ -986,34 +987,31 @@ capitalPreservation = netAssets   / capitalInvested</div>
                 over a long run.</li>
             <li>One household, one toilet, once. No repeat or upgrade demand.</li>
             <li>Enterprise productivity is flat &mdash; no learning curve, no seasonality, no supply-chain lag.</li>
-            <li>Enterprise expansion is capped by two hardcoded constants (10% of lendable capital, 10% growth per
-                month) that are not exposed as inputs. The second materially shapes the growth curve.</li>
+            <li>Enterprise expansion is capped by two editable assumptions (10% of lendable capital, 10% growth per
+                month). The second materially shapes the growth curve.</li>
             <li>Grants and loans are the only instruments. No results-based finance, no guarantees, no equity.</li>
-            <li>The break-even solver assumes net assets rise monotonically with the interest rate. That holds in most
-                regimes but <strong>breaks when capital is tight</strong>, where the solver may converge on a
-                non-solution without saying so.</li>
+            <li>The model is deterministic. Its grid-then-bisect solvers identify the best feasible region but do not
+                quantify uncertainty or replace sensitivity analysis.</li>
         </ul>
 
         <h3>Margin of interpretation</h3>
-        <p>The impact figures rest on three assumptions the model cannot validate: DALYs averted per person, hours saved
-            per person per day, and CO<sub>2</sub>e abated per toilet. Each is a user input with a plausible default;
-            none is measured. <strong>Treat impact outputs as scenario arithmetic, not as evidence.</strong></p>
+        <p>The impact figures rest on assumptions the model cannot validate. Malawi's time-saved default is sourced to
+            a World Bank appraisal; DALYs and carbon default to zero until programme evidence is supplied.
+            <strong>Treat impact outputs as scenario arithmetic, not as evidence.</strong></p>
 
         <!-- ================================================================ -->
         <h2 id="open">13. Open questions</h2>
 
-        <p>These were modelling decisions that needed the model owner's judgement. As of 2026-08-21, <strong>none are
-                open</strong> — every one has been decided and recorded as its own ADR, listed here rather than settled
-            quietly, because each changes what the outputs mean.</p>
+        <p>Most original modelling questions are decided and recorded as ADRs. One specification question remains:
+            whether the headline constraint should be derived directly from the production minimum rather than from a
+            separate comparison. It is documented in MODEL_SPEC R-7.6 and must not be changed without the model owner's
+            decision.</p>
 
         <div class="alert-box">
-            <h3>Q2 is accepted, not verified</h3>
-            <p>One of these is worth flagging even though it's resolved: the 30% factor for the value of saved
-                household time is an <strong>accepted working default, not a sourced figure</strong>
-                (<a href="#parameters">&sect;10</a>, &sect;9). The model owner has confirmed it is acceptable for now.
-                If you are publishing an SROI figure from this tool, confirm 30% against your own programme's
-                cost&ndash;benefit guidance first &mdash; the method is sound, the number is a convention.
-                <code>docs/adr/0030-accept-30-percent-time-value-factor.md</code>.</p>
+            <h3>Country evidence does not determine programme policy</h3>
+            <p>World Bank observations describe context. They do not set the fund's term sheet, write-downs, operating
+                budget, delivery capacity, or subsidy policy. Malawi's 50% time-value factor is sourced, but it should
+                still be checked against the guidance used by the programme publishing the analysis.</p>
         </div>
 
         <p>Resolved 2026-08-21, each as its own decision record: <strong>Q13</strong> &mdash; service life now stops
@@ -1022,13 +1020,14 @@ capitalPreservation = netAssets   / capitalInvested</div>
             have. <strong>Q6</strong> &mdash; the grant and loan ledgers stay strictly separate; no cross-lending.
             <strong>Q7</strong> &mdash; one household, one toilet, once; no repeat or upgrade demand modelled.
             <strong>Q9</strong> &mdash; the collections floor stops abruptly at wind-up rather than tapering, because a
-            taper rate would be an invented number. <strong>Q2</strong> &mdash; see above. See <code>docs/adr/</code>
+            taper rate would be an invented number. <strong>Q2</strong> &mdash; the Malawi time-value factor is 50%,
+            sourced in ADR-0034. See <code>docs/adr/</code>
             for each decision's reasoning.</p>
 
         <div class="alert-box green">
             <h3>How to check any of this yourself</h3>
-            <p>The model self-verifies on every run against fourteen ledger invariants, and the repository carries a
-                regression suite covering input wiring, those invariants, twenty-two recorded scenarios, and an
+            <p>The model self-verifies on every run against nineteen ledger invariants, and the repository carries a
+                regression suite covering input wiring, those invariants, twenty-one recorded scenarios, and an
                 end-to-end run of the application.</p>
             <p style="margin-top:0.75rem;"><code>npm test</code> &mdash; the suite.<br>
                 <code>node tools/verify-findings.js</code> &mdash; re-runs every measurement behind the audit and
@@ -1038,7 +1037,7 @@ capitalPreservation = netAssets   / capitalInvested</div>
 
         <p class="meta" style="margin-top:3rem;">Specification: <code>docs/MODEL_SPEC.md</code> &middot; Audit:
             <code>docs/ANALYSIS.md</code> &middot; Decisions: <code>docs/adr/</code> &middot; Current state:
-            <code>STATUS.md</code>
+            <code>STATUS.md</code> &middot; <a href="changelog.html">On-site changelog</a>
         </p>
     </div>
 </body>

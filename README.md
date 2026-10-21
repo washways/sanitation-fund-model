@@ -12,7 +12,7 @@ It answers three questions:
 
 ## Status
 
-Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **68 automated tests, 21 characterisation scenarios, 0 known defects that affect a result you'd see today.**
+Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **83 automated tests and 21 characterisation scenarios.** Known limitations and unresolved findings are listed in [STATUS.md](STATUS.md) and the on-site [changelog](changelog.html).
 
 **What's genuinely unresolved:** one low-priority finding (a solver that can misfire in an already-marginal capital-tight regime) and no open modelling questions — see [STATUS.md](STATUS.md) for specifics and [CHANGELOG.md](CHANGELOG.md) for what changed and when.
 
@@ -51,7 +51,7 @@ npm ci            # installs ESLint, the one devDependency — needed once
 npm test
 ```
 
-Seven suites, zero flakiness, about a second: **golden** (did any of 21 recorded scenarios move), **invariants** (does the ledger stay internally consistent, across a scenario matrix), **smoke** (does the whole app run end to end without throwing), **startup** (what does a user opening the page in a browser actually get, once the country fetch has run), **wiring** (does every input reach the model, and does it actually move the output), **write-down** (does a written-down loan behave the way the spec says it should), and **export** (does "Export CSV" produce a CSV instead of throwing).
+Nine suites, zero flakiness, about a second: **golden** (did any of 21 recorded scenarios move), **invariants** (does the ledger stay internally consistent, across a scenario matrix), **purity** (is the model DOM-free), **smoke** (does the whole app run end to end without throwing), **solver**, **startup** (what does a user opening the page actually get once the country fetch has run), **wiring**, **write-down**, and **export**.
 
 ```bash
 npm run golden:diff   # would any model output change, without writing anything?
@@ -128,9 +128,9 @@ docs/                  spec, parameters, architecture, testing, roadmap, ADRs, a
 
 ## Data sources
 
-World Bank Indicators API, used to calibrate a country's context: rural population (`SP.RUR.TOTL`), basic and safely-managed sanitation (`SH.STA.BASS.RU.ZS`, `SH.STA.SMSS.RU.ZS`), GDP and GNI per capita, inflation (`FP.CPI.TOTL.ZG`), population growth (`SP.POP.GROW`), lending rate (`FR.INR.LEND`), Gini, poverty headcount, and political stability (`PV.EST`). Administrative units come from `countriesnow.space`.
+World Bank Indicators API, used to calibrate dated country context: rural population (`SP.RUR.TOTL`), basic and safely-managed sanitation (`SH.STA.BASS.RU.ZS`, `SH.STA.SMSS.RU.ZS`), GDP and GNI per capita, inflation (`FP.CPI.TOTL.ZG`), population growth (`SP.POP.GROW`), lending rate (`FR.INR.LEND`), Gini, and poverty headcount.
 
-Fetched values are suggestions — every one is editable, and [docs/PARAMETERS.md](docs/PARAMETERS.md) records which indicator feeds which field. The fetch never overwrites a negotiated term or a policy choice, only observed facts about the country.
+Only directly observed target population, population growth, and income populate model fields. CPI, lending, poverty, Gini, and sanitation coverage are shown with their observation years as context. The fetch never overwrites a negotiated term, cost, capacity assumption, write-down, or policy choice; [docs/PARAMETERS.md](docs/PARAMETERS.md) records the boundary.
 
 ## Contributing
 

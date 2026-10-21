@@ -2,12 +2,6 @@
  * tables.js — part of the S5 structural split (ADR-0033). The on-screen monthly data table.
  */
 
-/* eslint-disable no-unused-vars --
- * F-19 baseline (docs/ANALYSIS.md), carried over from the pre-S5 single-file count —
- * 1 violation in this file (`hhDefault`). Recorded, not fixed, per docs/ROADMAP.md's
- * S0 task. Run `npx eslint src/` before committing; if this file's count goes up,
- * that is a new defect, not baseline noise.
- */
 Object.assign(UI, {
     renderTable(series) {
         const tbody = document.querySelector('#annualResultsTable tbody');
@@ -341,68 +335,4 @@ Object.assign(UI, {
         alert(finalMsg.join("\n\n"));
     },
 
-    // Phase 55: Smart Rate Updater (Reactive)
-    // NUCLEAR OPTION: Simplified, Robust, No Locks
-    updateSmartRates: function () {
-        console.log("updateSmartRates: STARTING");
-
-        // Every rate field holds a percentage (R-2.3). No normalisation, no guessing.
-        const getVal = (id) => {
-            const el = document.getElementById(id);
-            if (!el) return 0;
-            return parseFloat(el.value) || 0;
-        };
-
-        // Retrieve Benchmarks (stored in dataset)
-        // RE-ADDING DELETED VARIABLES
-        const inflation = getVal('inflationRate');
-        const hhDefault = getVal('hhDefaultRate');
-
-        const loanInput = document.getElementById('loanInterestRate_v2'); // ID ROTATION
-        let lendingRate = 0;
-        if (loanInput && loanInput.dataset.benchmark) {
-            lendingRate = parseFloat(loanInput.dataset.benchmark) || 0;
-        }
-
-        // Logic
-        // HH = Max(Inflation + 20% Spread, LendingRate + 5%)
-        const hhRate = Math.max(inflation + 20, lendingRate + 5);
-
-        // ME = HH - 5% (Subsidized)
-        // Ensure ME > Inflation to avoid loss
-        const meRate = Math.max(hhRate - 5, inflation + 2);
-
-        // Apply — but only where the user has not taken ownership of the field.
-        //
-        // This used to overwrite both rate fields unconditionally, on page load, on
-        // every country fetch, and on every edit to inflation or the default rates,
-        // then dispatch a synthetic input event that scheduled yet another recalc. The
-        // dataset.manual flag set by trackManualInterest was read nowhere (F-05). A
-        // user could type a rate, watch it change a second later, and have no idea why.
-        const apply = (id, val) => {
-            const el = document.getElementById(id);
-            if (!el) return;
-
-            if (el.dataset.manual === 'true') {
-                // The user owns this field now. Suggest, do not impose.
-                el.dataset.suggested = val.toFixed(2);
-                return;
-            }
-
-            el.value = val.toFixed(2);
-            el.classList.add('auto-filled');
-        };
-
-        apply('loanInterestRate_v2', hhRate);
-        apply('meLoanInterestRate_v2', meRate);
-
-        console.log(`updateSmartRates: UPDATED HH=${hhRate}, ME=${meRate}`);
-
-        // Feedback
-        const helpEl = document.getElementById('interest-help');
-        if (helpEl) {
-            helpEl.innerText = `Smart Link: HH Rate (${hhRate.toFixed(1)}%) > Inflation (${inflation}%) & Lending Rate (${lendingRate}%).`;
-            helpEl.style.color = "#d5ac00";
-        }
-    },
 });

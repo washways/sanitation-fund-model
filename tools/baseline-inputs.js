@@ -4,17 +4,11 @@
  * These are the `value=""` attributes in index.html, normalised the way
  * UI.getInputs() normalises them: every rate is entered as a PERCENTAGE in the form
  * and divided by 100 exactly once at the input boundary (R-2.3), so the values here
- * are decimals. Also includes the carbon overrides the DOMContentLoaded handler applies.
+ * are decimals.
  *
- * Two deliberate deviations from a real browser session, both documented:
- *
- *   fundCostOfCapital      — 2% concessional (decided 2026-08-20, ADR-0004). Seeded
- *                            from FR.INR.LEND on country fetch.
- *   loanInterestRate: 0.35 — index.html ships 0.35, but UI.updateSmartRates()
- *                            overwrites the field about one second after load
- *                            (finding F-05), so a real session runs at roughly
- *                            0.2332. We use the *declared* default here because
- *                            the override is itself a finding, not intent.
+ * Country loading changes observations only (ADR-0034); negotiated terms, programme
+ * assumptions, and policy choices below are never overwritten by API data. The 2%
+ * cost of capital is an illustrative concessional term, not the commercial benchmark.
  *
  * Keep this file in sync with index.html. tests/ compares the two.
  */
@@ -30,17 +24,17 @@ module.exports = {
   fundCostOfCapital: 0.02,
 
   // Market
-  popReqToilets: 27280461,
-  popGrowthRate: 0.03,
-  avgHHSize: 5,
+  popReqToilets: 9244139,
+  popGrowthRate: 0.0256,
+  avgHHSize: 4.4,
   avgToiletCost: 100,
   inflationRate: 0.0332,
 
   // Delivery network
-  districts: 50,
+  districts: 28,
   mePerDistrict: 20,
   toiletsPerMeMonth: 7,
-  meSetupCost: 2000,
+  meSetupCost: 3000,
 
   // Lending
   grantSupportPct: 0.10,
@@ -51,7 +45,7 @@ module.exports = {
   meExitRate: 0.10,        // annual business closure — distinct from write-down (R-6.3)
   meExpansionBudgetShare: 0.10,  // in-loop ME expansion pacing (R-6.2, ADR-0019)
   meMaxMonthlyGrowthRate: 0.10,  // ceiling on ME-network growth per month (R-6.2, ADR-0019)
-  termHh: 18,
+  termHh: 12,
   termMe: 12,
 
   // Costs
@@ -62,16 +56,16 @@ module.exports = {
   opsReserveCap: 0.15,   // 15% — now converted at the boundary like every other rate
 
   // Impact
-  dalyPerPerson: 0.005,
-  dalyValue: 500,
-  avgAnnualIncome: 1020,
+  dalyPerPerson: 0,
+  dalyValue: 0,
+  avgAnnualIncome: 600,
   co2PerToilet: 0.0,
   co2Value: 15,
   carbonCreditShare: 0.5,
 
   // Impact assumption, now a named input rather than a constant buried in the loop.
   hoursPerPersonPerDay: 0.25,
-  timeValueFactor: 0.30,   // saved time valued at 30% of the market wage (R-8.6)
+  timeValueFactor: 0.50,   // Malawi appraisal/WHO convention (ADR-0034)
   toiletLifespanYears: 5,  // carbon crediting stops after this (R-8.5)
 
   // Flags. These are now independent: `verify` controls the integrity/viability

@@ -70,11 +70,11 @@ function realisedLossRatio(annualWriteDownRate, annualInterestRate, termMonths, 
 
 describe('T-DEF-1 — realised loss vs. disbursed principal (F-26, F-35)', () => {
 
-    test('the shipped household default (18 months, 5% headline) realises 4.13%, not 5%', () => {
+    test('the Malawi household default (12 months, 5% headline) realises 2.81%, not 5%', () => {
         const ratio = realisedLossRatio(BASE.hhDefaultRate, BASE.loanInterestRate, BASE.termHh);
-        assert.ok(Math.abs(ratio - 0.0413) < 0.001,
-            `realised loss ${(ratio * 100).toFixed(2)}% should be pinned near 4.13% for the shipped ` +
-            `18-month term — if this moved, either the amortisation math or the shipped defaults changed`);
+        assert.ok(Math.abs(ratio - 0.0281) < 0.001,
+            `realised loss ${(ratio * 100).toFixed(2)}% should be pinned near 2.81% for the Malawi ` +
+            `12-month term — if this moved, either the amortisation math or the shipped defaults changed`);
         assert.ok(ratio < BASE.hhDefaultRate,
             `at the shipped term, realised loss (${(ratio * 100).toFixed(2)}%) should still read below ` +
             `the headline rate (${(BASE.hhDefaultRate * 100).toFixed(1)}%) — R-3.4`);
@@ -127,5 +127,19 @@ describe('T-DEF-1 — realised loss vs. disbursed principal (F-26, F-35)', () =>
     test('a 0% write-down rate realises exactly 0% loss (INV-8 territory — no NaN)', () => {
         const ratio = realisedLossRatio(0, BASE.loanInterestRate, BASE.termHh);
         assert.strictEqual(ratio, 0);
+    });
+
+    test('the full model honors explicit 0% HH and ME write-down inputs', () => {
+        const result = ModelModule.calculate({
+            ...BASE,
+            hhDefaultRate: 0,
+            meDefaultRate: 0,
+            verify: true
+        });
+        const totalHh = result.series.dataMonthlyDefaultsHh.reduce((a, b) => a + b, 0);
+        const totalMe = result.series.dataMonthlyDefaultsMe.reduce((a, b) => a + b, 0);
+        assert.strictEqual(totalHh, 0, '0% HH write-down must not fall back to 5%');
+        assert.strictEqual(totalMe, 0, '0% ME write-down must not fall back to 10%');
+        assert.strictEqual(result.integrity.ok, true);
     });
 });

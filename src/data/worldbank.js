@@ -1,5 +1,5 @@
 /**
- * worldbank.js — part of the S5 structural split (ADR-0033). World Bank / countriesnow.space API client. No DOM.
+ * worldbank.js — World Bank indicator client. No DOM.
  */
 
 /* eslint-disable no-unused-vars --
@@ -21,8 +21,7 @@ const ApiModule = {
         popGrowth: 'SP.POP.GROW',
         lendingRate: 'FR.INR.LEND',
         gini: 'SI.POV.GINI',
-        poverty: 'SI.POV.DDAY', // Poverty headcount ratio at $2.15 a day (2017 PPP) (% of population)
-        politicalStability: 'PV.EST' // Political Stability and Absence of Violence/Terrorism (Estimate, 0-100 Rank)
+        poverty: 'SI.POV.DDAY'
     },
 
     async fetchData(countryCode) {
@@ -31,14 +30,20 @@ const ApiModule = {
 
         const fetchIndicator = async (ind) => {
             try {
-                // Fetch last 5 years (MRV=5) to handle patchy data (like Governance)
-                const url = `${baseUrl}/${countryCode}/indicator/${ind}?${format}&MRV=5`;
+                // `mrnev=1` means the latest non-empty observation. `MRV=5`, used
+                // previously, means five calendar periods and silently dropped older
+                // but still latest poverty/Gini observations in countries with patchy
+                // series. Keep the record's year and API label for provenance.
+                const url = `${baseUrl}/${countryCode}/indicator/${ind}?${format}&mrnev=1`;
                 const res = await fetch(url);
                 const data = await res.json();
                 if (data && data[1] && data[1].length > 0) {
-                    // Loop through results to find the first non-null value
                     const validRecord = data[1].find(r => r.value !== null);
-                    return validRecord ? validRecord.value : null;
+                    return validRecord ? {
+                        value: validRecord.value,
+                        year: validRecord.date || null,
+                        label: validRecord.indicator?.value || ind
+                    } : null;
                 }
                 return null;
             } catch (e) {
@@ -47,7 +52,8 @@ const ApiModule = {
             }
         };
 
-        const [pop, basicSan, safeSan, gdp, gni, inflation, popGrowth, lendingRate, gini, poverty, politicalStability] = await Promise.all([
+        const [popRecord, basicSanRecord, safeSanRecord, gdpRecord, gniRecord,
+            inflationRecord, popGrowthRecord, lendingRateRecord, giniRecord, povertyRecord] = await Promise.all([
             fetchIndicator(this.indicators.ruralPop),
             fetchIndicator(this.indicators.basicSanitation),
             fetchIndicator(this.indicators.safelyManaged),
@@ -57,28 +63,34 @@ const ApiModule = {
             fetchIndicator(this.indicators.popGrowth),
             fetchIndicator(this.indicators.lendingRate),
             fetchIndicator(this.indicators.gini),
-            fetchIndicator(this.indicators.poverty),
-            fetchIndicator(this.indicators.politicalStability)
+            fetchIndicator(this.indicators.poverty)
         ]);
 
-        return { pop, basicSan, safeSan, gdp, gni, inflation, popGrowth, lendingRate, gini, poverty, politicalStability };
-    },
-
-    async fetchStates(countryName) {
-        try {
-            const res = await fetch('https://countriesnow.space/api/v0.1/countries/states', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ country: countryName })
-            });
-            const data = await res.json();
-            if (data && data.data && data.data.states) {
-                return data.data.states;
-            }
-            return [];
-        } catch (e) {
-            console.error("Error fetching states", e);
-            return [];
-        }
+        const records = {
+            pop: popRecord,
+            basicSan: basicSanRecord,
+            safeSan: safeSanRecord,
+            gdp: gdpRecord,
+            gni: gniRecord,
+            inflation: inflationRecord,
+            popGrowth: popGrowthRecord,
+            lendingRate: lendingRateRecord,
+            gini: giniRecord,
+            poverty: povertyRecord
+        };
+        const value = key => records[key]?.value ?? null;
+        return {
+            pop: value('pop'),
+            basicSan: value('basicSan'),
+            safeSan: value('safeSan'),
+            gdp: value('gdp'),
+            gni: value('gni'),
+            inflation: value('inflation'),
+            popGrowth: value('popGrowth'),
+            lendingRate: value('lendingRate'),
+            gini: value('gini'),
+            poverty: value('poverty'),
+            meta: records
+        };
     }
 };

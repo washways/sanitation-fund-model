@@ -1,114 +1,99 @@
 # Parameter Dictionary
 
-**The canonical unit, source and meaning of every input.** Check this file before touching any field — it's the ground truth for what a default actually is and what happens to it once entered.
+**The canonical unit, source and meaning of every input.** Check this file before changing a field. Every rate is entered as a percentage (`12` means 12%) and converted once, at the UI boundary, to a decimal.
 
-Columns:
+Source categories matter:
 
-- **id** — the `id` attribute in `index.html`, which is also the key `UI.getInputs()` reads.
-- **Unit as entered** — what the user types into the box. Every rate is a **percentage**: type `12` for 12%, never `0.12`.
-- **Unit in the model** — what `ModelModule` receives after `getInputs()` normalises it. For a rate, this is always the decimal form, converted exactly once at the boundary.
-- **Source** — where a value comes from when the country data is fetched, if it does.
-
----
+- **Observed** values may be populated from a dated World Bank indicator.
+- **Malawi reference** values have country-specific evidence but remain editable.
+- **Programme assumption** values are illustrative terms or operating choices. They are never made country-specific by an API heuristic.
 
 ## Capital and structure
 
-| id | Label | Default | Unit as entered | Unit in model | Source | Notes |
-|---|---|---|---|---|---|---|
-| `wiz-invest-grant-sidebar` | Initial Grant Capital | 1,000,000 | USD | USD | user | Seeds the **grant ledger**. Caps total subsidy for the whole run — see `grantSupportPct`, below. |
-| `wiz-invest-loan-sidebar` | Initial Loan Capital | 4,000,000 | USD | USD | user | Seeds the **loan ledger**. Senior debt; must be repaid. |
-| `wiz-duration-sidebar` | Duration (Years) | 5 | years | years | user | Simulation horizon. The fund winds up when there's nothing left to do, so extending the horizon past that point changes nothing. |
-| `fundRepaymentTerm` | Fund Repayment (Years) | 5 | years | years | user | Flat principal amortisation. **Longer is not always safer** — a schedule that runs past the fund's productive life produces permanent arrears rather than more time to repay. |
-| `investorGracePeriod` | Investor Grace Period (Months) | 6 | months | months | user | Defers **principal only** — interest accrues from month 1 regardless, and capitalises into the liability if the fund can't pay it. |
-| `fundCostOfCapital` | Fund Cost of Capital (%) | 2 | percent | decimal | `FR.INR.LEND` on fetch (informational only — never overwrites this field) | Defaults to 2%, concessional ([ADR-0013](adr/0013-viable-default-scenario.md)). Accrues from month 1; unpaid interest capitalises. |
+| id | Label | Default | Entered / model unit | Source | Meaning |
+|---|---|---:|---|---|---|
+| `wiz-invest-grant-sidebar` | Initial Grant Capital | 1,000,000 | USD / USD | programme assumption | Seeds the grant ledger and caps total grant-funded output. |
+| `wiz-invest-loan-sidebar` | Initial Loan Capital | 4,000,000 | USD / USD | programme assumption | Senior debt that seeds the loan ledger. |
+| `wiz-duration-sidebar` | Duration | 5 | years / years | programme assumption | Simulation horizon; a completed fund winds up before it. |
+| `fundRepaymentTerm` | Fund Repayment | 5 | years / years | programme assumption | Flat principal amortisation after grace. |
+| `investorGracePeriod` | Investor Grace Period | 6 | months / months | programme assumption | Defers principal only; interest accrues from month 1. |
+| `fundCostOfCapital` | Fund Cost of Capital | 2 | percent / decimal | programme assumption | Illustrative concessional term. The dated commercial lending rate is displayed as context and never overwrites it. |
 
 ## Market and demand
 
-| id | Label | Default | Unit as entered | Unit in model | Source | Notes |
-|---|---|---|---|---|---|---|
-| `popReqToilets` | Pop. Needing Toilets | 27,280,461 | people | people | `SP.RUR.TOTL` x sanitation gap | Divided by `avgHHSize` to get the toilet backlog. **People, not households.** |
-| `popGrowthRate` | Annual Pop Growth (%) | 3 | percent | decimal | `SP.POP.GROW` | The unserved backlog compounds monthly at `(1+g)^(1/12)`, net of production. |
-| `avgHHSize` | Avg Household Size (people) | 5 | people | people | user | One toilet serves one household. |
-| `avgToiletCost` | Avg Toilet Cost ($ USD) | 100 | USD | USD | user | Base cost before inflation and the variable mark-up. |
-| `avgAnnualIncome` | Avg Annual Income ($) | 1,020 | USD | USD | `NY.GNP.PCAP.CD` | Sets the value of saved time (R-8.6). Editing it changes the SROI. |
+| id | Label | Default | Entered / model unit | Source | Meaning |
+|---|---|---:|---|---|---|
+| `popReqToilets` | Pop. Needing Toilets | 9,244,139 | people / people | observed: `SP.RUR.TOTL × (1 − SH.STA.BASS.RU.ZS/100)` | Malawi uses 18,307,197 rural people (2025) and 49.5054% basic rural sanitation (2024). Divided by household size to form the toilet backlog. |
+| `popGrowthRate` | Annual Pop Growth | 2.56 | percent / decimal | observed: `SP.POP.GROW` | Compounds the carried backlog monthly before current production is subtracted. |
+| `avgHHSize` | Avg Household Size | 4.4 | people / people | Malawi reference: [NSO IHS5 2019/20](https://microdata.worldbank.org/catalog/3818) | One toilet serves one household. Not auto-filled for other countries. |
+| `avgToiletCost` | Avg Toilet Cost | 100 | USD / USD | Malawi reference: [UNICEF Malawi sanitation revolving funds](https://www.unicef.org/malawi/media/3886/file/Sanitation%2520Revolving%2520Funds%2520for%2520Rural%2520and%2520Peri-Urban%2520Communities%2520in%2520Malawi.pdf) | Rounded 2024-USD planning value; the cited 2020 rural VIP retail price was $83.80. Replace with a current local bill of quantities. |
+| `avgAnnualIncome` | Avg Annual Income | 600 | USD/year / USD/year | observed: `NY.GNP.PCAP.CD`, falling back to `NY.GDP.PCAP.CD` | Used only to value saved time; it is not household disposable income. |
 
 ## Delivery network
 
-| id | Label | Default | Unit as entered | Unit in model | Source | Notes |
-|---|---|---|---|---|---|---|
-| `districts` | Administrative Units | 50 | count | count | `countriesnow.space` states, else pop/500k | With `mePerDistrict`, sets the hard ME cap. |
-| `mePerDistrict` | Micro-enterprises / Unit | 20 | count | count | derived from the sanitation gap | Cap is `districts x mePerDistrict` = 1,000 by default, and the baseline reaches it. |
-| `toiletsPerMeMonth` | Toilets / ME / Month | 7 | count/month | count/month | user | No learning curve, no seasonality. |
-| `meSetupCost` | ME Setup Cost ($ USD) | 2,000 | USD | USD | user | One of two components of `meCapitalRequirement(inputs)` — the other is working capital. Used consistently everywhere an ME's cost matters (`src/model/engine.js`). |
+| id | Label | Default | Entered / model unit | Source | Meaning |
+|---|---|---:|---|---|---|
+| `districts` | Administrative Units | 28 | count / count | Malawi reference: official district count | With enterprises per unit, sets the network ceiling. It is not fetched because third-party administrative-unit data mixed districts and regions. |
+| `mePerDistrict` | Micro-enterprises / Unit | 20 | count / count | programme assumption | Capacity ceiling, not an observed country statistic. |
+| `toiletsPerMeMonth` | Toilets / ME / Month | 7 | count/month / count/month | programme assumption | Flat productivity; no learning, seasonality, or supply-chain lag. |
+| `meSetupCost` | ME Setup Cost | 3,000 | USD / USD | Malawi reference: [UNICEF Malawi sanitation revolving funds](https://www.unicef.org/malawi/media/3886/file/Sanitation%2520Revolving%2520Funds%2520for%2520Rural%2520and%2520Peri-Urban%2520Communities%2520in%2520Malawi.pdf) | Approximate enterprise-loan size, added to working capital by `meCapitalRequirement()`. |
 
 ## Lending terms
 
-| id | Label | Default | Unit as entered | Unit in model | Source | Notes |
-|---|---|---|---|---|---|---|
-| `loanInterestRate_v2` | HH Loan Interest Rate (%) | 40 | percent | decimal | `updateSmartRates` suggestion — a hint only, never overwrites what you typed | `0` is a valid, fully-handled concessional rate. |
-| `meLoanInterestRate_v2` | ME Loan Interest Rate (%) | 10 | percent | decimal | `updateSmartRates` suggestion | Same. |
-| `termHh` | HH Loan Term (Months) | 18 | months | months | user | Term changes the *realised* loss rate on write-downs, not just the headline — see `hhDefaultRate`, below. |
-| `termMe` | ME Loan Term (Months) | 12 | months | months | user | |
-| `hhDefaultRate` | HH Annual Write-down Rate (%) | 5 | percent | decimal | poverty-derived | **Not the share of loans that fail.** It's an annual write-down hazard on the outstanding balance — realised loss as a share of principal disbursed depends on the term, and isn't the headline number. At the shipped 18-month term, 5% headline realises ~4.1%; at 6 months it would realise ~1.5%; past ~24 months realised loss *exceeds* the headline. See `tests/writedown.test.js`. |
-| `meDefaultRate` | ME Annual Write-down Rate (%) | 5 | percent | decimal | user | Same convention as the household rate. Reduces **loan value**. |
-| `meExitRate` | ME Annual Closure Rate (%) | 10 | percent | decimal | user | Reduces **capacity**. Deliberately separate from loan write-down: a business can close having repaid in full, and a loan can be written down by a business that keeps trading. The 10% default is a convention, not a measurement. |
-| `meExpansionBudgetShare` | ME Expansion Budget Share (%) | 10 | percent | decimal | user | Share of `lendable` cash committed each month to recruiting new MEs. |
-| `meMaxMonthlyGrowthRate` | ME Max Monthly Growth Rate (%) | 10 | percent | decimal | user | Ceiling on ME-network growth per month, as a share of the current network. **The dominant driver of the recruitment curve** — 10%/month compounds to ~3.1x/year. |
-| `grantSupportPct` | Grant-Funded Pacing (% of Production) | 10 | percent | decimal | affordability calc | **A pacing lever, not a volume lever.** Total grant-funded output is capped by the grant ledger (Initial Grant Capital), so this field controls *how fast* it's spent, not how much gets spent in total — a live `grantExhaustedMonth` note beside the field in the app shows the actual runway. |
+| id | Label | Default | Entered / model unit | Source | Meaning |
+|---|---|---:|---|---|---|
+| `loanInterestRate_v2` | HH Loan Interest Rate | 40 | percent / decimal | programme assumption | Illustrative annual portfolio rate; never derived from CPI or commercial lending. Zero is valid. |
+| `meLoanInterestRate_v2` | ME Loan Interest Rate | 10 | percent / decimal | programme assumption | Illustrative annual portfolio rate. Zero is valid. |
+| `termHh` | HH Loan Term | 12 | months / months | Malawi reference: UNICEF reports 3–12 months | Affects affordability and realised loss exposure. |
+| `termMe` | ME Loan Term | 12 | months / months | Malawi reference: UNICEF enterprise loans | Loan tenor for enterprise capital. |
+| `hhDefaultRate` | HH Annual Write-down Rate | 5 | percent / decimal | programme assumption | Continuous annual hazard on outstanding balance, not “share of borrowers failing.” At the 12-month default, 5% headline produces about 2.81% realised loss on disbursed principal. Zero is valid. |
+| `meDefaultRate` | ME Annual Write-down Rate | 5 | percent / decimal | programme assumption | Same convention as household write-down; reduces portfolio value, not enterprise capacity. Zero is valid. |
+| `meExitRate` | ME Annual Closure Rate | 10 | percent / decimal | programme assumption | Reduces productive capacity and is deliberately separate from loan write-down. |
+| `meExpansionBudgetShare` | ME Expansion Budget Share | 10 | percent / decimal | programme assumption | Share of lendable cash available for enterprise expansion each month. |
+| `meMaxMonthlyGrowthRate` | ME Max Monthly Growth Rate | 10 | percent / decimal | programme assumption | Ceiling on monthly network growth; a strong driver of reach. |
+| `grantSupportPct` | Grant-Funded Pacing | 10 | percent / decimal | policy choice | Target share of monthly production funded from the grant ledger. This controls pacing, not total subsidy depth. |
 
 ## Costs
 
-| id | Label | Default | Unit as entered | Unit in model | Source | Notes |
-|---|---|---|---|---|---|---|
-| `annualFixedOpsCost` | Annual Fixed Ops Cost ($) | 60,000 | USD/year | USD/year | `10000 + 500 x districts` | Inflated monthly. Falls to **30%** during hibernation (the collections floor), and stops entirely at wind-up. |
-| `mgmtFeeRatio` | Mgmt Fee Ratio (%) | 1 | percent | decimal | fixed 2% on fetch | Part of `variableRate`, charged on every disbursement. |
-| `meCostRate` | M&E Cost (%) | 2 | percent | decimal | user | Part of `variableRate`. Monitoring & evaluation — not micro-enterprise. |
-| `contingencyRate` | Cost Contingency (% mark-up) | 5 | percent | decimal | political stability (`PV.EST`) | ✅ Relabelled. It is a **per-unit uplift on delivery cost**, not a reserve — the implementation was right and the name was wrong ([ADR-0017](adr/0017-contingency-is-a-cost-mark-up.md)). |
-| `opsReserveCap` | Starting Capacity Throttle (%) | 15 | percent | percent, `/100` in model | user | Sizes the starting ME cohort at month 0, and applies **only then** — that is its whole, narrow job. Not the fund's ongoing solvency reserve, which is computed fresh every month regardless of this setting (below). Because it sets the starting network, it drives the entire growth path — sweep it to see the effect. |
-| — | **Solvency reserve** (not a form field — computed every month) | 3 × full ops cost + next 3mo of scheduled investor principal | USD | USD | derived | The gate on new lending — R-5.4. Not the same thing as `opsReserveCap`, above, which only ever sizes the month-0 starting network. |
-| `inflationRate` | Annual Inflation (%) | 3.32 | percent | decimal | `FP.CPI.TOTL.ZG` | Any rate, including well above 100%, is representable. Applies to unit cost and fixed ops, not to income. |
+| id | Label | Default | Entered / model unit | Source | Meaning |
+|---|---|---:|---|---|---|
+| `annualFixedOpsCost` | Annual Fixed Ops Cost | 60,000 | USD/year / USD/year | programme assumption | Inflated monthly; falls to the 30% collections floor in hibernation and stops at wind-up. |
+| `mgmtFeeRatio` | Mgmt Fee Ratio | 1 | percent / decimal | programme assumption | Variable fee charged on each disbursement. |
+| `meCostRate` | M&E Cost | 2 | percent / decimal | programme assumption | Monitoring-and-evaluation cost charged on each disbursement. |
+| `contingencyRate` | Cost Contingency | 5 | percent / decimal | programme assumption | Per-unit delivery-cost mark-up, not a reserve and not a governance-index transform. |
+| `opsReserveCap` | Starting Capacity Throttle | 15 | percent / decimal | programme assumption | Sizes only the month-0 enterprise cohort. The rolling solvency reserve is separately derived as three months of full fixed ops plus the next three months of scheduled investor principal. |
+| `inflationRate` | Annual Cost Escalation in Model Currency | 3.32 | percent / decimal | programme assumption | Escalates USD-labelled unit and fixed operating costs. Local-currency CPI is displayed as context but is not applied without an exchange-rate path. |
 
 ## Impact
 
-| id | Label | Default | Unit as entered | Unit in model | Source | Notes |
-|---|---|---|---|---|---|---|
-| `dalyPerPerson` | DALYs Averted / Person | 0.005 | DALY/person/year | same | user | Accrued monthly against active toilets (area under curve) — R-8.3. |
-| `dalyValue` | Value per DALY ($) | 500 | USD/DALY | same | user | ✅ Now **included** in SROI ([ADR-0011](adr/0011-sroi-is-social-value-only.md)); it previously dominated the impact card while being excluded from the ratio. |
-| `co2PerToilet` | CO2e / Toilet (Tonnes/Yr) | 0.2 in HTML, overridden to 0.0 on load | tonnes/toilet/year | tonnes/toilet/year, accrued monthly against toilets in service | user | Carbon is switched off by default on the shipped demo — set it above 0 to see the carbon path. Accrual stops after `toiletLifespanYears`. |
-| `co2Value` | Value per Tonne CO2e ($) | 15 | USD/tonne | USD/tonne | user | |
-| `carbonCreditShare` | Fund Carbon Share (%) | 100 in HTML, overridden to 50 on load | percent | decimal | user | `co2PerToilet` and `carbonCreditShare` are deliberately overridden to a documented demo scenario by `setCarbonDefault` on page load, regardless of what `index.html` ships — see `src/app.js`'s `DOMContentLoaded` handler. |
-| `timeValueFactor` | Value of Saved Time (% of wage) | 30 | percent | decimal | user | ✅ Replaces the hardcoded, uncited `$0.50`/hour. The hourly value is now `avgAnnualIncome / 2080 × factor` — $0.147 at the shipped defaults, shown beneath the input. The 0.30 factor is an accepted convention, not a verified figure — confirm against your programme's guidance before publishing. [ADR-0015](adr/0015-value-of-saved-time.md), [ADR-0030](adr/0030-accept-30-percent-time-value-factor.md) |
-| `toiletLifespanYears` | Toilet Service Life (Years) | 5 | years | years | user | ✅ Carbon crediting, DALYs and time-saved all stop after this ([ADR-0016](adr/0016-toilet-service-life.md), [ADR-0025](adr/0025-service-life-gates-all-impact.md)). No effect at the shipped 5-year default duration; on longer runs, all three impact channels stop for a retired toilet. |
-| `hoursPerPersonPerDay` | Hours Saved / Person / Day | 0.25 | hours | hours | user assumption | One definition, computed in the loop (R-8.2). |
+| id | Label | Default | Entered / model unit | Source | Meaning |
+|---|---|---:|---|---|---|
+| `dalyPerPerson` | DALYs Averted / Person | 0 | DALY/person/year / same | unsupported by default | Set only from an approved programme impact study. Zero prevents an unsupported health claim from entering SROI. |
+| `dalyValue` | Value per DALY | 0 | USD/DALY / same | unsupported by default | Included in SROI when supplied; zero by default because no approved Malawi valuation was identified. |
+| `co2PerToilet` | CO2e / Toilet | 0 | tonnes/toilet/year / same | unsupported by default | Carbon is off until a methodology supplies an abatement factor. Accrual stops at service-life expiry. |
+| `co2Value` | Value per Tonne CO2e | 15 | USD/tonne / same | programme assumption | Used only when an abatement factor is supplied. |
+| `carbonCreditShare` | Fund Carbon Share | 50 | percent / decimal | programme assumption | Fund share after transaction and verification costs. |
+| `timeValueFactor` | Value of Saved Time | 50 | percent / decimal | Malawi reference: [World Bank Lilongwe project appraisal](https://documents1.worldbank.org/curated/en/419171513998119839/pdf/MALAWI-PAD-12012017.pdf) | Applies 50% of income per working hour, following the appraisal’s conservative opportunity-cost convention. |
+| `toiletLifespanYears` | Toilet Service Life | 5 | years / years | programme assumption | Gates carbon, DALYs, and time-saved benefits. Does not create replacement demand. |
+| `hoursPerPersonPerDay` | Hours Saved / Person / Day | 0.25 | hours/day / same | Malawi reference: World Bank appraisal | Fifteen minutes per person per day. |
 
-## Not used by the model
+## Country-data boundary
 
-| id | Why it is here |
+The World Bank client requests the latest non-empty observation (`mrnev=1`) and preserves its year. It writes only:
+
+| Model input | Indicator |
 |---|---|
-| `countryInput` | Selects the country for the World Bank fetch. Passed to the model as a label only. |
-| `enableBreakEvenSolver` | Read by the controller, not the maths — turns the solver panel on or off. |
+| population needing toilets | `SP.RUR.TOTL` and `SH.STA.BASS.RU.ZS` |
+| population growth | `SP.POP.GROW` |
+| annual income proxy | `NY.GNP.PCAP.CD`, falling back to `NY.GDP.PCAP.CD` |
 
-Every other collected input reaches `ModelModule` — `tests/wiring.test.js` enforces this and fails if a new one goes in without being wired up.
+Safely managed sanitation, CPI inflation, commercial lending, Gini, and poverty are dated context only. Missing essential observations clear the affected field and pause automatic calculation; they never reuse the previous country’s value. Programme terms, costs, capacity, write-downs, and subsidy policy remain the user’s responsibility for every country.
 
----
+## Controller-only inputs
 
-## The unit convention
+| id | Meaning |
+|---|---|
+| `countryInput` | Chooses the ISO country used by the World Bank fetch; passed to the model as a label only. |
+| `enableBreakEvenSolver` | Turns the solver panel on or off; not part of the monthly mathematics. |
 
-**Every rate is entered as a percentage.** `12` means 12%. Conversion to a decimal happens exactly once, at the input boundary, in `UI.getInputs()`:
-
-```js
-const getPercent = (id, def = 0) => getRaw(id, def) / 100;
-```
-
-Decided 2026-08-20 ([ADR-0012](adr/0012-percentage-entry-convention.md)), resolving F-17. Before that the form taught two conventions at once — nine fields labelled "(0.35 = 35%)" and one labelled "(%)" — under two heuristics that contradicted each other about the same DOM node:
-
-```js
-// getInputs        — "anything above 1 must be a percentage"    val > 1.0  -> val / 100
-// updateSmartRates — "anything below 1 must be a decimal"       val < 1.0  -> val * 100
-```
-
-So 100% was ambiguous, and any rate **above** 100% was unrepresentable: a user modelling 150% inflation silently got 1.5%.
-
-**No function may inspect a value's magnitude to infer its unit.** Both heuristics are deleted; do not reintroduce either. `tests/wiring.test.js` applies the same `/100` when checking defaults, so reverting a single field to decimal entry fails the drift test.
-
-Anything saved or screenshotted before 2026-08-20 shows rate fields in the old decimal convention and must be re-entered rather than copied across.
+Every other collected input reaches `ModelModule`; `tests/wiring.test.js` enforces this. No function may inspect a number’s magnitude to infer whether it is a percentage. That convention is fixed by [ADR-0012](adr/0012-percentage-entry-convention.md).

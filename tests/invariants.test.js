@@ -24,6 +24,24 @@ const TOL = 1.0; // dollars — see R-2.6
 const sum = a => a.reduce((x, y) => x + y, 0);
 const run = over => ModelModule.calculate({ ...BASE, ...over });
 
+test('INV-19: demand grows before current production is subtracted (R-7.1)', () => {
+  const inputs = { ...BASE, popGrowthRate: 0.12 };
+  const result = ModelModule.calculate(inputs);
+  const monthlyGrowth = ModelModule.getMonthlyRate(inputs.popGrowthRate);
+  let expected = inputs.popReqToilets / inputs.avgHHSize;
+  let previousProduction = 0;
+
+  assert.strictEqual(result.series.dataMonthlyBacklog.length, inputs.duration * 12);
+  for (let i = 0; i < result.series.dataMonthlyBacklog.length; i++) {
+    const cumulative = result.series.dataToiletsMonthlyLoan[i] + result.series.dataToiletsMonthlyGrant[i];
+    const production = cumulative - previousProduction;
+    expected = Math.max(0, expected * (1 + monthlyGrowth) - production);
+    assert.ok(Math.abs(result.series.dataMonthlyBacklog[i] - expected) < 1e-6,
+      `month ${i + 1}: backlog ${result.series.dataMonthlyBacklog[i]} should be ${expected}`);
+    previousProduction = cumulative;
+  }
+});
+
 /**
  * The scenario matrix. Every invariant runs against all of these, so a fix that
  * works on the defaults but breaks a corner is caught here rather than by a user.

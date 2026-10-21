@@ -71,7 +71,8 @@ console.log('='.repeat(80));
   check('F-01', 'fundCostOfCapital has a control and produces investor interest',
     hasInput && sum(withCoC.series.dataMonthlyFundInt) > 0,
     `input present in index.html: ${hasInput}. At 8%: ${money(sum(withCoC.series.dataMonthlyFundInt))} of interest paid, ` +
-    `${money(withCoC.series.capitalisedInterest)} capitalised. Auto-filled from FR.INR.LEND on country fetch.`);
+    `${money(withCoC.series.capitalisedInterest)} capitalised. Commercial lending is now context only; ` +
+    `the fund term remains user-controlled.`);
 }
 
 // F-02 + F-33 — carbon units.
@@ -307,6 +308,8 @@ console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
 console.log('DELIBERATELY OUTSTANDING (see docs/ANALYSIS.md and STATUS.md):');
-console.log('  None in the findings register — 37 of 37 resolved.');
+console.log('  F-44: capitalised interest is not scheduled for catch-up repayment.');
+console.log('  F-45: wind-up can freeze cash before investor liability is settled.');
+console.log('  Findings register: 43 of 45 resolved.');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

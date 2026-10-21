@@ -1,71 +1,71 @@
 # STATUS
 
-**Read this first. Update it last.** One page, always current — a snapshot of where things stand, not a history. For what changed and when, see [CHANGELOG.md](CHANGELOG.md) and [docs/adr/](docs/adr/). If this page disagrees with reality, reality wins and you fix this file.
+**Read this first. Update it last.** This is the current snapshot; history is in [CHANGELOG.md](CHANGELOG.md), the on-site [changelog](changelog.html), and [docs/adr/](docs/adr/).
 
----
-
-## Where the work is
+## Current state
 
 | | |
 |---|---|
-| **Stages complete** | S0, S1, S2, S3, S5 — five of seven. S4 item 1 (solver robustness, F-27) done; items 2-4 and all of S6 not started. |
-| **Not started** | S4 items 2–4 (solver caching, sensitivity analysis, scenario save/load) and S6 (presentation and reach) — see [docs/ROADMAP.md](docs/ROADMAP.md). |
-| **Tests** | ✅ 77 pass, 0 todo, 0 fail (`npm test`, ~1s) |
-| **Lint** | ✅ `npm run lint` — ESLint, 3 rules. CI runs it on every push/PR (`.github/workflows/ci.yml`). |
-| **Goldens** | ✅ 21 scenarios, current (`npm run golden:diff` → "No behaviour change") |
-| **Findings register** | 37 of 37 resolved — see [docs/ANALYSIS.md](docs/ANALYSIS.md). Nothing outstanding in the register. |
-| **Open modelling questions** | **None.** |
+| **Release** | 0.6.0 — evidence-based Malawi defaults and observations-only country loading |
+| **Stages complete** | S0, S1, S2, S3, S5; S4 solver correctness complete, other S4 work and S6 remain |
+| **Tests** | ✅ 83 pass, 0 todo, 0 fail (`npm test`, ~1s) |
+| **Lint** | ✅ ESLint, 0 errors and 0 warnings |
+| **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
+| **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
+| **Findings register** | 43 of 45 resolved; F-44 and F-45 remain open |
+| **Open modelling question** | MODEL_SPEC R-7.6: whether the headline constraint label should derive directly from the production minimum |
 
----
+## What remains unresolved
 
-## What's actually unresolved
-
-| What | Why it's not done | Urgency |
+| What | Why it matters | Recommended next action |
 |---|---|---|
-| Solver caching/debouncing across recalculations (S4 item 2) | ADR-0032 (2026-08-25) fixed solver *correctness* (F-27) but roughly doubled its simulation cost (22 → up to 47 per recalc when the solver panel is enabled). The existing 500ms input debounce still applies; result caching across recalcs is not written. | Low — solver panel is opt-in and off by default; measured cost is well under 100ms at the shipped 5-year horizon. Worth revisiting if it's noticeable at long horizons. |
-| Sensitivity ("tornado") analysis and scenario save/load (S4 items 3–4) | Not started. | Low — genuinely useful, not blocking anything. |
-| Browser click-through for charts and the AI advisor panel | Covered only as "does not throw" via a headless DOM stub, not against a real browser. | Low — the startup path and CSV export both have real behavioural tests now; these two don't yet. |
-| The shipped default scenario's parameter search predates three later correctness fixes (reserve sizing, ME capital pricing, solver robustness) | The grid search that chose the defaults (`docs/adr/0013`) hasn't been re-run against the model as it stands today. The defaults are still confirmed viable — just not re-optimised. | Low — nothing is wrong, it's just not freshly tuned. |
+| **F-44 — capitalised-interest catch-up** | Missed interest increases investor liability but is not separately scheduled for later repayment. | High priority: write one debt-waterfall ADR defining arrears ordering and repayment. |
+| **F-45 — terminal investor settlement** | Wind-up can freeze loan cash while investor liability remains outstanding. | Fix with F-44: pay available loan cash through a specified terminal waterfall before freezing state. |
+| **R-7.6 constraint label** | The displayed dominant constraint is recomputed separately from actual production limits and can disagree. | Decide the reporting convention before changing code. |
+| Solver caching, sensitivity analysis, scenario save/load | S4 items 2–4 remain. | Sensitivity analysis is the most useful next robustness feature. |
+| Real-browser chart/advisor click-through | Headless tests cover startup, calculation, export, and wiring, but not visual chart interaction. | Add a browser smoke pass during S6 accessibility/mobile work. |
 
-That's the complete list. Nothing is blocked on a decision — the model owner has ruled on every open modelling question the original audit raised.
+## Malawi reference run
 
----
+Static defaults and the recorded post-fetch Malawi startup now agree on the model-driving observations. Country loading no longer changes programme assumptions.
 
-## What the model produces today
+| Measure | Current result |
+|---|---:|
+| Toilets built | 118,509 |
+| People reached | 521,440 (~5.6% of the target population) |
+| Micro-enterprises at horizon | 345 |
+| Ending / minimum cash | +$17,898 |
+| Net assets | +$472,563 |
+| Senior debt | Repaid in full |
+| OSS / FSS | 1.83 / 1.19 |
+| SROI | 4.09 (time value only by default; unsupported DALY and carbon inputs are zero) |
+| Verdict | Integrity OK; viability OK |
 
-Baseline run, shipped `index.html` defaults (`node tools/verify-findings.js` reproduces this):
+The 20-year stress scenario is **not viable** under the same assumptions: 164,749 toilets, -$11,751 net assets, and 40 insolvent months. This is accepted and disclosed rather than hidden by inventing a higher portfolio rate or lower operating cost. The sourced 12-month Malawi household term turns capital faster but earns less interest per loan, so the illustrative 40% portfolio rate does not sustain indefinite operations.
 
-| | |
-|---|---|
-| Toilets built | 97,744 (488,720 people, ~1.8% of the target population) |
-| Micro-enterprises | 254 |
-| Ending / minimum cash | +$17,741 (never dips below this) |
-| Net assets | +$914,174 |
-| Senior debt | repaid in full |
-| OSS / FSS | 2.37 / 1.44 |
-| Verdict | integrity OK, viability OK |
+## Assumptions and country data
 
-What a user actually sees on load differs from the above — the app auto-fetches country data and overwrites most of the form half a second after load (`tests/startup.test.js` is what covers this). With the recorded Malawi fixture: 175,340 toilets, +$21,931 minimum cash, still fully repaid, still viable.
-
----
+- World Bank loading writes only target population, population growth, and GNI per capita (GDP fallback), using latest non-empty observations with dates.
+- CPI, commercial lending, poverty, Gini, and sanitation coverage are context only.
+- Missing essential observations clear the field and pause automatic calculation; another country's value is never retained.
+- Malawi references are documented in [docs/PARAMETERS.md](docs/PARAMETERS.md): 4.4 people/household, 28 districts, $100 toilet planning cost, $3,000 enterprise capital, 12-month loan terms, 0.25 hours saved/day, and a 50% time-value factor.
+- Financing, operating, write-down, capacity, contingency, and grant-pacing defaults remain illustrative programme assumptions. They must be calibrated before an investment decision.
 
 ## Environment
 
-Node is **not** on `PATH` on the maintainer's machine:
+Node is not on `PATH` on the maintainer's machine:
 
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"
-node --version                    # v25.8.1 — anything >= 20 works
-npm ci                             # installs ESLint, the one devDependency
-npm test                           # 77 pass, 0 fail
+npm test
 npm run lint
-node tools/verify-findings.js      # re-measures the audit's findings against the live model
+npm run golden:diff
+npm run audit:countries       # live, read-only; not a CI test
+node tools/verify-findings.js
 ```
 
-Run the app: `python -m http.server 8080`, or `npm run serve`. Works offline (Chart.js is vendored). `file://` works too, but the World Bank fetch is CORS-blocked from there.
+Run the app with `python -m http.server 8080` or `npm run serve`. `file://` works, but browsers may block World Bank calls from local files.
 
----
+## Latest activity
 
-## Recent activity
-
-See [CHANGELOG.md](CHANGELOG.md) for the full, dated record. In short: an initial audit (2026-08-20) found 34 defects and fixed most of them across three stages; a follow-up session (2026-08-21) closed everything that remained in S0-S3, including a debt-service reserve fix and a micro-enterprise capital-pricing fix, and every open modelling question. A third session (2026-08-25) closed the findings register (F-27, solver robustness — fixing it surfaced and fixed a second, unrelated display bug, F-37; register now 37 of 37) and then completed S5, splitting the 4,028-line `app.js` into 14 files under `src/` with a byte-identical `golden.json` ([ADR-0033](docs/adr/0033-s5-structural-split.md)). `docs/adr/` holds one decision record per change, each with its prediction and its measured result.
+On 2026-10-20 the post-S5 review added F-38–F-45. F-38–F-43 were fixed under [ADR-0034](docs/adr/0034-observations-only-country-data.md) and [ADR-0035](docs/adr/0035-zero-writedowns-and-demand-order.md). The review made startup listener behavior browser-faithful, removed policy-generating API heuristics and mixed-level administrative data, recalibrated Malawi defaults from primary evidence, preserved explicit zero write-downs, and corrected demand recurrence order. F-44/F-45 are intentionally visible follow-up work.

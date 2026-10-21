@@ -28,6 +28,7 @@ const ROOT = path.join(__dirname, '..');
 // positions in the load order.
 const appSrc = concatenated();
 const htmlSrc = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const changelogSrc = fs.readFileSync(path.join(ROOT, 'changelog.html'), 'utf8');
 
 /** Every id present in index.html. */
 const htmlIds = new Set([...htmlSrc.matchAll(/id="([A-Za-z0-9_-]+)"/g)].map(m => m[1]));
@@ -42,6 +43,15 @@ function getInputsBody() {
 }
 
 describe('input wiring', () => {
+  test('the current changelog and known limitations are visible from the model', () => {
+    assert.match(htmlSrc, /href="changelog\.html"/,
+      'the dashboard must link to the on-site change record');
+    assert.match(changelogSrc, /Version 0\.6\.0/,
+      'the on-site change record must identify the current release');
+    assert.match(changelogSrc, /F-44[\s\S]*F-45/,
+      'known open correctness findings must be visible, not buried in developer docs');
+  });
+
   test('every id read by getInputs() exists in index.html (F-01)', () => {
     const body = getInputsBody();
     const read = new Set(

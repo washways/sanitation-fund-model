@@ -169,6 +169,8 @@ const ModelModule = {
         // Demand grows with population (R-7.1). Without this the model shows the fund
         // closing a gap that is in fact widening (F-09).
         const monthlyPopGrowth = this.getMonthlyRate(inputs.popGrowthRate || 0);
+        const annualWriteDownHh = inputs.hhDefaultRate ?? 0.05;
+        const annualWriteDownMe = inputs.meDefaultRate ?? 0.10;
 
         // Cumulative Trackers
         let cumulativeCarbon = 0;
@@ -208,6 +210,7 @@ const ModelModule = {
         const dataMonthlyDalysAverted = [];
         const dataMonthlyActiveToilets = [];
         const dataMonthlyCreditingToilets = [];
+        const dataMonthlyBacklog = [];
 
         // Audit & Unit Economics Arrays
         const dataMonthlyUnitCost = [];
@@ -317,8 +320,8 @@ const ModelModule = {
 
             // 3. Collect Revenues (Legacy Portfolios)
             // Monthly Default Prob (1 - (1-AnnualRate)^(1/12))
-            const probDefHh = 1 - Math.pow(1 - (inputs.hhDefaultRate || 0.05), 1 / 12);
-            const probDefMe = 1 - Math.pow(1 - (inputs.meDefaultRate || 0.10), 1 / 12);
+            const probDefHh = 1 - Math.pow(1 - annualWriteDownHh, 1 / 12);
+            const probDefMe = 1 - Math.pow(1 - annualWriteDownMe, 1 / 12);
 
             // Process HH
             hhCohorts = hhCohorts.filter(c => c.termRemaining > 0);
@@ -441,6 +444,11 @@ const ModelModule = {
             let grantCount = 0;
             let loanCount = 0;
             let targetGrantCount = 0;
+
+            // R-7.1: grow the carried backlog before subtracting this month's
+            // production. The previous implementation subtracted first and then
+            // grew the remainder, understating demand by production * growth.
+            backlogToilets *= (1 + monthlyPopGrowth);
 
             // A. ME Expansion
             // Only if lendable > 0 and backlog > 0
@@ -611,6 +619,7 @@ const ModelModule = {
             dataMonthlyDalysAverted.push(dalys);
             dataMonthlyActiveToilets.push(toiletsBuiltCumulative);
             dataMonthlyCreditingToilets.push(creditingToilets);
+            dataMonthlyBacklog.push(backlogToilets);
 
             // 10. Data Push
             const netFlow = (loanInflow + carbonRev) - (outflows.fixed + outflows.varFees + outflows.investPrin + outflows.investInt + outflows.loansHh + outflows.loansMe + outflows.grants);
@@ -648,9 +657,6 @@ const ModelModule = {
             dataMonthlyPortfolioHh.push(portfolioHhNow);
             dataMonthlyPortfolioMe.push(portfolioMeNow);
             dataMonthlyMes.push(currentMEs);
-
-            // Demand grows with population (R-7.1), net of what was just built.
-            backlogToilets *= (1 + monthlyPopGrowth);
 
             // Carry this month's state forward for next month's wind-up test.
             prevPortfolio = portfolioHhNow + portfolioMeNow;
@@ -728,6 +734,7 @@ const ModelModule = {
             dataMonthlyDalysAverted,
             dataMonthlyActiveToilets,
             dataMonthlyCreditingToilets,
+            dataMonthlyBacklog,
             dataPeople,
             dataMonthlyPortfolioHh,
             dataMonthlyPortfolioMe,

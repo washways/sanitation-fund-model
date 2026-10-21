@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Changes and Known Limitations — Sanitation Fund Model</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background:#f8fafc; color:#1e293b; }
+        .page { max-width:960px; margin:0 auto; padding:2rem 1.25rem 4rem; }
+        .nav { display:flex; gap:1rem; margin-bottom:2rem; }
+        .nav a { color:#1d4ed8; font-weight:600; text-decoration:none; }
+        h1 { margin-bottom:.4rem; }
+        h2 { margin:2rem 0 .75rem; }
+        h3 { margin:1.25rem 0 .4rem; }
+        p, li { line-height:1.65; }
+        ul { margin:.5rem 0 1rem 1.4rem; }
+        .meta { color:#64748b; }
+        .release, .notice { background:#fff; border:1px solid #e2e8f0; border-radius:.65rem; padding:1.25rem; margin-top:1rem; }
+        .notice { border-left:5px solid #d97706; background:#fffbeb; }
+        .good { border-left:5px solid #16a34a; }
+        code { background:#f1f5f9; padding:.1rem .25rem; border-radius:.2rem; }
+        table { width:100%; border-collapse:collapse; margin:.75rem 0; background:#fff; }
+        th, td { border:1px solid #e2e8f0; padding:.65rem; text-align:left; vertical-align:top; }
+        th { background:#f1f5f9; }
+    </style>
+</head>
+<body>
+<main class="page">
+    <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
+    <h1>Changes and known limitations</h1>
+    <p class="meta">Current release: <strong>Version 0.6.0 — 21 October 2026</strong>. This page summarizes changes that affect interpretation. The repository’s <code>CHANGELOG.md</code>, model specification, and decision records contain the full technical record.</p>
+
+    <section class="release good">
+        <h2>0.6.0 — Evidence-based defaults and safer country data</h2>
+        <ul>
+            <li>Malawi now opens with dated population, sanitation-gap, growth, and income observations plus sourced household size, district count, enterprise capital, loan terms, and time-saving assumptions.</li>
+            <li>Country loading changes only observed target population, population growth, and income. CPI, commercial lending, poverty, Gini, and sanitation coverage are shown as dated context; they do not silently set financing, losses, costs, capacity, or subsidy policy.</li>
+            <li>Missing essential country observations clear the affected field and pause automatic calculation instead of retaining another country’s value.</li>
+            <li>A genuine 0% portfolio write-down now remains zero. Demand now grows before current production is subtracted.</li>
+            <li>DALY and carbon assumptions default to zero until programme evidence is supplied.</li>
+        </ul>
+
+        <h3>Effect on the Malawi five-year reference run</h3>
+        <table>
+            <tr><th>Measure</th><th>0.5.0</th><th>0.6.0</th><th>Interpretation</th></tr>
+            <tr><td>Toilets built</td><td>97,744</td><td>118,509</td><td>Higher turnover with the sourced 12-month household term.</td></tr>
+            <tr><td>Net assets</td><td>$914,174</td><td>$472,563</td><td>Less portfolio remains outstanding at the five-year endpoint.</td></tr>
+            <tr><td>SROI</td><td>4.46</td><td>4.09</td><td>Unsupported DALY value is removed; time value remains sourced.</td></tr>
+            <tr><td>Senior debt</td><td>Fully repaid</td><td>Fully repaid</td><td>The five-year reference run remains viable.</td></tr>
+        </table>
+    </section>
+
+    <section class="notice">
+        <h2>Known limitations requiring follow-up</h2>
+        <p><strong>F-44 — capitalised interest catch-up.</strong> Missed investor interest is added to the liability but is not separately scheduled for later repayment. Scenarios that capitalise interest may overstate the liability remaining at the end.</p>
+        <p><strong>F-45 — terminal investor settlement.</strong> Wind-up can freeze the ledger while investor liability remains. A dedicated terminal-settlement rule is still required.</p>
+        <p><strong>Long-horizon warning.</strong> The sourced 12-month Malawi household term makes the five-year reference run viable, but the current 20-year stress scenario eventually becomes insolvent because lower interest earned per loan does not cover indefinite operating costs. This result is disclosed rather than tuned away with an invented rate or cost.</p>
+        <p><strong>Constraint label question.</strong> The model specification still asks whether the headline “dominant constraint” should be derived directly from the production minimum. The underlying production arithmetic is unaffected.</p>
+    </section>
+
+    <section class="release">
+        <h2>Earlier stages</h2>
+        <ul>
+            <li><strong>0.5.0 / S5:</strong> split the application into pure model, UI, data, and controller modules with no behavior change.</li>
+            <li><strong>0.4.0 / S4:</strong> replaced unsafe monotonic solver assumptions with grid-then-bisect searches and explicit failure results.</li>
+            <li><strong>0.3.0 / S3:</strong> corrected reserves, enterprise capital, terminal wind-up, impact service life, and model mathematics.</li>
+            <li><strong>0.2.0 / S0–S2:</strong> added the safety net, fixed silent input and unit errors, separated integrity from viability, and stopped the controller rewriting user inputs.</li>
+        </ul>
+    </section>
+</main>
+</body>
+</html>

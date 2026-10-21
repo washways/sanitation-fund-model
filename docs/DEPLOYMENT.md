@@ -57,11 +57,11 @@ static files and should be served exactly as committed. **Do not delete it.**
   `/` in any `src` or `href` resolves to `washways.org/` and 404s. A test in
   `tests/` should be added if this ever recurs.
 - **Every external call must be HTTPS**, or the browser blocks it as mixed content.
-  Currently: the World Bank API, `countriesnow.space`, jsDelivr and Google Fonts.
+  Currently: the World Bank API, jsDelivr and Google Fonts.
 - **The World Bank API must allow cross-origin requests.** If it ever stops, country
-  auto-fill fails silently and the form keeps its defaults — the app still runs, but
-  users would be modelling Malawi's defaults under another country's name. Worth a
-  visible warning if that day comes.
+  auto-fill shows a visible error and pauses automatic calculation. Essential fields
+  are cleared, so a user cannot unknowingly model another country with retained
+  Malawi values.
 - **Chart.js is pinned with an integrity hash.** If the CDN copy ever changes, the
   browser refuses it and the page falls back to `vendor/chart.umd.min.js`. That
   fallback only works because `.nojekyll` stops Jekyll interfering with `vendor/`.
