@@ -35,6 +35,7 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | S4 sensitivity — 2026-10-21 | Added a pure, deterministic one-at-a-time engine and JSON CLI for up to eight evidence-bounded parameters. | Every low/high pair must bracket base, pass normal validation, and carry a source. Never add built-in generic shocks, undocumented country ranges, timestamps, network fetches, or mutation. |
 | S6 country provenance — 2026-10-21 | Gave the three World Bank-derived model inputs one blue, dated source state and made real user edits clear it. | Only `popReqToilets`, `popGrowthRate`, and `avgAnnualIncome` may receive `country-observation`. Programme assumptions never do; extend the startup regression if the API boundary changes. |
 | S3 rollout realism — 2026-10-21 | Replaced the cash-maximising month-zero cohort with an explicit 15% pilot share of the target ME network. | Opening enterprises are `min(target share, affordable, network cap)`. The pilot share is a visible programme assumption, never country-derived; zero must seed no hidden cohort. |
+| S6 responsive results — 2026-10-21 | Replaced the fixed three-column programme summary and global no-wrap cells with an adaptive grid and scoped monthly-table scrolling. | Compact summary cards must wrap and fit the main panel. Only `#monthlyDataTable` may retain wide no-wrap cells inside its local scroll container. |
 
 The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) and [docs/adr/](docs/adr/). Never edit an accepted ADR; supersede it.
 

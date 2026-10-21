@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 54 of 54 findings resolved as of 2026-10-21. F-54 was fixed under ADR-0047. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 55 of 55 findings resolved as of 2026-10-21. F-55 was fixed under ADR-0048. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,6 +54,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
+| ✅ [F-55](#f-55--programme-summary-tables-overflow-the-page) | Medium | UI | Summary cards are fixed to three columns while all cells are forced not to wrap | src | S6 |
 | ✅ [F-54](#f-54--month-zero-launches-half-the-national-enterprise-network) | **High** | Assumptions | Month zero cash-maximises the startup cohort, creating $25.8k of ME interest in month one | run | S3 |
 | ✅ [F-53](#f-53--country-derived-input-highlighting-contradicts-its-own-source-state) | Medium | UI | API provenance disappears immediately on some fields and remains falsely on edited values | run | S6 |
 | ✅ [F-48](#f-48--the-visible-advisor-bypasses-model-tested-advice) | **High** | Advice | The visible advisor calls legacy rules that repeat recommendations already proved unsafe | src | S6 |
@@ -1034,6 +1035,12 @@ The equivalent genuine zero-cap run produces no enterprises or toilets and is no
 The `Starting Capacity Throttle` did not state an operational target. It subtracted 15% of combined grant and loan capital from the loan ledger only while calculating the month-zero cohort, then disappeared. The replacement 15%-of-network pilot starts 84 enterprises, records $7,603 month-one interest, grows to about 232 enterprises by month 12 and 314 by month 24, retains full five-year senior repayment, and has FSS of 1.064. A 10% pilot also repays in full but has FSS of only 0.995; one enterprise per district starts 28 and records $2,534 interest, but repays only 97.66% of senior principal under the current terms.
 
 **Fix:** replaced the indirect capital holdback with an explicit, editable initial-network share, retaining the documented 15% input as a pilot-network target. Affordability remains a hard cap and later growth is unchanged. [ADR-0047](adr/0047-start-with-a-pilot-enterprise-network.md). Resolved in `9e642e6`.
+
+### F-55 — Programme summary tables overflow the page
+
+**Medium — fixed.** The results grid below “Programme Summary (End of Project Estimation)” was fixed to three columns in an inline style. A later global `.summary-table th, .summary-table td` rule also applied a 100px minimum width and `white-space: nowrap` to both the compact summary cards and the 22-column monthly audit table. With the fixed sidebar, ordinary laptop and tablet widths could not accommodate the minimum content width, so cards and tables extended beyond the visible main panel.
+
+**Fix:** the summary now uses a CSS auto-fitting grid, compact summary cells wrap, and wide no-wrap cells are scoped to the monthly audit table inside its local horizontal scroll container. [ADR-0048](adr/0048-fit-programme-summary-to-viewport.md). Resolved in `ffff787`.
 
 ---
 

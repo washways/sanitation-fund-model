@@ -17,7 +17,7 @@ must be replaced with the programme's implementation plan.
 
 ## Status
 
-Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **114 automated tests and 21 characterisation scenarios.** Known limitations are listed in [STATUS.md](STATUS.md) and the on-site [changelog](changelog.html).
+Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **116 automated tests and 21 characterisation scenarios.** Known limitations are listed in [STATUS.md](STATUS.md) and the on-site [changelog](changelog.html).
 
 **What's genuinely unresolved:** all 54 registered defects and all 14 modelling questions are resolved. Scenario comparison, solver caching, and real-browser chart/advisor checks remain roadmap work. Evidence-bounded sensitivity is available through the deterministic JSON CLI. See [STATUS.md](STATUS.md).
 
@@ -56,7 +56,7 @@ npm ci            # installs ESLint, the one devDependency — needed once
 npm test
 ```
 
-Fourteen suites, zero flakiness, about four seconds: **constraint reporting**, **debt waterfall**, **export**, **golden**, **input validation**, **invariants**, **purity**, **sensitivity**, **smoke**, **solver**, **startup scale**, **startup**, **wiring**, and **write-down**.
+Fifteen suites, zero flakiness, about four seconds: **constraint reporting**, **debt waterfall**, **export**, **golden**, **input validation**, **invariants**, **layout**, **purity**, **sensitivity**, **smoke**, **solver**, **startup scale**, **startup**, **wiring**, and **write-down**.
 
 ```bash
 npm run golden:diff   # would any model output change, without writing anything?
@@ -125,7 +125,7 @@ methodology.html     user-facing methodology note
 server.js             dev static server
 eslint.config.js      3 rules: no-dupe-keys, no-undef, no-unused-vars
 
-tests/                14 suites, 114 tests, 21 recorded golden scenarios
+tests/                15 suites, 116 tests, 21 recorded golden scenarios
 vendor/                pinned Chart.js, for offline use
 tools/                 headless model loader, app-source file list, audit verification
 docs/                  spec, parameters, architecture, testing, roadmap, ADRs, audit
