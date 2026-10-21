@@ -186,12 +186,48 @@ Object.assign(ModelModule, {
 
 
         const goal = inputs.popReqToilets || 1;
-        const minCash = Math.min(...s.dataMonthlyCashBalance);
+
+        // R-7.6 / ADR-0044: rank actual foregone monthly production, not ending
+        // cash or a separately reconstructed reach heuristic. Capacity and loan
+        // capital are the additive loss partition. Grant capital is an overlapping
+        // sub-cause showing output recoverable by fully funding the intended grant
+        // allocation while leaving loan capacity unchanged.
+        const constraintForegone = (s.dataConstraintForegone || []).reduce((totals, month) => {
+            totals.capacity += month.capacity || 0;
+            totals.loanCapital += month.loanCapital || 0;
+            totals.grantCapital += month.grantCapital || 0;
+            return totals;
+        }, { capacity: 0, loanCapital: 0, grantCapital: 0 });
+        const constraintLabels = {
+            capacity: "ME Capacity",
+            loanCapital: "Loan Capital",
+            grantCapital: "Grant Capital"
+        };
+        const rankedConstraints = Object.entries(constraintForegone)
+            .filter(([, foregone]) => foregone > 0)
+            .sort((a, b) => b[1] - a[1]);
 
         let dominantConstraint = "Demand Met (Success)";
-        if (monthsInsolvent > 0) dominantConstraint = "Capital Depleted (Insolvent)";
-        else if (goal > people && minCash > 0) dominantConstraint = "Supply Chain (ME Capacity)";
-        else if (goal > people) dominantConstraint = "Capital Limited";
+        let primaryConstraint = "demand";
+        let secondaryConstraints = [];
+        if (rankedConstraints.length > 0) {
+            const greatestLoss = rankedConstraints[0][1];
+            const primaryKeys = rankedConstraints
+                .filter(([, foregone]) => foregone === greatestLoss)
+                .map(([key]) => key);
+            const secondaryKeys = rankedConstraints
+                .filter(([, foregone]) => foregone !== greatestLoss)
+                .map(([key]) => key);
+
+            primaryConstraint = primaryKeys.length === 1 ? primaryKeys[0] : "mixed";
+            secondaryConstraints = secondaryKeys;
+            dominantConstraint = primaryKeys.length === 1
+                ? `${constraintLabels[primaryKeys[0]]} (primary)`
+                : `Mixed: ${primaryKeys.map(key => constraintLabels[key]).join(" + ")} (primary)`;
+            if (secondaryKeys.length > 0) {
+                dominantConstraint += `; secondary: ${secondaryKeys.map(key => constraintLabels[key]).join(", ")}`;
+            }
+        }
 
         // F-14 / ADR-0028: a single flat, documented object. Six named groups, each a
         // direct property of the return value — never nested inside one another, never
@@ -211,7 +247,12 @@ Object.assign(ModelModule, {
                 loanToilets: loanToilets,
                 grantToilets: grantToilets,
                 sdg6Gap: (people / goal),
-                dominantConstraint: dominantConstraint
+                dominantConstraint: dominantConstraint,
+                constraintAnalysis: {
+                    primary: primaryConstraint,
+                    secondary: secondaryConstraints,
+                    foregone: constraintForegone
+                }
             },
             impact: {
                 dalys: totalDalys,

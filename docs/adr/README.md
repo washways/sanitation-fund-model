@@ -44,3 +44,8 @@ For the short version of what each one decided, [CHANGELOG.md](../../CHANGELOG.m
 | [0037](0037-fail-fast-input-validation.md) | Reject invalid inputs before simulation instead of producing plausible corruption |
 | [0038](0038-export-the-calculated-scenario.md) | Export the calculated input snapshot and canonical KPIs |
 | [0039](0039-one-model-tested-advice-path.md) | Route the visible advisor through model-tested scenarios only |
+| [0040](0040-report-exact-me-launches.md) | Report exact monthly enterprise launches and align the audit table |
+| [0041](0041-honor-zero-enterprise-capacity.md) | Honor explicit zero enterprise capacity after validation |
+| [0042](0042-chart-annual-grants-as-flows.md) | Chart annual grant spending as flows, not cumulative balances |
+| [0043](0043-report-final-partial-year.md) | Retain the final partial year in reporting |
+| [0044](0044-report-actual-production-constraints.md) | Rank constraints from actual foregone production and expose secondary causes |

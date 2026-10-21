@@ -11,6 +11,22 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.15.0] — 2026-10-21 — Production constraints follow actual output
+
+### Changed
+
+- **The production-constraint headline now comes from the production allocation it explains.** The old monthly label was computed before grant affordability and final output were known, while the headline independently guessed from reach, minimum cash, and insolvency. The two could disagree with each other and with the actual bottleneck. ([ADR-0044](docs/adr/0044-report-actual-production-constraints.md), Q14 / R-7.6)
+- **Primary and secondary constraints are both visible.** Monthly unmet output is partitioned between enterprise capacity and loan capital. Grant capital is reported separately as the output recoverable by fully funding the intended grant allocation while leaving loan capacity unchanged. Months affected by more than one cause are labelled `Mixed`.
+- **The horizon headline ranks foregone monthly output, not constrained-month counts.** For the Malawi reference run, enterprise capacity is primary; loan capital and grant capital are secondary. Insolvency remains in the separate viability verdict instead of being substituted for a production constraint.
+- **All original modelling questions are now resolved.** The owner also selected evidence-bounded one-at-a-time sensitivity analysis, retained the disclosed adverse 20-year Malawi stress result, retained an explicitly USD-only engine for now, and prioritized transparent JSON scenario comparison after sensitivity analysis.
+- **A dedicated three-test regression now protects the explanation.** It reconciles monthly demand to production, verifies the Malawi primary/secondary ranking, and ensures a satisfied demand target receives no invented bottleneck.
+
+### Golden movement
+
+Only `dominantConstraint` changes in 20 of 21 scenarios. The demand-constrained scenario remains `Demand Met (Success)`. Every numeric field — cashflow, production, reach, impact, balance sheet, viability, and solver output — is unchanged.
+
+---
+
 ## [0.14.0] — 2026-10-21 — Partial-year horizons fully reported
 
 ### Fixed

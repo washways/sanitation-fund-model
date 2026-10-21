@@ -18,6 +18,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 const { concatenated } = require('../tools/app-source');
+const { version } = require('../package.json');
 
 const ROOT = path.join(__dirname, '..');
 // The app's src/ files, concatenated in load order — this is what a browser's
@@ -46,11 +47,11 @@ describe('input wiring', () => {
   test('the current changelog and known limitations are visible from the model', () => {
     assert.match(htmlSrc, /href="changelog\.html"/,
       'the dashboard must link to the on-site change record');
-    assert.match(changelogSrc, /Version 0\.14\.0/,
+    assert.match(changelogSrc, new RegExp(`Version ${version.replaceAll('.', '\\.')}\\b`),
       'the on-site change record must identify the current release');
-    assert.match(changelogSrc, /<li>Valid horizons shorter than a year now show charts[\s\S]*F-52 is resolved/,
+    assert.match(changelogSrc, /<li>The production-constraint headline now uses[\s\S]*Q14 is resolved/,
       'the on-site change record must give users a simple bullet summary of the current release');
-    assert.match(changelogSrc, /Known limitations requiring follow-up[\s\S]*Long-horizon warning[\s\S]*Constraint label question/,
+    assert.match(changelogSrc, /Known limitations requiring follow-up[\s\S]*Long-horizon warning[\s\S]*Decision-support roadmap[\s\S]*Currency/,
       'remaining limitations must be visible, not buried in developer docs');
   });
 

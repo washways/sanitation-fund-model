@@ -2,12 +2,6 @@
  * engine.js — part of the S5 structural split (ADR-0033). The core simulation: rate/annuity helpers and the month loop. Pure — no DOM, no browser globals — enforced by tests/purity.test.js.
  */
 
-/* eslint-disable no-unused-vars --
- * F-19 baseline (docs/ANALYSIS.md), carried over from the pre-S5 single-file count —
- * 1 violation in this file (`constraints`). Recorded, not fixed, per
- * docs/ROADMAP.md's S0 task. Run `npx eslint src/` before committing; if this file's
- * count goes up, that is a new defect, not baseline noise.
- */
 // --- Model Module (Dynamic Core) ---
 const ModelModule = {
     // Helper: Geometric Monthly Rate
@@ -361,8 +355,6 @@ const ModelModule = {
         let cumulativeCarbon = 0;
         let cumulativeDalys = 0;
         let dataDalys = [];
-        let constraints = { capital: 0, capacity: 0, demand: 0 };
-
         // Accumulators (Audit)
 
         // --- Output Arrays ---
@@ -408,6 +400,7 @@ const ModelModule = {
         const dataMonthlyPerToiletOps = [];
 
         const dataConstraintBinding = [];
+        const dataConstraintForegone = [];
 
         // Audit & Reconciliation
         const dataMonthlyInflationFactor = [];
@@ -718,18 +711,6 @@ const ModelModule = {
             // Affordability
             const maxUnits = Math.floor(lendable / grossUnitCost); // Loan Capacity
 
-            // Audit ME Demand
-            // Required MEs to clear backlog in e.g. 12 months? Or just instant?
-            // "MEsComputedRequired" -> simple capacity check
-            // If backlog is 1000, and capacity is 7/mo, needed = 1000/7.
-            // But this changes every month.
-            // Let's just log if Constraint was Capacity.
-            let constraint = "Demand";
-            const meCapacity = currentMEs * inputs.toiletsPerMeMonth;
-            if (meCapacity < backlogToilets) constraint = "Capacity";
-            if (maxUnits < backlogToilets && maxUnits < meCapacity) constraint = "Capital";
-            dataConstraintBinding.push(constraint);
-
             // Carbon & Grant Capacity
             // Strategy: Check GrantCash for Subsidy
             // Grant Cost = GrossUnitCost (Fully Burdened)
@@ -763,6 +744,41 @@ const ModelModule = {
                 loanCount = Math.min(loanCount, Math.max(0, remainingDemand - grantCount));
             }
             production = grantCount + loanCount;
+
+            // R-7.6 / ADR-0044: explain the production decision with the same
+            // quantities that produced it. Capacity and loan-capital losses form an
+            // additive partition of whole-toilet demand less actual output. Grant
+            // capital is an overlapping diagnostic: output recoverable if the
+            // intended grant allocation were fully funded while loan capacity stayed
+            // fixed. It must not be added to the other two fields.
+            const demandUnits = Math.max(0, Math.floor(demand));
+            const capacityUnits = Math.max(0, Math.floor(capacity));
+            const plannedUnits = Math.min(demandUnits, capacityUnits);
+            const capacityForegone = Math.max(0, demandUnits - plannedUnits);
+            const loanCapitalForegone = Math.max(0, plannedUnits - production);
+            const fullyFundedGrantTarget = Math.min(plannedUnits, Math.max(0, targetGrantCount));
+            const safeLoanCapacity = Math.max(0, maxUnits);
+            const outputWithFullGrantTarget = Math.min(
+                plannedUnits,
+                fullyFundedGrantTarget + safeLoanCapacity
+            );
+            const grantCapitalForegone = Math.max(0, outputWithFullGrantTarget - production);
+
+            const bindingCauses = [];
+            if (capacityForegone > 0) bindingCauses.push("Capacity");
+            if (loanCapitalForegone > 0) bindingCauses.push("Loan Capital");
+            if (grantCapitalForegone > 0) bindingCauses.push("Grant Capital");
+            const constraint = bindingCauses.length === 0
+                ? "Demand"
+                : bindingCauses.length === 1
+                    ? bindingCauses[0]
+                    : `Mixed: ${bindingCauses.join(" + ")}`;
+            dataConstraintBinding.push(constraint);
+            dataConstraintForegone.push({
+                capacity: capacityForegone,
+                loanCapital: loanCapitalForegone,
+                grantCapital: grantCapitalForegone
+            });
 
             if (production > 0) {
                 // Disbursements
@@ -966,6 +982,7 @@ const ModelModule = {
             dataMonthlyPerToiletGrant,
             dataMonthlyPerToiletOps,
             dataConstraintBinding,
+            dataConstraintForegone,
 
             // New Audit Fields
             dataMonthlyInflationFactor,

@@ -451,6 +451,6 @@ console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
 console.log('Findings register: 52 of 52 resolved.');
-console.log('Open modelling question: MODEL_SPEC R-7.6/Q14 (headline constraint reporting).');
+console.log('Open modelling questions: none. R-7.6/Q14 was resolved by ADR-0044.');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

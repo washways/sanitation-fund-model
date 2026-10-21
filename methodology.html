@@ -616,12 +616,18 @@ pay principal    = min(principal due, cash remaining)</div>
             in reality widening.</p>
 
         <h3>What binds</h3>
-        <p>Each month, production is the tightest of three limits:</p>
-        <div class="formula-box">capacity   = enterprises × toilets per enterprise per month   supply
-demand     = outstanding backlog                              market
-maxUnits   = lendable / fully-burdened unit cost              capital</div>
-        <p>Grants are allocated first, up to the grant support percentage; loans fill the remainder as far as capital
-            allows.</p>
+        <p>Each month, demand and enterprise capacity set planned production. Grants are allocated first, up to the
+            grant support percentage and available grant cash; loans fill the remainder as far as loan capital allows.</p>
+        <div class="formula-box">planned             = min(floor(demand), floor(capacity))
+capacity foregone   = floor(demand) - planned
+loan-capital loss   = planned - actual production</div>
+        <p>The two losses reconcile demand to actual production. The model also reports how much additional output
+            would have been possible if the intended grant allocation had been fully funded while loan capacity stayed
+            unchanged. That grant figure overlaps the loan-capital loss, so it is explanatory rather than additive.</p>
+        <p>The dashboard ranks these actual monthly output losses over the horizon. It shows the largest as the primary
+            constraint, lists every other positive cause as secondary, and labels a month <strong>Mixed</strong> when
+            capacity and capital suppress production together. The same backlog may remain constrained in successive
+            months, so this is a ranking of production opportunities, not a count of unique households.</p>
 
         <div class="alert-box">
             <h3>Grant Support % paces subsidy, it does not increase it</h3>
@@ -1048,12 +1054,16 @@ capitalPreservation = netAssets   / capitalInvested</div>
             <strong>Treat impact outputs as scenario arithmetic, not as evidence.</strong></p>
 
         <!-- ================================================================ -->
-        <h2 id="open">13. Open questions</h2>
+        <h2 id="open">13. Decisions and open work</h2>
 
-        <p>Most original modelling questions are decided and recorded as ADRs. One specification question remains:
-            whether the headline constraint should be derived directly from the production minimum rather than from a
-            separate comparison. It is documented in MODEL_SPEC R-7.6 and must not be changed without the model owner's
-            decision.</p>
+        <p>All original modelling questions are now decided and recorded as ADRs. Q14 was resolved on 21 October 2026:
+            the headline constraint now comes from actual foregone production, reports simultaneous constraints, and
+            keeps grant and loan affordability visible as separate causes. No modelling question is currently open.</p>
+
+        <p>Remaining work is product development rather than an unresolved model convention: evidence-bounded
+            one-at-a-time sensitivity analysis comes first, followed by transparent JSON scenario save/load/compare.
+            The current engine remains explicitly USD-only. The adverse twenty-year Malawi result remains a disclosed
+            stress finding and will not be tuned away without new evidence.</p>
 
         <div class="alert-box">
             <h3>Country evidence does not determine programme policy</h3>

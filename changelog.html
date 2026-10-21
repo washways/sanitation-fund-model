@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.14.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.15.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.15.0 — Production constraints follow actual output</h2>
+        <ul>
+            <li>The production-constraint headline now uses the same demand, enterprise-capacity, grant, loan, and final-output quantities as the monthly production calculation.</li>
+            <li>The largest source of foregone monthly output is shown first, with other material causes listed as secondary. Months affected by several causes are labelled <strong>Mixed</strong>.</li>
+            <li>For the standard Malawi scenario, enterprise capacity is primary; loan and grant capital are secondary. This describes production and does not replace the separate fund-viability verdict.</li>
+            <li>A three-test regression reconciles demand to production and prevents the constraint explanation drifting back to a cash-balance heuristic.</li>
+            <li>No financial, production, reach, impact, viability, or solver number changed. Q14 is resolved and no modelling question remains open.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.14.0 — Partial-year horizons fully reported</h2>
         <ul>
             <li>Valid horizons shorter than a year now show charts and a labelled reporting period instead of a blank dashboard.</li>
@@ -143,7 +154,8 @@
         <h2>Known limitations requiring follow-up</h2>
         <ul>
             <li><strong>Long-horizon warning:</strong> the sourced 12-month Malawi household term makes the five-year reference run viable, but the current 20-year stress scenario eventually becomes insolvent because lower interest earned per loan does not cover indefinite operating costs. This result is disclosed rather than tuned away.</li>
-            <li><strong>Constraint label question:</strong> the model specification still asks whether the headline “dominant constraint” should be derived directly from the production minimum. The underlying production arithmetic is unaffected.</li>
+            <li><strong>Decision-support roadmap:</strong> evidence-bounded sensitivity analysis and transparent JSON scenario comparison remain to be built. Generic percentage shocks will not be presented as evidence.</li>
+            <li><strong>Currency:</strong> the model remains explicitly USD-only. It does not apply a spot exchange rate to multi-year cashflows or model exchange-rate risk.</li>
             <li><strong>Calibration:</strong> financing, operating-cost, loss, capacity, contingency, and subsidy assumptions remain illustrative until replaced with programme evidence.</li>
         </ul>
     </section>
