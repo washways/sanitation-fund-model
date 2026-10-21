@@ -11,6 +11,24 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.19.0] — 2026-10-21 — Impact estimates are explicit and evidence-linked
+
+### Changed
+
+- **The Jobs chart now works and agrees with the headline.** A new editable `Jobs Supported / Active ME` assumption defaults to three for the Malawi reference case: one owner/operator plus two full-time-equivalent workers. Both outputs now use active enterprises × this assumption and are labelled “jobs supported,” not jobs created or job-years. The unsupported `$3,000/job` display is removed. ([ADR-0049](docs/adr/0049-derive-health-and-report-impact-honestly.md), F-56)
+- **Country loading now derives a conservative sanitation DALY burden factor.** It divides the WHO lower uncertainty bound for diarrhoeal DALYs attributable to inadequate sanitation by the matching-year World Bank population without basic sanitation. Malawi 2019 produces `0.0096719` burden DALY per exposed person-year. The blue field names both APIs and the year. (F-57)
+- **A separate, editable 21% health-effect assumption avoids treating all attributable burden as averted.** The default is the 2022 meta-analysis point estimate for basic sanitation without sewer connection versus unimproved/limited sanitation (RR 0.79; 95% CI 0.61–1.03, moderate certainty). It produces about 2,139 physical DALYs averted in the five-year Malawi reference. DALY value remains zero, so SROI does not change.
+- **Missing health evidence fails safely.** A 44-country live audit found the derivation available for 42 countries. Eritrea lacks the matching World Bank exposure data and Tuvalu lacks the WHO numerator; they display not estimated. A missing WHO lower bound also resets the factor instead of being coerced to numeric zero.
+- **Carbon no longer displays an unevidenced zero as a measured result.** The factor remains safely off until a project-specific baseline and technology methodology is supplied. The summary, chart, and export say “Not estimated — project factor required”; user/toilet counts alone do not create an emissions factor. (F-58)
+- **All four country-derived model inputs are visibly blue.** Target population, population growth, income, and the WHO/World Bank DALY derivation share the same editable provenance treatment.
+- **Four new regressions cover the jobs formula, zero case, and explicit health effect; startup and render-path tests cover the DALY calculation, missing-evidence fallback, jobs chart, and carbon limitation.** The suite now has 122 tests across 16 files.
+
+### Golden movement
+
+None. Static defaults retain a zero DALY factor, the existing jobs headline remains 801 because its former hidden multiplier is now the explicit default, and all financial outputs and 21 recorded scenarios are unchanged. The post-fetch Malawi browser scenario gains the physical DALY count only; its SROI remains 2.73 because DALY valuation is still zero.
+
+---
+
 ## [0.18.1] — 2026-10-21 — Programme summary fits the page
 
 ### Fixed

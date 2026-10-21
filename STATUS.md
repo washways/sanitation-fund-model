@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.18.1 — responsive programme summary |
+| **Release** | 0.19.0 — evidence-linked impact estimates |
 | **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance and responsive results complete; caching/scenario comparison and remaining S6 work remain |
-| **Tests** | ✅ 116 pass, 0 todo, 0 fail (`npm test`, ~4s) |
+| **Tests** | ✅ 122 pass, 0 todo, 0 fail (`npm test`, ~2s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
-| **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
-| **Findings register** | ✅ 55 of 55 resolved |
+| **Country audit** | ✅ 44/44 selector countries have current essential observations; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
+| **Findings register** | ✅ 58 of 58 resolved |
 | **Open modelling questions** | None — all 14 owner decisions are recorded |
 
 ## What remains unresolved
@@ -35,7 +35,10 @@ Static defaults and the recorded post-fetch Malawi startup now agree on the mode
 | Net assets | +$176,782 |
 | Senior debt | Repaid in full |
 | OSS / FSS | 1.65 / 1.06 |
-| SROI | 2.73 (time value only by default; unsupported DALY and carbon inputs are zero) |
+| Physical DALYs averted | ~2,139 after the Malawi country load; WHO/World Bank lower-bound burden × explicit 21% health effect |
+| Jobs supported | 801 at horizon (267 active enterprises × explicit assumption of 3) |
+| Carbon | Not estimated — a project baseline/technology factor is required |
+| SROI | 2.73 (time value only by default; DALY value and carbon factor remain zero) |
 | Production constraints | ME capacity primary; loan and grant capital secondary |
 | Verdict | Integrity OK; viability OK |
 
@@ -43,12 +46,15 @@ The 20-year stress scenario is **not viable** under the same assumptions: it win
 
 ## Assumptions and country data
 
-- World Bank loading writes only target population, population growth, and GNI per capita (GDP fallback), using latest non-empty observations with dates.
-- Those three fields share a blue `country-observation` state after loading; each records direct/derived provenance and observation year(s), and a real user edit removes the marker.
+- Country loading writes only target population, population growth, GNI per capita (GDP fallback), and the conservative sanitation DALY derivation, using dated World Bank and WHO observations.
+- Those four fields share a blue `country-observation` state after loading; each records direct/derived provenance and observation year(s), and a real user edit removes the marker.
 - CPI, commercial lending, poverty, Gini, and sanitation coverage are context only.
 - Missing essential observations clear the field and pause automatic calculation; another country's value is never retained.
 - Malawi references are documented in [docs/PARAMETERS.md](docs/PARAMETERS.md): 4.4 people/household, 28 districts, $100 toilet planning cost, $3,000 enterprise capital, 12-month loan terms, 0.25 hours saved/day, and a 50% time-value factor.
 - Financing, operating, write-down, capacity, contingency, and grant-pacing defaults remain illustrative programme assumptions. They must be calibrated before an investment decision.
+- Jobs supported use an editable three-per-active-enterprise Malawi reference: one owner/operator plus two FTE workers. It is not an observed country value and is not job-years.
+- The health burden factor uses the WHO `WSH_30_SAN` lower uncertainty bound divided by matching-year World Bank population without basic sanitation. An explicit 21% programme-effect assumption from the 2022 basic non-sewered sanitation meta-analysis scales that burden to DALYs averted. DALY value remains zero. Eritrea and Tuvalu currently fall back to not estimated because a required API source is unavailable.
+- Carbon remains not estimated until the programme supplies a project-specific baseline and technology factor; number of toilets or users alone is insufficient.
 - The opening enterprise network is an explicit 15% pilot share: 84 of Malawi's 560-enterprise target, capped by available loan capital. It is not an observed country value and must be replaced with the recruitment plan.
 - The engine remains explicitly USD-only. Do not apply a live spot rate to multi-year cashflows; a later dated, user-supplied reporting conversion needs an ADR.
 - The adverse 20-year Malawi result stays visible as a stress finding. Assumptions will not be tuned merely to force viability.
@@ -77,10 +83,18 @@ The 20-year stress scenario is **not viable** under the same assumptions: it win
 
 ## Country-input provenance contract
 
-- `popReqToilets`, `popGrowthRate`, and `avgAnnualIncome` are the only model inputs written by country loading and the only controls that receive `country-observation`.
+- `popReqToilets`, `popGrowthRate`, `avgAnnualIncome`, and `dalyPerPerson` are the only model inputs written by country loading and the only controls that receive `country-observation`.
 - The target population description names its rural-population/basic-sanitation derivation; growth and income name their direct observation year.
-- Programmatic load events retain the World Bank marker. A trusted user edit clears it and records user provenance.
+- Programmatic load events retain the API marker. A trusted user edit clears it and records user provenance.
 - Programme rates, costs, losses, capacity, contingency, and subsidy settings never receive the marker. See [ADR-0046](docs/adr/0046-mark-country-derived-inputs-consistently.md).
+
+## Impact-estimate contract
+
+- `jobsPerMe` is explicit and drives both the annual jobs series and horizon headline. The output is jobs supported at a point in time; no monetary job value enters SROI.
+- The country DALY rate uses WHO both-sex/all-age `WSH_30_SAN` lower-bound DALYs and World Bank `SP.POP.TOTL` plus `SH.STA.BASS.ZS` for the same year. Missing or invalid evidence resets to zero/not estimated and cannot retain another country.
+- `dalyValue = 0` keeps the physical estimate out of SROI until a supported valuation is supplied.
+- `dalyImpactRealisation = 21%` is an editable evidence-based point estimate, not a country API observation or a claim of programme-specific measured effect.
+- `co2PerToilet = 0` means not estimated, not measured zero. A positive factor requires a project baseline and sanitation/wastewater technology methodology. See [ADR-0049](docs/adr/0049-derive-health-and-report-impact-honestly.md).
 
 ## Investor debt contract
 
@@ -132,6 +146,7 @@ npm test
 npm run lint
 npm run golden:diff
 npm run audit:countries       # live, read-only; not a CI test
+npm run audit:impact          # live WHO/World Bank impact coverage; not a CI test
 node tools/verify-findings.js
 ```
 
@@ -139,4 +154,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.18.1 fixed programme-summary overflow under [ADR-0048](docs/adr/0048-fit-programme-summary-to-viewport.md). The three cards now reflow to the available width and wrap their contents; only the 22-column monthly audit table scrolls horizontally inside its own container. Model outputs and all 21 golden scenarios are unchanged. The suite now has 116 passing tests. Country-derived health estimates and the jobs/carbon impact displays are the next active assumptions review. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.19.0 closed the impact-display review under [ADR-0049](docs/adr/0049-derive-health-and-report-impact-honestly.md). Jobs now use one explicit assumption in the chart and headline; Malawi country loading derives a conservative 0.0096719 sanitation-burden DALY/person/year, then an explicit 21% basic-sanitation health-effect assumption produces about 2,139 physical DALYs averted; DALY value remains zero; and carbon says not estimated until a project factor exists. The live impact audit succeeds for 42 of 44 selector countries, with explicit fallbacks for Eritrea and Tuvalu. Financial outputs and all 21 golden scenarios are unchanged. The suite has 122 passing tests. The next active review is truthful API context for lending rates, fixed operating cost, and USD cost escalation. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

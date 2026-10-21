@@ -77,7 +77,7 @@ Toilets are integers (`Math.floor` at the point of production, R-7.5). Micro-ent
 Invariant checks tolerate $1.00 of floating-point drift per month. Never compare money with `===`.
 
 ### R-2.7 Country observations **[AS-BUILT]**
-The country loader requests the World Bank API's latest non-empty observation and preserves its year. It may populate only directly observed model inputs: rural population without basic sanitation, population growth, and GNI per capita (falling back to GDP per capita). CPI, commercial lending, poverty, Gini, and sanitation coverage are dated context. They do not set financing terms, subsidy policy, write-downs, costs, or capacity.
+The country loader requests the World Bank API's latest non-empty observation and preserves its year. It may populate observed or transparently derived model inputs: rural population without basic sanitation, population growth, GNI per capita (falling back to GDP per capita), and the conservative sanitation-attributable DALY factor specified in R-8.3. CPI, commercial lending, poverty, Gini, and sanitation coverage are dated context. They do not set financing terms, subsidy policy, write-downs, costs, or capacity.
 
 If any essential observation for the target population, growth, or income is unavailable, the related field is cleared and automatic calculation pauses. A value from the previous country must never survive as if it belonged to the new one. See [ADR-0034](adr/0034-observations-only-country-data.md).
 
@@ -414,7 +414,7 @@ Crediting is capped by the configurable `toiletLifespanYears` input (Q11, resolv
 
 Revenue accrues to `grantCash`, on the reasoning that carbon finance is concessional. Gated on `co2PerToilet > 0`.
 
-The default is `0.0` because the model has no programme-specific carbon evidence. With carbon priced correctly, the explicit `carbon enabled` scenario flips from *Capital Depleted (Insolvent)* to *Supply Chain (ME Capacity)* — a substantive change in what the model says about carbon-financed sanitation.
+The default is `0.0` because the model has no programme-specific carbon evidence. A factor must come from a project methodology that compares baseline and project sanitation or wastewater systems; it cannot be derived from the number of toilets or people served alone. While the factor is zero, the interface says **Not estimated — project factor required**, rather than presenting zero as a measured result. With carbon priced correctly, the explicit `carbon enabled` scenario flips from *Capital Depleted (Insolvent)* to *Supply Chain (ME Capacity)* — a substantive change in what the model says about carbon-financed sanitation. See [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md).
 
 ### R-8.2 Time saved **[AS-BUILT]** (was F-07, fixed 2026-08-20; gated by service life 2026-08-21, [ADR-0025](adr/0025-service-life-gates-all-impact.md), resolves Q13)
 **One** definition, computed monthly in the loop:
@@ -429,10 +429,21 @@ totalHoursSaved = sum(hoursSaved)
 ### R-8.3 DALYs **[AS-BUILT]** (gated by service life 2026-08-21, [ADR-0025](adr/0025-service-life-gates-all-impact.md), resolves Q13)
 
 ```
-dalys[m] = creditingToilets[m] * avgHHSize * dalyPerPerson / 12
+dalys[m] = creditingToilets[m] * avgHHSize * dalyPerPerson
+            * dalyImpactRealisation / 12
 ```
 
-Accumulated monthly — an area-under-curve measure, so a toilet built in month 1 accrues more DALYs than one built in month 100, **while it remains in service.** `activeToilets[m]` here means `creditingToilets[m]` (R-8.5), same as R-8.2 — a retired toilet stops averting DALYs. Both Malawi impact inputs default to zero because no approved programme estimate or valuation was identified; this keeps an unsupported health claim out of headline SROI ([ADR-0034](adr/0034-observations-only-country-data.md)).
+Accumulated monthly — an area-under-curve measure, so a toilet built in month 1 accrues more DALYs than one built in month 100, **while it remains in service.** `activeToilets[m]` here means `creditingToilets[m]` (R-8.5), same as R-8.2 — a retired toilet stops averting DALYs.
+
+On country load, `dalyPerPerson` is derived from authoritative country observations for one matching year:
+
+```
+peopleWithoutBasicSanitation = WorldBankPopulation * (1 - WorldBankBasicSanitationPct / 100)
+dalyPerPerson                = WHO sanitation-attributable diarrhoeal DALYs lower bound
+                               / peopleWithoutBasicSanitation
+```
+
+The WHO record must be `WSH_30_SAN`, both sexes and all ages; the World Bank denominator must use `SP.POP.TOTL` and `SH.STA.BASS.ZS` for the WHO year. The lower uncertainty bound is used deliberately. This is a population-level burden proxy, not a programme effect. `dalyImpactRealisation` is therefore a separate editable share, defaulting to **21%** from the Wolf et al. 2022 point estimate for basic sanitation without sewer connection versus unimproved or limited sanitation (RR 0.79; 95% CI 0.61–1.03, moderate certainty). The assumption is applied proportionally to DALYs across all ages and should be replaced with programme evidence when available. Malawi 2019 resolves to `0.0096719` burden DALY per exposed person-year and about 2,139 physical DALYs averted in the default five-year run. If any API component is absent or invalid, the burden input resets to zero and is shown as not estimated; another country's value is never retained. `dalyValue` remains zero by default, so this physical estimate does not change SROI unless the user separately supplies a supported valuation. See [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md).
 
 ### R-8.4 Social value and SROI **[AS-BUILT]** (was F-08; Q1 resolved 2026-08-20, Q2 accepted 2026-08-21)
 ```
@@ -469,6 +480,15 @@ Derived from the country's own income rather than a global constant, and discoun
 This replaces a hardcoded `$0.50` of unknown provenance — almost certainly Malawi's income per working hour at the full wage rate, frozen into a multi-country tool. It also closes F-25: `avgAnnualIncome` was collected and never used.
 
 The 0.50 Malawi factor and 0.25 hours saved per person per day are sourced to the World Bank Lilongwe appraisal; see [ADR-0015](adr/0015-value-of-saved-time.md) (method) and [ADR-0034](adr/0034-observations-only-country-data.md) (Malawi calibration).
+
+### R-8.7 Jobs supported **[AS-BUILT]** (F-56, [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md))
+
+```
+jobsSupported[y] = floor(activeMEsAtPeriodEnd[y]) * jobsPerMe
+headlineJobs     = floor(activeMEsAtHorizon) * jobsPerMe
+```
+
+`jobsPerMe` is an explicit, editable programme assumption. Its Malawi reference default is **3**: one owner/operator plus two full-time-equivalent workers per active micro-enterprise. The chart and headline use the same formula. The result is called **jobs supported**, not jobs created or job-years, because the model does not track individual workers or employment duration. Jobs have no monetary value in SROI; the former unsupported `$3,000/job` display is removed.
 
 ---
 
@@ -553,12 +573,12 @@ Duration is month-granular. Each complete 12-month period is labelled `Year N`; 
 
 ### R-10.7 Country-input provenance **[AS-BUILT]** (F-53)
 
-Every model input written or derived from World Bank country observations is marked with the same
+Every model input written or derived from authoritative country observations is marked with the same
 blue `country-observation` state and carries a human- and machine-readable source description. The
 state survives programmatic input events during loading and is removed when the user edits the
 value. Programme terms and policy assumptions must never carry that state. Context-only country
 indicators remain in the dated country strip and do not masquerade as model inputs. See
-[ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md).
+[ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md) and [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md).
 
 ---
 
@@ -574,6 +594,7 @@ All computed in `ModelModule.computeKPIs`, which must be **pure**: no DOM access
 |---|---|---|
 | `toilets` | `dataToiletsMonthlyLoan[last] + dataToiletsMonthlyGrant[last]` | AS-BUILT |
 | `people` | `toilets * avgHHSize` (1 toilet = 1 household) | AS-BUILT |
+| `jobs` | `floor(activeMEsAtHorizon) * jobsPerMe`; a point-in-time jobs-supported estimate, not job-years | AS-BUILT — [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md) |
 | `OSS` | operating revenue / operating expenses, where revenue = loan interest + carbon and expenses = fixed + variable ops. **Excludes** write-offs and finance cost. | AS-BUILT |
 | `FSS` | operating revenue / (operating expenses + write-offs + investor interest) | AS-BUILT — investor interest is now real, given a non-zero cost of capital (F-01) |
 | `netAssets` | `cashEnd + portfolioOutstanding - investorLiabilityEnd`, where the liability is the one the loop tracked | AS-BUILT — includes capitalised arrears since 2026-08-20 (F-06) |

@@ -33,6 +33,7 @@ module.exports = {
   // Delivery network
   districts: 28,
   mePerDistrict: 20,
+  jobsPerMe: 3,
   toiletsPerMeMonth: 7,
   meSetupCost: 3000,
 
@@ -57,6 +58,7 @@ module.exports = {
 
   // Impact
   dalyPerPerson: 0,
+  dalyImpactRealisation: 0.21, // basic non-sewered sanitation RR 0.79 (Wolf et al. 2022; ADR-0049)
   dalyValue: 0,
   avgAnnualIncome: 600,
   co2PerToilet: 0.0,

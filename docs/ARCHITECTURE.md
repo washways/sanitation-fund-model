@@ -17,6 +17,7 @@ index.html ──▶ style.css
            ──▶ https://cdn.jsdelivr.net/npm/chart.js@4.4.1   pinned, SRI-hashed
            │                                                  falls back to vendor/chart.umd.min.js offline
            ──▶ src/data/worldbank.js      ApiModule — World Bank + country-states fetching, no DOM
+           ──▶ src/data/who.js            WhoApiModule — sanitation DALY burden fetching, no DOM
            ──▶ src/data/countries.js      LDC_COUNTRIES
            ──▶ src/data/stakeholders.js   static reference data (unused, F-19 baseline)
            ──▶ src/model/engine.js        ModelModule core — rate/annuity helpers, the month loop. Pure.
@@ -40,7 +41,7 @@ Split from a single 4,028-line `app.js` in stage S5 — see [ADR-0033](adr/0033-
 
 | Concern | Files | Pure? |
 |---|---|---|
-| `ApiModule` | `src/data/worldbank.js` | no — network |
+| country APIs | `src/data/worldbank.js`, `src/data/who.js` | no — network |
 | `ModelModule` — **the simulation, KPIs, solvers, invariant checks** | `src/model/*.js` | **yes**, and tested (`tests/purity.test.js`) |
 | `UI` | `src/ui/*.js` | no — DOM |
 | controller | `src/app.js` | no — DOM |

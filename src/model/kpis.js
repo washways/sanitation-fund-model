@@ -243,7 +243,7 @@ Object.assign(ModelModule, {
                 toilets: totalToilets,
                 people: people,
                 mes: mes,
-                jobs: mes * 3,
+                jobs: mes * inputs.jobsPerMe,
                 loanToilets: loanToilets,
                 grantToilets: grantToilets,
                 sdg6Gap: (people / goal),

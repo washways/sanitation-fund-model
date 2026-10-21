@@ -43,7 +43,7 @@ module.exports = [
                 // The app's own top-level bindings, each declared in one src/ file and
                 // read (or, for ModelModule/UI, extended via Object.assign) from others —
                 // see tools/app-source.js for the load order this depends on.
-                ApiModule: 'readonly', ModelModule: 'writable', UI: 'writable',
+                ApiModule: 'readonly', WhoApiModule: 'readonly', ModelModule: 'writable', UI: 'writable',
                 LDC_COUNTRIES: 'readonly', stakeholdersData: 'readonly',
                 chartInstances: 'writable', runCalculation: 'writable',
             },

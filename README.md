@@ -17,9 +17,9 @@ must be replaced with the programme's implementation plan.
 
 ## Status
 
-Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **116 automated tests and 21 characterisation scenarios.** Known limitations are listed in [STATUS.md](STATUS.md) and the on-site [changelog](changelog.html).
+Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **122 automated tests and 21 characterisation scenarios.** Known limitations are listed in [STATUS.md](STATUS.md) and the on-site [changelog](changelog.html).
 
-**What's genuinely unresolved:** all 54 registered defects and all 14 modelling questions are resolved. Scenario comparison, solver caching, and real-browser chart/advisor checks remain roadmap work. Evidence-bounded sensitivity is available through the deterministic JSON CLI. See [STATUS.md](STATUS.md).
+**What's genuinely unresolved:** all 58 registered defects and all 14 modelling questions are resolved. Scenario comparison, solver caching, and real-browser chart/advisor checks remain roadmap work. Evidence-bounded sensitivity is available through the deterministic JSON CLI. See [STATUS.md](STATUS.md).
 
 **If you have output from before 2026-08-21, re-run it.** Several corrections that session moved real numbers (see the changelog); a result generated earlier is not comparable to one generated now.
 
@@ -45,7 +45,7 @@ Or with Node:
 npm run serve      # http://localhost:8080
 ```
 
-Opening `index.html` directly via `file://` also works, but the browser will block the World Bank API calls (CORS), so country auto-fill will be unavailable.
+Opening `index.html` directly via `file://` also works, but the browser may block the World Bank and WHO API calls (CORS), so country auto-fill will be unavailable.
 
 **Offline:** works. Chart.js is pinned to an exact version with an integrity hash and vendored to `vendor/` as a fallback, so charts render with no network.
 
@@ -56,7 +56,7 @@ npm ci            # installs ESLint, the one devDependency — needed once
 npm test
 ```
 
-Fifteen suites, zero flakiness, about four seconds: **constraint reporting**, **debt waterfall**, **export**, **golden**, **input validation**, **invariants**, **layout**, **purity**, **sensitivity**, **smoke**, **solver**, **startup scale**, **startup**, **wiring**, and **write-down**.
+Sixteen suites, zero flakiness, about four seconds: **constraint reporting**, **debt waterfall**, **export**, **golden**, **impact estimates**, **input validation**, **invariants**, **layout**, **purity**, **sensitivity**, **smoke**, **solver**, **startup scale**, **startup**, **wiring**, and **write-down**.
 
 ```bash
 npm run golden:diff   # would any model output change, without writing anything?
@@ -125,7 +125,7 @@ methodology.html     user-facing methodology note
 server.js             dev static server
 eslint.config.js      3 rules: no-dupe-keys, no-undef, no-unused-vars
 
-tests/                15 suites, 116 tests, 21 recorded golden scenarios
+tests/                16 suites, 122 tests, 21 recorded golden scenarios
 vendor/                pinned Chart.js, for offline use
 tools/                 headless model loader, app-source file list, audit verification
 docs/                  spec, parameters, architecture, testing, roadmap, ADRs, audit
@@ -134,11 +134,11 @@ docs/                  spec, parameters, architecture, testing, roadmap, ADRs, a
 
 ## Data sources
 
-World Bank Indicators API, used to calibrate dated country context: rural population (`SP.RUR.TOTL`), basic and safely-managed sanitation (`SH.STA.BASS.RU.ZS`, `SH.STA.SMSS.RU.ZS`), GDP and GNI per capita, inflation (`FP.CPI.TOTL.ZG`), population growth (`SP.POP.GROW`), lending rate (`FR.INR.LEND`), Gini, and poverty headcount.
+World Bank Indicators API, used to calibrate dated country context: rural and total population (`SP.RUR.TOTL`, `SP.POP.TOTL`), basic and safely-managed sanitation (`SH.STA.BASS.RU.ZS`, `SH.STA.BASS.ZS`, `SH.STA.SMSS.RU.ZS`), GDP and GNI per capita, inflation (`FP.CPI.TOTL.ZG`), population growth (`SP.POP.GROW`), lending rate (`FR.INR.LEND`), Gini, and poverty headcount. WHO Global Health Observatory `WSH_30_SAN` supplies the lower estimate of diarrhoeal DALYs attributable to inadequate sanitation.
 
-Only directly observed target population, population growth, and income populate model fields. CPI, lending, poverty, Gini, and sanitation coverage are shown with their observation years as context. The fetch never overwrites a negotiated term, cost, capacity assumption, write-down, or policy choice; [docs/PARAMETERS.md](docs/PARAMETERS.md) records the boundary.
+Only observed target population, population growth, income, and the transparent WHO/World Bank sanitation-DALY derivation populate model fields. CPI, lending, poverty, Gini, and sanitation coverage are shown with their observation years as context. The fetch never overwrites a negotiated term, cost, capacity assumption, write-down, or policy choice; [docs/PARAMETERS.md](docs/PARAMETERS.md) records the boundary.
 
-Those three country-derived inputs are outlined in blue after loading and carry dated hover text.
+Those four country-derived inputs are outlined in blue after loading and carry dated hover text.
 Editing one removes the marker, so a user-entered figure is never still presented as API-derived.
 
 ## Contributing

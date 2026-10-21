@@ -146,6 +146,7 @@ const ModelModule = {
             inflationRate: 'Annual Cost Escalation',
             districts: 'Administrative Units',
             mePerDistrict: 'Micro-enterprises per Unit',
+            jobsPerMe: 'Jobs Supported per Active ME',
             toiletsPerMeMonth: 'Toilets per ME per Month',
             meSetupCost: 'ME Setup Cost',
             grantSupportPct: 'Grant-Funded Pacing',
@@ -163,7 +164,8 @@ const ModelModule = {
             meCostRate: 'M&E Cost',
             contingencyRate: 'Cost Contingency',
             initialMeNetworkShare: 'Initial ME Network Share',
-            dalyPerPerson: 'DALYs Averted per Person',
+            dalyPerPerson: 'Sanitation DALY Burden per Exposed Person',
+            dalyImpactRealisation: 'Sanitation Health Effect',
             dalyValue: 'Value per DALY',
             avgAnnualIncome: 'Avg Annual Income',
             co2PerToilet: 'CO2e per Toilet',
@@ -190,7 +192,7 @@ const ModelModule = {
 
         requireWhenFinite([
             'investGrant', 'investLoan', 'fundRepaymentTerm', 'popReqToilets', 'districts',
-            'mePerDistrict', 'toiletsPerMeMonth', 'meSetupCost',
+            'mePerDistrict', 'jobsPerMe', 'toiletsPerMeMonth', 'meSetupCost',
             'annualFixedOpsCost', 'mgmtFeeRatio', 'meCostRate',
             'contingencyRate', 'dalyPerPerson', 'dalyValue', 'avgAnnualIncome',
             'co2PerToilet', 'co2Value', 'meMaxMonthlyGrowthRate',
@@ -205,7 +207,7 @@ const ModelModule = {
         requireWhenFinite([
             'grantSupportPct', 'hhDefaultRate', 'meDefaultRate', 'meExitRate',
             'meExpansionBudgetShare', 'initialMeNetworkShare', 'carbonCreditShare',
-            'timeValueFactor',
+            'timeValueFactor', 'dalyImpactRealisation',
         ], value => value >= 0 && value <= 1, 'must be between 0% and 100%.');
 
         requireWhenFinite([
@@ -410,6 +412,7 @@ const ModelModule = {
         const dataDefaultsMe = [];
         const dataFundDebtService = [];
         const dataPeople = []; // Annual Snapshot
+        const dataJobs = []; // Active FTE jobs supported at each reporting date
         const dataCarbon = []; // Annual Snapshot
 
         // Sim Helpers
@@ -421,6 +424,7 @@ const ModelModule = {
             labels.push(label);
             dataToilets.push(toiletsBuiltCumulative);
             dataPeople.push(toiletsBuiltCumulative * inputs.avgHHSize);
+            dataJobs.push(Math.floor(currentMEs) * inputs.jobsPerMe);
             dataCarbon.push(cumulativeCarbon);
             dataDalys.push(cumulativeDalys);
 
@@ -843,7 +847,8 @@ const ModelModule = {
             const hoursPerPersonPerDay = inputs.hoursPerPersonPerDay !== undefined
                 ? inputs.hoursPerPersonPerDay : 0.25;
             const hours = creditingToilets * inputs.avgHHSize * hoursPerPersonPerDay * 30;
-            const dalys = (creditingToilets * inputs.avgHHSize * inputs.dalyPerPerson) / 12;
+            const dalys = (creditingToilets * inputs.avgHHSize * inputs.dalyPerPerson
+                * inputs.dalyImpactRealisation) / 12;
 
             cumulativeDalys += dalys;
 
@@ -966,6 +971,7 @@ const ModelModule = {
             dataMonthlyCreditingToilets,
             dataMonthlyBacklog,
             dataPeople,
+            dataJobs,
             dataMonthlyPortfolioHh,
             dataMonthlyPortfolioMe,
             dataMonthlyMes,

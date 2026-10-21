@@ -40,6 +40,7 @@ Every numeric input must be finite before the simulation starts. Blank or malfor
 | `districts` | Administrative Units | 28 | count / count | Malawi reference: official district count | With enterprises per unit, sets the network ceiling. It is not fetched because third-party administrative-unit data mixed districts and regions. |
 | `mePerDistrict` | Micro-enterprises / Unit | 20 | count / count | programme assumption | Capacity ceiling, not an observed country statistic. Zero is valid and disables the enterprise network and production. |
 | `initialMeNetworkShare` | Initial ME Network (% of Target) | 15 | percent / decimal | programme assumption | Share of the target network launched at month zero, capped by affordable enterprise capital. Illustrative pilot assumption; replace with the implementation plan. |
+| `jobsPerMe` | Jobs Supported / Active ME | 3 | jobs/enterprise / same | programme assumption | Interim Malawi reference: one owner/operator plus two FTE workers per active enterprise. Produces a point-in-time jobs-supported estimate, not jobs created or job-years. Replace with programme staffing evidence. |
 | `toiletsPerMeMonth` | Toilets / ME / Month | 7 | count/month / count/month | programme assumption | Flat productivity; no learning, seasonality, or supply-chain lag. |
 | `meSetupCost` | ME Setup Cost | 3,000 | USD / USD | Malawi reference: [UNICEF Malawi sanitation revolving funds](https://www.unicef.org/malawi/media/3886/file/Sanitation%2520Revolving%2520Funds%2520for%2520Rural%2520and%2520Peri-Urban%2520Communities%2520in%2520Malawi.pdf) | Approximate enterprise-loan size, added to working capital by `meCapitalRequirement()`. |
 
@@ -72,9 +73,10 @@ Every numeric input must be finite before the simulation starts. Blank or malfor
 
 | id | Label | Default | Entered / model unit | Source | Meaning |
 |---|---|---:|---|---|---|
-| `dalyPerPerson` | DALYs Averted / Person | 0 | DALY/person/year / same | unsupported by default | Set only from an approved programme impact study. Zero prevents an unsupported health claim from entering SROI. |
+| `dalyPerPerson` | Sanitation DALY Burden / Exposed Person | 0 before country load; Malawi 0.0096719 after load | DALY/person/year / same | derived: WHO `WSH_30_SAN` lower bound ÷ World Bank population without basic sanitation for the same year | Population-level burden proxy, not an intervention effect. Resets to zero/not estimated if the matching observations are unavailable. |
+| `dalyImpactRealisation` | Sanitation Health Effect | 21 | percent / decimal | [Wolf et al. 2022](https://doi.org/10.1016/S0140-6736(22)00937-0) | Interim point estimate for basic sanitation without sewer connection versus unimproved/limited sanitation (RR 0.79; 95% CI 0.61–1.03, moderate certainty). Scales the burden proxy to reported DALYs averted; replace with programme evidence. |
 | `dalyValue` | Value per DALY | 0 | USD/DALY / same | unsupported by default | Included in SROI when supplied; zero by default because no approved Malawi valuation was identified. |
-| `co2PerToilet` | CO2e / Toilet | 0 | tonnes/toilet/year / same | unsupported by default | Carbon is off until a methodology supplies an abatement factor. Accrual stops at service-life expiry. |
+| `co2PerToilet` | Net CO2e Avoided / Toilet | 0 | tonnes/toilet/year / same | unsupported by default | Carbon is not estimated until a project methodology compares baseline and project systems. It cannot be inferred from people or toilets alone. Accrual stops at service-life expiry. |
 | `co2Value` | Value per Tonne CO2e | 15 | USD/tonne / same | programme assumption | Used only when an abatement factor is supplied. |
 | `carbonCreditShare` | Fund Carbon Share | 50 | percent / decimal | programme assumption | Fund share after transaction and verification costs. |
 | `timeValueFactor` | Value of Saved Time | 50 | percent / decimal | Malawi reference: [World Bank Lilongwe project appraisal](https://documents1.worldbank.org/curated/en/419171513998119839/pdf/MALAWI-PAD-12012017.pdf) | Applies 50% of income per working hour, following the appraisal’s conservative opportunity-cost convention. |
@@ -83,20 +85,21 @@ Every numeric input must be finite before the simulation starts. Blank or malfor
 
 ## Country-data boundary
 
-The World Bank client requests the latest non-empty observation (`mrnev=1`) and preserves its year. It writes only:
+The World Bank client requests the latest non-empty observation (`mrnev=1`) and preserves its year. The WHO client requests sanitation-attributable diarrhoeal DALYs for both sexes and all ages. Country loading writes only:
 
 | Model input | Indicator |
 |---|---|
 | population needing toilets | `SP.RUR.TOTL` and `SH.STA.BASS.RU.ZS` |
 | population growth | `SP.POP.GROW` |
 | annual income proxy | `NY.GNP.PCAP.CD`, falling back to `NY.GDP.PCAP.CD` |
+| sanitation DALY factor | WHO `WSH_30_SAN` lower bound divided by `SP.POP.TOTL × (1 − SH.STA.BASS.ZS/100)` for the WHO year |
 
 Safely managed sanitation, CPI inflation, commercial lending, Gini, and poverty are dated context only. Missing essential observations clear the affected field and pause automatic calculation; they never reuse the previous country’s value. Programme terms, costs, capacity, write-downs, and subsidy policy remain the user’s responsibility for every country.
 
-After a country load, the three model-driving fields share a blue outline and background. Hover
+After a country load, the four model-driving fields share a blue outline and background. Hover
 text records whether the value is a direct observation or a derivation and names the observation
 year(s). A real user edit removes the blue state and changes its in-page provenance to user-entered;
-programme assumptions are never given the World Bank marker. See [ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md).
+programme assumptions are never given the API marker. See [ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md) and [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md).
 
 ## Controller-only inputs
 

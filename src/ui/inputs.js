@@ -41,6 +41,7 @@ const UI = {
             avgToiletCost: getRaw('avgToiletCost', 50),
             districts: getRaw('districts'),
             mePerDistrict: getRaw('mePerDistrict'),
+            jobsPerMe: getRaw('jobsPerMe'),
             toiletsPerMeMonth: getRaw('toiletsPerMeMonth'),
             meSetupCost: getRaw('meSetupCost'),
             loanInterestRate: getPercent('loanInterestRate_v2', 10),
@@ -65,6 +66,7 @@ const UI = {
             termMe: getRaw('termMe', 24),
             // Impact
             dalyPerPerson: getRaw('dalyPerPerson', 0.005),
+            dalyImpactRealisation: getPercent('dalyImpactRealisation', 21),
             dalyValue: getRaw('dalyValue', 500),
             avgAnnualIncome: getRaw('avgAnnualIncome', 1500),
             co2PerToilet: getRaw('co2PerToilet', 0.2),

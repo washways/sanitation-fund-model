@@ -288,6 +288,31 @@ describe('application smoke', () => {
       'grant spending must never appear as a positive cash inflow');
   });
 
+  test('impact selections report jobs and an unevidenced carbon factor honestly (F-56, F-58, ADR-0049)', () => {
+    const app = makeApp();
+    app.runCalculation(true);
+
+    app.UI.renderCharts(app.UI.lastResults.series, 'jobs');
+    const jobsChart = [...app.chartConfigs].reverse().find(config =>
+      /Jobs Supported/.test(config.options?.plugins?.title?.text || ''));
+    assert.ok(jobsChart, 'selecting jobs must render a jobs-supported impact chart');
+    const jobsData = Array.from(jobsChart.data.datasets[0].data);
+    assert.match(jobsChart.data.datasets[0].label, /Jobs Supported/);
+    assert.strictEqual(jobsData.at(-1), app.UI.lastResults.kpis.reach.jobs,
+      'the jobs chart must use the same explicit staffing assumption as the headline');
+    assert.ok(jobsData.at(-1) > 0, 'the default jobs series must not be blank or zero');
+
+    assert.strictEqual(app.el('sum-carbon').innerText, 'Not estimated',
+      'a zero project carbon factor must not be presented as measured zero mitigation');
+    assert.strictEqual(app.el('sum-val-carbon').innerText, 'Project factor required');
+
+    app.UI.renderCharts(app.UI.lastResults.series, 'carbon');
+    const carbonChart = [...app.chartConfigs].reverse().find(config =>
+      /Carbon Not Estimated/.test(config.options?.plugins?.title?.text || ''));
+    assert.ok(carbonChart, 'selecting carbon with no factor must render the limitation');
+    assert.match(carbonChart.data.datasets[0].label, /Not Estimated.*Project Factor Required/i);
+  });
+
   test('a valid six-month scenario still renders period charts (F-52, ADR-0043)', () => {
     const app = makeApp();
     app.el('wiz-duration-sidebar').value = '0.5';

@@ -154,7 +154,7 @@ describe('input wiring', () => {
     const map = {
       popReqToilets: 'popReqToilets', avgHHSize: 'avgHHSize',
       avgToiletCost: 'avgToiletCost', districts: 'districts',
-      mePerDistrict: 'mePerDistrict', toiletsPerMeMonth: 'toiletsPerMeMonth',
+      mePerDistrict: 'mePerDistrict', jobsPerMe: 'jobsPerMe', toiletsPerMeMonth: 'toiletsPerMeMonth',
       meSetupCost: 'meSetupCost', annualFixedOpsCost: 'annualFixedOpsCost',
       fundRepaymentTerm: 'fundRepaymentTerm', termHh: 'termHh', termMe: 'termMe',
       investorGracePeriod: 'investorGracePeriod', initialMeNetworkShare: 'initialMeNetworkShare',
@@ -165,7 +165,7 @@ describe('input wiring', () => {
       hhDefaultRate: 'hhDefaultRate', meDefaultRate: 'meDefaultRate',
       mgmtFeeRatio: 'mgmtFeeRatio', meCostRate: 'meCostRate',
       contingencyRate: 'contingencyRate', popGrowthRate: 'popGrowthRate',
-      dalyPerPerson: 'dalyPerPerson', dalyValue: 'dalyValue',
+      dalyPerPerson: 'dalyPerPerson', dalyImpactRealisation: 'dalyImpactRealisation', dalyValue: 'dalyValue',
       avgAnnualIncome: 'avgAnnualIncome',
       fundCostOfCapital: 'fundCostOfCapital',
       hoursPerPersonPerDay: 'hoursPerPersonPerDay',
@@ -183,7 +183,7 @@ describe('input wiring', () => {
       'popGrowthRate', 'grantSupportPct', 'inflationRate', 'hhDefaultRate',
       'meDefaultRate', 'mgmtFeeRatio', 'meCostRate', 'contingencyRate',
       'initialMeNetworkShare', 'fundCostOfCapital', 'meExitRate', 'timeValueFactor',
-      'meExpansionBudgetShare', 'meMaxMonthlyGrowthRate',
+      'meExpansionBudgetShare', 'meMaxMonthlyGrowthRate', 'dalyImpactRealisation',
     ]);
 
     const drift = [];

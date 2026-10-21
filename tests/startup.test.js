@@ -132,6 +132,21 @@ function bootApp(fixture = FIXTURE) {
   /** Serve the recorded indicator values; refuse anything else, loudly. */
   const stubFetch = (url) => {
     requestedUrls.push(String(url));
+    if (String(url).includes('ghoapi.azureedge.net/api/WSH_30_SAN')) {
+      const rec = fixture.who;
+      if (!rec) return Promise.reject(new Error('no WHO fixture'));
+      return Promise.resolve({
+        json: () => Promise.resolve({ value: [{
+          SpatialDim: rec.country,
+          TimeDim: rec.year,
+          Dim1: rec.sex,
+          Dim2: rec.age,
+          NumericValue: rec.value,
+          Low: rec.low,
+          High: rec.high
+        }] })
+      });
+    }
     const m = String(url).match(/indicator\/([A-Z0-9.]+)\?/);
     if (m) {
       const rec = fixture.indicators[m[1]];
@@ -229,21 +244,31 @@ describe('startup — the scenario a user actually opens', () => {
     assert.strictEqual(inputs.avgAnnualIncome, 600, 'income should come from GNI per capita');
     assert.strictEqual(inputs.popReqToilets, 9244139,
       'target population should be rural population times the basic-sanitation gap');
-    assert.ok(app.requestedUrls.filter(url => url.includes('/indicator/')).every(url => url.includes('mrnev=1')),
-      'World Bank requests should ask for the latest non-empty observation');
+    const latestObservationUrls = app.requestedUrls.filter(url =>
+      url.includes('/indicator/') && !url.includes('SP.POP.TOTL') && !url.includes('SH.STA.BASS.ZS'));
+    assert.ok(latestObservationUrls.every(url => url.includes('mrnev=1')),
+      'ordinary World Bank requests should ask for the latest non-empty observation');
+    assert.ok(app.requestedUrls.filter(url =>
+      url.includes('SP.POP.TOTL') || url.includes('SH.STA.BASS.ZS')).every(url => url.includes('date=2019')),
+      'the DALY denominator must use World Bank observations from the WHO numerator year');
     assert.ok(app.requestedUrls.every(url => !url.includes('countriesnow.space')),
       'country loading must not depend on a mixed-level administrative-unit list');
+    assert.ok(app.requestedUrls.some(url => url.includes('ghoapi.azureedge.net/api/WSH_30_SAN')),
+      'country loading should request WHO sanitation-attributable DALYs');
+    assert.ok(Math.abs(inputs.dalyPerPerson - 0.0096719) < 0.0000001,
+      `DALY factor ${inputs.dalyPerPerson} should use the WHO lower bound over the matching exposed population`);
   });
 
   test('country-derived inputs have consistent, truthful source highlighting', () => {
-    const observedInputs = ['popReqToilets', 'popGrowthRate', 'avgAnnualIncome'];
+    const observedInputs = ['popReqToilets', 'popGrowthRate', 'avgAnnualIncome', 'dalyPerPerson'];
     for (const id of observedInputs) {
       const input = app.el(id);
       assert.ok(input.classList.contains('country-observation'),
         `${id} should be visibly marked as country-derived after the API load`);
-      assert.strictEqual(input.dataset.sourceType, 'world-bank',
-        `${id} should retain machine-readable World Bank provenance`);
-      assert.match(input.title, /World Bank/i, `${id} should explain its source on hover`);
+      const expectedType = id === 'dalyPerPerson' ? 'who-world-bank' : 'world-bank';
+      assert.strictEqual(input.dataset.sourceType, expectedType,
+        `${id} should retain machine-readable API provenance`);
+      assert.match(input.title, /World Bank|WHO/i, `${id} should explain its source on hover`);
     }
 
     for (const id of ['loanInterestRate_v2', 'meLoanInterestRate_v2', 'fundCostOfCapital']) {
@@ -290,6 +315,9 @@ describe('startup — the scenario a user actually opens', () => {
     assert.strictEqual(inputs.avgToiletCost, 100, 'income must not select an invented cost tier');
     assert.strictEqual(inputs.districts, 28, 'use the evidenced Malawi district count');
     assert.strictEqual(inputs.mePerDistrict, 20, 'country loading must not invent enterprise capacity');
+    assert.strictEqual(inputs.jobsPerMe, 3, 'country loading must not invent enterprise staffing');
+    assert.strictEqual(inputs.dalyImpactRealisation, 0.21,
+      'country loading must not overwrite the programme health-effect assumption');
   });
 
   test('the model is internally consistent on the startup scenario', () => {
@@ -331,8 +359,15 @@ describe('startup — the scenario a user actually opens', () => {
     assert.strictEqual(inputs.termMe, 12, 'UNICEF sanitation-enterprise loan term');
     assert.strictEqual(inputs.hoursPerPersonPerDay, 0.25, 'World Bank Malawi appraisal: 15 minutes/day');
     assert.strictEqual(inputs.timeValueFactor, 0.50, 'World Bank/WHO opportunity-cost factor');
-    assert.strictEqual(inputs.dalyPerPerson, 0, 'unsupported health impact must be off by default');
+    assert.ok(Math.abs(inputs.dalyPerPerson - 0.0096719) < 0.0000001,
+      'health impact should use the conservative WHO/World Bank country derivation');
+    assert.strictEqual(inputs.dalyImpactRealisation, 0.21,
+      'basic non-sewered sanitation uses the explicit 21% evidence-based point estimate');
+    assert.ok(Math.abs(result.kpis.impact.dalys - 2138.94) < 0.1,
+      `the derived burden and effect factor should produce about 2,139 physical DALYs, got ${result.kpis.impact.dalys}`);
     assert.strictEqual(inputs.dalyValue, 0, 'unsupported health valuation must be off by default');
+    assert.ok(Math.abs(result.kpis.value.sroi - 2.73) < 0.01,
+      'physical DALYs must not silently enter SROI while DALY valuation remains zero');
   });
 });
 
@@ -347,4 +382,28 @@ test('missing essential country observations clear stale fields and stop auto-ca
     'an unavailable sanitation observation must not retain Malawi or a prior country value');
   assert.match(app.el('wbIndicators').innerHTML, /No calculation was run/i,
     'the user should be told that the country scenario is incomplete');
+});
+
+test('missing WHO health evidence resets the optional DALY estimate to zero', async () => {
+  const fixture = structuredClone(FIXTURE);
+  delete fixture.who;
+  const app = bootApp(fixture);
+
+  await app.runStartup();
+
+  assert.strictEqual(app.el('dalyPerPerson').value, '0');
+  assert.ok(!app.el('dalyPerPerson').classList.contains('country-observation'));
+  assert.match(app.el('dalyPerPerson').title, /Not estimated/i);
+});
+
+test('a WHO record without its conservative lower bound is not treated as zero evidence', async () => {
+  const fixture = structuredClone(FIXTURE);
+  fixture.who.low = null;
+  const app = bootApp(fixture);
+
+  await app.runStartup();
+
+  assert.strictEqual(app.el('dalyPerPerson').value, '0');
+  assert.ok(!app.el('dalyPerPerson').classList.contains('country-observation'));
+  assert.match(app.el('dalyPerPerson').title, /not estimated/i);
 });

@@ -53,3 +53,4 @@ For the short version of what each one decided, [CHANGELOG.md](../../CHANGELOG.m
 | [0046](0046-mark-country-derived-inputs-consistently.md) | Mark every country-derived model input consistently and truthfully |
 | [0047](0047-start-with-a-pilot-enterprise-network.md) | Start with an explicit pilot share of the enterprise network |
 | [0048](0048-fit-programme-summary-to-viewport.md) | Fit the programme summary to the available viewport |
+| [0049](0049-derive-health-and-report-impact-honestly.md) | Derive health impact conservatively and report jobs/carbon honestly |
