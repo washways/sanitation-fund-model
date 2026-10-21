@@ -385,6 +385,7 @@ const ModelModule = {
         const dataMonthlyInvestorPrincipalArrears = [];
         const dataMonthlyNewLoansHhVal = [];
         const dataMonthlyNewLoansMeVal = [];
+        const dataMonthlyNewMes = [];
         const dataMonthlyGrantDisbursed = [];
         const dataMonthlyGrantCash = []; // F-30: the grant ledger's own running balance
         const dataMonthlyCarbonRevenue = [];
@@ -633,6 +634,7 @@ const ModelModule = {
             let grantCount = 0;
             let loanCount = 0;
             let targetGrantCount = 0;
+            let newMes = 0;
 
             // R-7.1: grow the carried backlog before subtracting this month's
             // production. The previous implementation subtracted first and then
@@ -652,7 +654,7 @@ const ModelModule = {
                     const potentialNew = Math.min(Math.floor(expansionBudget / meSetup), Math.ceil(currentMEs * inputs.meMaxMonthlyGrowthRate));
                     // Check against Max Cap
                     const space = maxTotalMEs - currentMEs;
-                    const newMes = Math.min(potentialNew, space);
+                    newMes = Math.min(potentialNew, space);
 
                     if (newMes > 0) {
                         const cost = newMes * meSetup;
@@ -820,6 +822,7 @@ const ModelModule = {
             dataMonthlyCarbonRevenue.push(inflows.carbon);
             dataMonthlyNewLoansHhVal.push(outflows.loansHh);
             dataMonthlyNewLoansMeVal.push(outflows.loansMe);
+            dataMonthlyNewMes.push(newMes);
             dataMonthlyRevenueHh.push(inflows.hhInt);
             dataMonthlyRevenueMe.push(inflows.meInt);
             dataMonthlyRepaymentHh.push(inflows.hhPrin);
@@ -904,6 +907,7 @@ const ModelModule = {
             dataMonthlyCarbonRevenue,
             dataMonthlyNewLoansHhVal,
             dataMonthlyNewLoansMeVal,
+            dataMonthlyNewMes,
             dataMonthlyRevenueHh,
             dataMonthlyRevenueMe,
             dataMonthlyRepaymentHh,

@@ -3,7 +3,7 @@
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # Node is not on PATH
 npm ci                 # installs ESLint, the one devDependency — needed once
-npm test              # 97 tests, ~1s
+npm test              # 98 tests, ~2s
 npm run test:watch    # re-run on change
 npm run golden:diff   # what would move, without writing
 npm run verify        # reproduce the audit findings
@@ -141,12 +141,13 @@ Add scenarios that exercise a distinct **path**, not merely a different number. 
 
 The model suites cannot catch a crash in the render path, because in those crashes the model was fine and the UI reading it was not. That is what eight of this project's first fifteen commits were.
 
-This suite builds a DOM stub from the **actual ids and default values parsed out of `index.html`**, loads the concatenated app (`tools/app-source.js`, `src/`) into it, and drives the real `runCalculation`. It asserts nothing about what appears on screen — it is not a rendering test — but it proves that clicking Recalculate on a fresh page does not throw.
+This suite builds a DOM stub from the **actual ids and default values parsed out of `index.html`**, loads the concatenated app (`tools/app-source.js`, `src/`) into it, and drives the real `runCalculation`. Most checks are render-path smoke tests rather than pixel/layout tests; the F-49 regression additionally inspects the generated implementation-table structure because a missing header silently relabelled every later value.
 
 Two of its tests earn their place beyond crash-catching:
 
 - **`the controller does not write back into the user's inputs`** captures the value of every headline input, runs `runCalculation(true)`, and fails if any of them moved. This is the executable form of [ADR-0009](adr/0009-advisory-not-automatic.md), and the whole point of Stage 2.
 - **`solvency advice is model-tested`** asserts that every offered remedy actually improves repayment when simulated, and that extending the repayment term is never offered — because measurement shows it makes repayment worse (F-32).
+- **`monthly table aligns its columns and reports exact ME launches`** requires each rendered row to match the header width and reconciles the canonical launch count to the working-capital-inclusive ME loan value (F-49).
 
 If a future change needs the DOM stub to *do* something rather than merely exist, that is a signal the model has grown a hidden UI dependency.
 

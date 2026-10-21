@@ -11,6 +11,20 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.11.0] — 2026-10-21 — Accurate monthly implementation table
+
+### Fixed
+
+- **Monthly values now sit under the correct headings.** Data rows had 25 cells but the table had 24 headers. The unlabeled extra cell shifted the ME loan value, ME repayments, operating costs, investor payments, net cash flow, and ending cash one column to the right. Count and value now have explicit `New MEs` and `New ME Loans` headings. ([ADR-0040](docs/adr/0040-report-exact-me-launches.md), F-49)
+- **New-enterprise counts now come from the simulation.** The table divided ME loan value by setup cost even though each loan also includes working capital. At the current Malawi defaults that displayed 3.8 times the enterprises actually launched in expansion months. The engine now exposes the exact monthly launch series, and the UI uses it without reconstructing model logic.
+- **A render-path regression checks the table itself.** Every startup/monthly row must have the same number of cells as the header, and every monthly ME loan value must reconcile to the exact launch count and canonical capital requirement.
+
+### Golden movement
+
+None expected. This corrects a user-facing audit table and adds a reporting series; cashflows, KPIs, viability, all 21 recorded scenarios, and the post-fetch Malawi startup remain unchanged.
+
+---
+
 ## [0.10.0] — 2026-10-21 — One model-tested advice path
 
 ### Fixed

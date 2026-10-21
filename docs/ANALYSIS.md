@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 48 of 48 findings resolved as of 2026-10-21. F-48 was fixed under ADR-0039. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 49 of 49 findings resolved as of 2026-10-21. F-49 was fixed under ADR-0040. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -990,6 +990,14 @@ Following that advice makes the outcome worse. The advisor was written against a
 **High — fixed.** The `AI Advisor` button called `UI.generateSuggestions()`, a legacy rule set that still recommended extending the fund repayment term and increasing grant pacing. F-32 already demonstrated that a longer investor term can reduce repayment, while F-30 established that grant pacing barely changes total reach because the grant ledger fixes total subsidy. The model-tested `suggestSolvencyFix()` path existed and was covered, but the visible button bypassed it.
 
 **Fix:** the renamed `Review model-tested advice` control runs the current form through `runCalculation(true)` and renders only simulated options. The duplicate rule set and modal path are deleted. [ADR-0039](adr/0039-one-model-tested-advice-path.md). Resolved in `b54159a`.
+
+### F-49 — Monthly implementation columns are shifted and ME launches are overstated
+
+**High — fixed.** The monthly implementation table created 25 cells per data row but only 24 headers. Its unlabeled extra cell was intended to be the count of new micro-enterprises, so every value from the ME loan amount through ending cash was displayed under the wrong heading.
+
+That count is calculated as `new ME loan value / meSetupCost`, even though ADR-0031 made each enterprise loan include setup cost plus working capital. With the current Malawi defaults, the table divides by $3,000 instead of the $11,400 actually lent per enterprise and therefore reports 3.8 times the true launch count in expansion months.
+
+**Fix:** `dataMonthlyNewMes` exposes the exact simulated monthly launch count; the table labels count and value separately, and a render-path regression requires every row to match the header width. [ADR-0040](adr/0040-report-exact-me-launches.md). Resolved in `pending`.
 
 ---
 

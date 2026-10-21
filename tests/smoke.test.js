@@ -63,7 +63,11 @@ function makeApp() {
   const document = {
     body: el('body'),
     addEventListener() {},
-    querySelector: (s) => (s === '.top-actions' ? el('__topActions') : null),
+    querySelector: (s) => {
+      if (s === '.top-actions') return el('__topActions');
+      if (s === '#monthlyDataTable thead') return el('__monthlyDataHead');
+      return null;
+    },
     querySelectorAll: () => [],
     getElementById: (id) => (ids.has(id) ? el(id) : null),
     createElement: () => el('__created' + Math.random()),
@@ -225,6 +229,40 @@ describe('application smoke', () => {
       assert.ok(o.repaidPct <= 1.0001,
         `${o.label} reports ${(o.repaidPct * 100).toFixed(1)}% repaid — over 100% means the ` +
         `denominator is the wrong loan amount`);
+    }
+  });
+
+  test('monthly table aligns its columns and reports exact ME launches (F-49, ADR-0040)', () => {
+    const app = makeApp();
+    app.runCalculation(true);
+    const s = app.UI.lastResults.series;
+    const inputs = app.UI.lastResults.inputs;
+
+    assert.ok(Array.isArray(s.dataMonthlyNewMes),
+      'the simulation must expose the exact monthly ME launch count');
+    assert.strictEqual(s.dataMonthlyNewMes.length, s.monthlyLabels.length);
+
+    const capitalPerMe = app.ModelModule.meCapitalRequirement(inputs);
+    let expansionMonths = 0;
+    for (let i = 0; i < s.monthlyLabels.length; i++) {
+      if (s.dataMonthlyNewMes[i] > 0) expansionMonths++;
+      assert.ok(Math.abs(
+        s.dataMonthlyNewLoansMeVal[i] - (s.dataMonthlyNewMes[i] * capitalPerMe)
+      ) < 0.01, `M${i + 1}: ME loan value must reconcile to the exact launch count`);
+    }
+    assert.ok(expansionMonths > 0, 'control scenario must exercise in-loop ME expansion');
+
+    const header = app.el('__monthlyDataHead').innerHTML;
+    const headerCells = (header.match(/<th\b/g) || []).length;
+    assert.match(header, />New MEs</);
+    assert.match(header, />New ME Loans</);
+
+    const rows = [...app.el('monthlyDataBody').innerHTML.matchAll(/<tr>([\s\S]*?)<\/tr>/g)];
+    assert.ok(rows.length > 1, 'monthly table should include startup and monthly rows');
+    for (const [, row] of rows) {
+      const dataCells = (row.match(/<td\b/g) || []).length;
+      assert.strictEqual(dataCells, headerCells,
+        `monthly table row has ${dataCells} cells under ${headerCells} headers`);
     }
   });
 });

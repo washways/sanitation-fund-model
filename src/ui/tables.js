@@ -78,7 +78,8 @@ Object.assign(UI, {
             "RevIntHH": "Interest revenue collected from households",
             "PrinRepHH": "Principal repaid by households",
             "DefHH": "Value of household loans written off (defaulted)",
-            "NewLoanME": "Value of new loans to Micro-Enterprises",
+            "NewMEs": "Number of new Micro-Enterprises launched this month",
+            "NewLoanME": "Value of new loans to Micro-Enterprises this month",
             "RevIntME": "Interest revenue from MEs",
             "PrinRepME": "Principal repaid by MEs",
             "DefME": "Value of ME loans written off",
@@ -113,7 +114,8 @@ Object.assign(UI, {
                     <th title="${tooltipMap.PrinRepHH}">PrinRepaid(HH)</th>
                     <th title="${tooltipMap.DefHH}">Defaults(HH)</th>
                     
-                    <th title="${tooltipMap.NewLoanME}">NewLoans(ME)</th>
+                    <th title="${tooltipMap.NewMEs}">New MEs</th>
+                    <th title="${tooltipMap.NewLoanME}">New ME Loans</th>
                     <th title="${tooltipMap.RevIntME}">RevInt(ME)</th>
                     <th title="${tooltipMap.PrinRepME}">PrinRepaid(ME)</th>
                     <th title="${tooltipMap.DefME}">Defaults(ME)</th>
@@ -210,7 +212,7 @@ Object.assign(UI, {
                 <td>${fmtMoney(s.dataMonthlyDefaultsHh[i])}</td>
                 
                 <!--ME Finances-->
-                <td>${(s.dataMonthlyNewLoansMeVal[i] / inputs.meSetupCost).toFixed(0)}</td> <!-- Count -->
+                <td>${fmtVal(s.dataMonthlyNewMes[i])}</td> <!-- Count -->
                 <td>${fmtMoney(s.dataMonthlyNewLoansMeVal[i])}</td> <!-- Value -->
                 <td>${fmtMoney(s.dataMonthlyRevenueMe[i])}</td>
                 <td>${fmtMoney(s.dataMonthlyRepaymentMe[i])}</td>

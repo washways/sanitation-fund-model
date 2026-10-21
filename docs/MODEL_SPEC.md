@@ -282,6 +282,17 @@ They are separate because they come apart in both directions: an enterprise can 
 ### R-6.4 Production capacity **[AS-BUILT]**
 `capacity = currentMEs * toiletsPerMeMonth`. There is no learning curve, no seasonality and no supply-chain lag.
 
+### R-6.5 Launch reporting **[AS-BUILT]** (corrected 2026-10-21, [ADR-0040](adr/0040-report-exact-me-launches.md), resolves F-49)
+
+The simulation records the enterprises launched inside each simulated month directly:
+
+```
+dataMonthlyNewMes[m]        = newMEs[m]
+dataMonthlyNewLoansMeVal[m] = newMEs[m] * meCapitalRequirement(inputs)
+```
+
+The monthly implementation table presents these as separate `New MEs` (count) and `New ME Loans` (currency) columns. It must not reconstruct the count by dividing loan value by `meSetupCost`: the loan includes the working-capital component in R-6.1, and active-enterprise changes also include attrition. The separate month-0 row reports `startMEs` and `startupCost` under the same two headings.
+
 ---
 
 ## 7. Toilet production

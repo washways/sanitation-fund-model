@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.10.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.11.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.11.0 — Monthly implementation table corrected</h2>
+        <ul>
+            <li>Every monthly figure now appears under the correct heading. A missing header previously shifted ME finance, operating-cost, investor-payment, net-cash, and ending-cash values one column to the right.</li>
+            <li>The table now labels <strong>New MEs</strong> (a count) separately from <strong>New ME Loans</strong> (a currency amount).</li>
+            <li>New-enterprise counts now use the exact number launched by the simulation instead of dividing the loan amount by setup cost alone.</li>
+            <li>At the current Malawi defaults, the old shortcut overstated launches by 3.8 times because it ignored working capital included in each enterprise loan.</li>
+            <li>F-49 is resolved. Cashflows, headline results, and the five-year Malawi reference result are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.10.0 — Advice is now model-tested</h2>
         <ul>
             <li>The advice button now recalculates the current scenario and shows only changes that were tested by rerunning the model.</li>

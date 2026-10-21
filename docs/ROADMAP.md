@@ -23,7 +23,7 @@ Progress is tracked in [STATUS.md](../STATUS.md), which is the first file to rea
 | **S3** | Model correctness | ✅ Complete — 12 findings closed | High | S2 |
 | **S4** | Decision support | In progress — item 1 (F-27) done; items 2-4 not started | Medium | S3 |
 | **S5** | Structure | ✅ Done — enables everything after (2 files exceed 500 lines, documented) | Medium | S3 |
-| **S6** | Presentation and reach | Not started | Low | S5 |
+| **S6** | Presentation and reach | In progress — public changelog, advice and monthly-table integrity landed | Low | S5 |
 
 The ordering is deliberate and is not a priority ranking:
 
@@ -93,6 +93,7 @@ Rules this stage followed, and how:
 | Mobile / small-screen layout | Not assessed. |
 | Explicit "this is a model, not a forecast" framing with assumption provenance | Every parameter should show whether it came from the World Bank, a default, or the user. |
 | Multi-currency / local currency display | Currently USD-labelled only. Needs an ADR (out of scope in R-1). |
+| ✅ Monthly audit-table integrity | Count/value columns are aligned and exact simulated ME launches are reported directly ([ADR-0040](adr/0040-report-exact-me-launches.md)). |
 
 ---
 

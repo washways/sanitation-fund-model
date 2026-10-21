@@ -384,12 +384,28 @@ console.log('='.repeat(80));
     'The button reruns the current form through suggestSolvencyFix; the legacy rule set and AI label are absent.');
 }
 
+// F-49 — monthly reporting must use the simulated launch count and keep count/value
+// columns distinct. The render-path smoke test separately checks every row width.
+{
+  const capitalPerMe = ModelModule.meCapitalRequirement(BASE);
+  const hasCanonicalSeries = Array.isArray(s.dataMonthlyNewMes)
+    && s.dataMonthlyNewMes.length === s.dataMonthlyNewLoansMeVal.length;
+  const reconciles = hasCanonicalSeries && s.dataMonthlyNewMes.every((count, i) =>
+    Math.abs(s.dataMonthlyNewLoansMeVal[i] - (count * capitalPerMe)) < 0.01);
+  const separateHeaders = />New MEs<\/[a-z]+>[\s\S]*>New ME Loans<\/[a-z]+>/.test(APP_SRC);
+  const oldReconstructionGone = !/dataMonthlyNewLoansMeVal\[i\]\s*\/\s*inputs\.meSetupCost/.test(APP_SRC);
+  check('F-49', 'monthly table reports exact ME launches under aligned count/value headings',
+    reconciles && separateHeaders && oldReconstructionGone,
+    `All ${s.dataMonthlyNewMes?.length || 0} monthly launch values reconcile to ` +
+    `${money(capitalPerMe)} per enterprise; the setup-cost-only UI reconstruction is absent.`);
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 48 of 48 resolved.');
+console.log('Findings register: 49 of 49 resolved.');
 console.log('Open modelling question: MODEL_SPEC R-7.6/Q14 (headline constraint reporting).');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.10.0 — one model-tested advice path |
+| **Release** | 0.11.0 — accurate monthly implementation table |
 | **Stages complete** | S0, S1, S2, S3, S5; S4 solver correctness complete, other S4 work and S6 remain |
-| **Tests** | ✅ 97 pass, 0 todo, 0 fail (`npm test`, ~1s) |
+| **Tests** | ✅ 98 pass, 0 todo, 0 fail (`npm test`, ~2s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
-| **Findings register** | ✅ 48 of 48 resolved |
+| **Findings register** | ✅ 49 of 49 resolved |
 | **Open modelling question** | MODEL_SPEC R-7.6: whether the headline constraint label should derive directly from the production minimum |
 
 ## What remains unresolved
@@ -75,6 +75,12 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 - Every displayed option has a measured repayment and reach result from a one-at-a-time model rerun.
 - No parallel rule-of-thumb advisor, modal advice, automatic input change, or “AI” claim. See [ADR-0039](docs/adr/0039-one-model-tested-advice-path.md).
 
+## Monthly reporting contract
+
+- `series.dataMonthlyNewMes` is the canonical count of enterprises launched inside each simulated month.
+- `New MEs` is a count; `New ME Loans` is the working-capital-inclusive currency amount. Do not infer one from setup cost alone.
+- Every monthly implementation row has exactly the same number of cells as its header. The render-path regression pins both alignment and the count/value reconciliation. See [ADR-0040](docs/adr/0040-report-exact-me-launches.md).
+
 ## Environment
 
 Node is not on `PATH` on the maintainer's machine:
@@ -92,4 +98,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.10.0 closed F-48 under [ADR-0039](docs/adr/0039-one-model-tested-advice-path.md). The visible advice control now recalculates the current scenario and renders only simulated options; the contradictory legacy advisor and “AI” label are gone. All model outputs and the five-year Malawi reference headlines are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.11.0 closed F-49 under [ADR-0040](docs/adr/0040-report-exact-me-launches.md). The monthly table now has aligned headings and uses the exact simulated enterprise-launch count instead of a setup-cost-only reconstruction that overstated Malawi expansion by 3.8x. Cashflows and headline results are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
