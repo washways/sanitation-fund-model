@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 53 of 54 findings resolved as of 2026-10-21. F-54 is under active correction. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 54 of 54 findings resolved as of 2026-10-21. F-54 was fixed under ADR-0047. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,7 +54,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
-| [F-54](#f-54--month-zero-launches-half-the-national-enterprise-network) | **High** | Assumptions | Month zero cash-maximises the startup cohort, creating $25.8k of ME interest in month one | run | S3 |
+| ✅ [F-54](#f-54--month-zero-launches-half-the-national-enterprise-network) | **High** | Assumptions | Month zero cash-maximises the startup cohort, creating $25.8k of ME interest in month one | run | S3 |
 | ✅ [F-53](#f-53--country-derived-input-highlighting-contradicts-its-own-source-state) | Medium | UI | API provenance disappears immediately on some fields and remains falsely on edited values | run | S6 |
 | ✅ [F-48](#f-48--the-visible-advisor-bypasses-model-tested-advice) | **High** | Advice | The visible advisor calls legacy rules that repeat recommendations already proved unsafe | src | S6 |
 | ✅ [F-47](#f-47--exports-can-describe-a-different-scenario-and-liability) | **High** | Export | Exports reread live inputs and the copied report misstates senior liability and leverage | src, run | S6 |
@@ -1029,11 +1029,11 @@ The equivalent genuine zero-cap run produces no enterprises or toilets and is no
 
 ### F-54 — Month zero launches half the national enterprise network
 
-**High — open.** The Malawi reference run launches the largest enterprise cohort its loan capital can afford: 285 of the eventual 560-enterprise network at month zero, backed by $3.249m of enterprise loans. Month one consequently reports $25,797 of enterprise interest and $259,190 of principal before household lending has generated any interest. The arithmetic is correct for that cohort, but the cohort assumes recruitment, due diligence, contracting, training, capitalisation, and operations are complete before the simulation starts.
+**High — fixed.** The Malawi reference run launched the largest enterprise cohort its loan capital could afford: 285 of the eventual 560-enterprise network at month zero, backed by $3.249m of enterprise loans. Month one consequently reported $25,797 of enterprise interest and $259,190 of principal before household lending had generated any interest. The arithmetic was correct for that cohort, but the cohort assumed recruitment, due diligence, contracting, training, capitalisation, and operations were complete before the simulation started.
 
-The `Starting Capacity Throttle` does not state an operational target. It subtracts 15% of combined grant and loan capital from the loan ledger only while calculating the month-zero cohort, then disappears. A measured 15%-of-network pilot starts 84 enterprises, records $7,603 month-one interest, grows to about 232 enterprises by month 12 and 314 by month 24, retains full five-year senior repayment, and has FSS of 1.064. A 10% pilot also repays in full but has FSS of only 0.995; one enterprise per district starts 28 and records $2,534 interest, but repays only 97.66% of senior principal under the current terms.
+The `Starting Capacity Throttle` did not state an operational target. It subtracted 15% of combined grant and loan capital from the loan ledger only while calculating the month-zero cohort, then disappeared. The replacement 15%-of-network pilot starts 84 enterprises, records $7,603 month-one interest, grows to about 232 enterprises by month 12 and 314 by month 24, retains full five-year senior repayment, and has FSS of 1.064. A 10% pilot also repays in full but has FSS of only 0.995; one enterprise per district starts 28 and records $2,534 interest, but repays only 97.66% of senior principal under the current terms.
 
-**Planned fix:** replace the indirect capital holdback with an explicit, editable initial-network share, retaining the documented 15% input as a pilot-network target. Preserve affordability as a hard cap and leave later growth unchanged. [ADR-0047](adr/0047-start-with-a-pilot-enterprise-network.md).
+**Fix:** replaced the indirect capital holdback with an explicit, editable initial-network share, retaining the documented 15% input as a pilot-network target. Affordability remains a hard cap and later growth is unchanged. [ADR-0047](adr/0047-start-with-a-pilot-enterprise-network.md). Resolved in `9e642e6`.
 
 ---
 
