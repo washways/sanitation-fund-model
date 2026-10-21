@@ -37,6 +37,7 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | S3 rollout realism — 2026-10-21 | Replaced the cash-maximising month-zero cohort with an explicit 15% pilot share of the target ME network. | Opening enterprises are `min(target share, affordable, network cap)`. The pilot share is a visible programme assumption, never country-derived; zero must seed no hidden cohort. |
 | S6 responsive results — 2026-10-21 | Replaced the fixed three-column programme summary and global no-wrap cells with an adaptive grid and scoped monthly-table scrolling. | Compact summary cards must wrap and fit the main panel. Only `#monthlyDataTable` may retain wide no-wrap cells inside its local scroll container. |
 | S3 impact evidence — 2026-10-21 | Made jobs per active enterprise explicit, derived a conservative sanitation-burden proxy from WHO plus matching-year World Bank exposure, applied an explicit intervention-effect assumption, and relabelled zero carbon as not estimated. | Jobs are point-in-time jobs supported, not job-years. Never treat 100% of attributable burden as averted: apply the editable `dalyImpactRealisation` factor (21% interim basic non-sewered sanitation estimate). DALY value stays zero unless separately evidenced. Carbon needs a project baseline/technology factor. |
+| S6 assumption context — 2026-10-21 | Put dated commercial lending and CPI context beside the financial assumptions they inform, and marked those controls amber. | Blue means API-derived value; amber means programme assumption. Never auto-fill HH/ME APRs from commercial lending, fixed operations from a macro heuristic, or USD escalation from local CPI without an FX and cost-basket forecast. |
 
 The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) and [docs/adr/](docs/adr/). Never edit an accepted ADR; supersede it.
 
@@ -61,6 +62,11 @@ The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) a
 4. `dalyPerPerson`, a burden proxy from the WHO `WSH_30_SAN` lower bound divided by matching-year World Bank total population without basic sanitation. The separate `dalyImpactRealisation` assumption is never API-filled.
 
 CPI, commercial lending, poverty, Gini, and sanitation levels are context. Do not resurrect `countriesnow.space`, `PV.EST` heuristics, smart-rate formulas, poverty-to-grant mappings, cost tiers, or cross-country operating-cost formulas.
+
+Commercial lending must be shown beside HH and ME rates with its observation year, not applied to
+them. Local CPI must be shown beside model-currency escalation with its year and USD/FX warning.
+Annual fixed operations must request the actual programme budget; no country macro API derives it.
+These four controls use amber `programme-assumption`, never blue `country-observation`.
 
 After loading, all four model-driving country fields use the blue `country-observation` state and
 carry a source description. Trusted user input removes that state. Do not use `auto-filled`, inline

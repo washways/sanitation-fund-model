@@ -320,6 +320,34 @@ describe('startup — the scenario a user actually opens', () => {
       'country loading must not overwrite the programme health-effect assumption');
   });
 
+  test('financial assumptions show dated API context without being overwritten (F-59, ADR-0050)', () => {
+    const assumptionIds = [
+      'loanInterestRate_v2', 'meLoanInterestRate_v2', 'annualFixedOpsCost', 'inflationRate'
+    ];
+    for (const id of assumptionIds) {
+      assert.ok(app.el(id).classList.contains('programme-assumption'),
+        `${id} should be visibly identified as a programme assumption`);
+      assert.ok(!app.el(id).classList.contains('country-observation'),
+        `${id} must not look as though an API supplied its value`);
+    }
+
+    assert.strictEqual(inputs.loanInterestRate, 0.40);
+    assert.strictEqual(inputs.meLoanInterestRate, 0.10);
+    assert.strictEqual(inputs.annualFixedOpsCost, 60000);
+    assert.strictEqual(inputs.inflationRate, 0.0332);
+
+    for (const id of ['hh-rate-help', 'me-rate-help']) {
+      assert.match(app.el(id).innerText, /37\.1%/);
+      assert.match(app.el(id).innerText, /2024/);
+      assert.match(app.el(id).innerText, /commercial lending.*context/i);
+    }
+    assert.match(app.el('ops-cost-help').innerText, /cannot be derived.*country macro API/i);
+    assert.match(app.el('ops-cost-help').innerText, /programme budget/i);
+    assert.match(app.el('cost-escalation-help').innerText, /28\.4%/);
+    assert.match(app.el('cost-escalation-help').innerText, /2025/);
+    assert.match(app.el('cost-escalation-help').innerText, /local-currency CPI.*USD/i);
+  });
+
   test('the model is internally consistent on the startup scenario', () => {
     assert.strictEqual(result.integrity.ok, true,
       `integrity violations at startup: ${result.integrity.violations.join('; ')}`);

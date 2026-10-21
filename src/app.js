@@ -307,6 +307,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const loanInput = document.getElementById('loanInterestRate_v2'); // UPDATED ID
                 if (loanInput) loanInput.dataset.benchmark = data.lendingRate;
 
+                const lendingContext = `Commercial lending context (${yearOf('lendingRate')}): ` +
+                    `${data.lendingRate.toFixed(1)}%. This is not a programme APR; set the field from ` +
+                    `cost of funds, servicing cost, expected losses, affordability, subsidy, and margin.`;
+                const hhRateHelp = document.getElementById('hh-rate-help');
+                const meRateHelp = document.getElementById('me-rate-help');
+                if (hhRateHelp) hhRateHelp.innerText = lendingContext;
+                if (meRateHelp) meRateHelp.innerText = lendingContext;
+
                 // Fund Cost of Capital: BENCHMARK ONLY — do not overwrite the field.
                 //
                 // This used to be auto-filled from the commercial lending rate. In
@@ -322,6 +330,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     cocHelp.innerText = `Concessional senior debt. For context, commercial lending in this ` +
                         `country runs at about ${data.lendingRate.toFixed(1)}% — set this from your actual term sheet.`;
                 }
+            } else {
+                const noLendingContext = 'Commercial lending context is unavailable for this country. ' +
+                    'Set the programme APR from the actual product pricing model.';
+                const hhRateHelp = document.getElementById('hh-rate-help');
+                const meRateHelp = document.getElementById('me-rate-help');
+                if (hhRateHelp) hhRateHelp.innerText = noLendingContext;
+                if (meRateHelp) meRateHelp.innerText = noLendingContext;
+            }
+
+            const opsCostHelp = document.getElementById('ops-cost-help');
+            if (opsCostHelp) {
+                opsCostHelp.innerText = 'Cannot be derived from a country macro API; enter the programme budget ' +
+                    'for staff, offices, vehicles, systems, audit, and field service.';
+            }
+            const costEscalationHelp = document.getElementById('cost-escalation-help');
+            if (costEscalationHelp) {
+                costEscalationHelp.innerText = hasNumber(data.inflation)
+                    ? `Local-currency CPI context (${yearOf('inflation')}): ${data.inflation.toFixed(1)}%. ` +
+                      `Do not use it as USD cost escalation without an exchange-rate and programme cost-basket forecast.`
+                    : 'Local-currency CPI context is unavailable. Set forward USD escalation from the programme cost basket and exchange-rate assumptions.';
             }
             if (hasNumber(data.popGrowth)) {
                 fillParam(

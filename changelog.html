@@ -29,9 +29,21 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.19.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.19.1 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.19.1 — Financial assumptions show relevant API context</h2>
+        <ul>
+            <li>Household and enterprise loan rates now show the dated country commercial-lending benchmark beside each field, without replacing the programme&rsquo;s product prices.</li>
+            <li>Malawi therefore retains the illustrative 40% household and 10% enterprise rates while showing 37.1% commercial lending for 2024 as context.</li>
+            <li>Annual fixed operating cost now states that a country macro API cannot infer the programme staffing, office, vehicles, systems, audit, and field-service budget.</li>
+            <li>USD cost escalation now shows local-currency CPI with its date but does not apply it without an exchange-rate and programme cost-basket forecast. Malawi shows 28.4% CPI for 2025 while retaining 3.32% USD escalation.</li>
+            <li>Blue fields are country observations or transparent derivations. Amber fields are programme assumptions that APIs may inform but never set.</li>
+            <li>F-59 is resolved. Model calculations and all 21 recorded scenarios are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.19.0 — Impact estimates are explicit and evidence-linked</h2>
         <ul>
             <li><strong>Jobs Supported</strong> now plots correctly. The Malawi reference assumption is an editable three jobs per active enterprise: one owner/operator plus two full-time-equivalent workers.</li>

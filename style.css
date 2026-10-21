@@ -590,6 +590,14 @@ body {
     color: #172554 !important;
 }
 
+/* Programme assumptions informed by, but never populated from, country context (ADR-0050). */
+.programme-assumption {
+    background-color: #fffbeb !important;
+    border: 2px solid #d97706 !important;
+    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.12);
+    color: #78350f !important;
+}
+
 .country-source-key {
     display: flex;
     align-items: flex-start;
@@ -607,6 +615,16 @@ body {
     border: 2px solid #2563eb;
     border-radius: 0.2rem;
     background: #eff6ff;
+}
+
+.programme-source-swatch {
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.08rem;
+    border: 2px solid #d97706;
+    border-radius: 0.2rem;
+    background: #fffbeb;
 }
 
 /* Mobile Responsiveness */

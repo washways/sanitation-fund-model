@@ -861,7 +861,8 @@ capitalPreservation = netAssets   / capitalInvested</div>
                     <td>Annual Cost Escalation in Model Currency</td>
                     <td>%</td>
                     <td>Applies to unit costs and fixed operating costs. <strong>Not</strong> to household incomes.
-                        Local-currency CPI is context only because the model is USD-labelled and has no FX path.</td>
+                        Dated local-currency CPI is shown beside the control as context only because the model is
+                        USD-labelled and has no FX or programme cost-basket forecast.</td>
                 </tr>
                 <tr>
                     <td colspan="3"><span class="tag">Delivery network</span></td>
@@ -913,7 +914,8 @@ capitalPreservation = netAssets   / capitalInvested</div>
                 <tr>
                     <td>HH / ME Loan Interest Rate</td>
                     <td>%</td>
-                    <td>Annual, converted geometrically. A rate of 0 is valid and handled.</td>
+                    <td>Annual, converted geometrically. A rate of 0 is valid and handled. Dated commercial lending
+                        is shown beside both controls as context; it is not a household or enterprise product price.</td>
                 </tr>
                 <tr>
                     <td>HH / ME Loan Term</td>
@@ -938,7 +940,8 @@ capitalPreservation = netAssets   / capitalInvested</div>
                 <tr>
                     <td>Annual Fixed Ops Cost</td>
                     <td>USD/yr</td>
-                    <td>Inflated monthly. Falls to 30% during hibernation, and stops entirely at wind-up.</td>
+                    <td>Inflated monthly. Falls to 30% during hibernation, and stops entirely at wind-up. No country
+                        macro API can infer the programme staffing, office, vehicles, systems, audit, and field-service budget.</td>
                 </tr>
                 <tr>
                     <td>Mgmt Fee Ratio</td>
@@ -1021,6 +1024,11 @@ capitalPreservation = netAssets   / capitalInvested</div>
             observations; the DALY burden factor is the documented WHO/World Bank derivation above. Hovering a blue field shows its source year or years. Editing it removes the blue marker,
             because the resulting value is now the user's assumption. Financing, operating, delivery, loss, and
             subsidy settings are never coloured as World Bank observations.</p>
+
+        <p><strong>Amber fields remain programme assumptions.</strong> Commercial lending and local CPI are repeated
+            beside the related controls with their dates because they are useful benchmarks, but they never set the
+            household APR, enterprise APR, operating budget, or USD escalation rate. The value beside each amber
+            field must come from the programme&rsquo;s term sheet, budget, and cost/FX forecast.</p>
 
         <div class="table-scroll">
             <table class="param-table">
