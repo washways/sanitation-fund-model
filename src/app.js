@@ -406,8 +406,16 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
         }
 
     } catch (e) {
+        // A failed recalculation is no result. Do not leave a previous scenario
+        // exportable under the user's newly entered assumptions (F-46).
+        UI.lastResults = null;
         console.error("Model Runtime Error:", e);
-        alert("Error: " + e.message);
+        if (e && e.code === 'INVALID_INPUTS' && Array.isArray(e.validationErrors)) {
+            alert("Please correct these inputs before running the model:\n\n- " +
+                e.validationErrors.join("\n- "));
+        } else {
+            alert("Error: " + e.message);
+        }
     }
 }
 // Format Number Inputs on Blur

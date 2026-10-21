@@ -3,7 +3,7 @@
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # Node is not on PATH
 npm ci                 # installs ESLint, the one devDependency — needed once
-npm test              # 89 tests, ~1s
+npm test              # 94 tests, ~1s
 npm run test:watch    # re-run on change
 npm run golden:diff   # what would move, without writing
 npm run verify        # reproduce the audit findings
@@ -13,12 +13,13 @@ No test framework, no bundler, no `node_modules`. The suite uses Node's built-in
 
 ---
 
-## Why ten kinds of test
+## Why eleven kinds of test
 
 This codebase's git history contains eight "Fix TypeError" commits from before the suite existed — each a defect found by a user in a browser. The suite is shaped around the distinct ways this particular model goes wrong; no one suite subsumes another.
 
 | Suite | Catches | Question it answers |
 |---|---|---|
+| `input-validation.test.js` | Invalid inputs entering the loop and producing NaN, Infinity, a crash, or plausible corruption | *Does an invalid scenario stop before month 1 with every bad field identified?* |
 | `debt-waterfall.test.js` | Capitalised interest or terminal senior cash disappearing inside a plausible end balance | *Does every senior-debt movement reconcile, including wind-up?* |
 | `wiring.test.js` | A parameter the model reads that the user cannot set, or a control that doesn't actually move the output | *Does the model receive what the user typed, and does it matter?* |
 | `invariants.test.js` | An internally inconsistent ledger | *Is the arithmetic self-consistent?* |

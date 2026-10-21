@@ -134,7 +134,129 @@ const ModelModule = {
         };
     },
 
+    // Pure input boundary (ADR-0037, F-46). These are mathematical and
+    // definitional constraints only; policy judgements such as a maximum interest
+    // rate or maximum programme cost deliberately do not belong here.
+    validateInputs(inputs) {
+        const labels = {
+            investGrant: 'Initial Grant Capital',
+            investLoan: 'Initial Loan Capital',
+            duration: 'Duration',
+            fundRepaymentTerm: 'Fund Repayment Term',
+            investorGracePeriod: 'Investor Grace Period',
+            fundCostOfCapital: 'Fund Cost of Capital',
+            popReqToilets: 'Population Needing Toilets',
+            popGrowthRate: 'Annual Population Growth',
+            avgHHSize: 'Avg Household Size',
+            avgToiletCost: 'Avg Toilet Cost',
+            inflationRate: 'Annual Cost Escalation',
+            districts: 'Administrative Units',
+            mePerDistrict: 'Micro-enterprises per Unit',
+            toiletsPerMeMonth: 'Toilets per ME per Month',
+            meSetupCost: 'ME Setup Cost',
+            grantSupportPct: 'Grant-Funded Pacing',
+            loanInterestRate: 'HH Loan Interest Rate',
+            meLoanInterestRate: 'ME Loan Interest Rate',
+            hhDefaultRate: 'HH Annual Write-down Rate',
+            meDefaultRate: 'ME Annual Write-down Rate',
+            meExitRate: 'ME Annual Closure Rate',
+            meExpansionBudgetShare: 'ME Expansion Budget Share',
+            meMaxMonthlyGrowthRate: 'ME Max Monthly Growth Rate',
+            termHh: 'HH Loan Term',
+            termMe: 'ME Loan Term',
+            annualFixedOpsCost: 'Annual Fixed Ops Cost',
+            mgmtFeeRatio: 'Mgmt Fee Ratio',
+            meCostRate: 'M&E Cost',
+            contingencyRate: 'Cost Contingency',
+            opsReserveCap: 'Starting Capacity Throttle',
+            dalyPerPerson: 'DALYs Averted per Person',
+            dalyValue: 'Value per DALY',
+            avgAnnualIncome: 'Avg Annual Income',
+            co2PerToilet: 'CO2e per Toilet',
+            co2Value: 'Value per Tonne CO2e',
+            carbonCreditShare: 'Fund Carbon Share',
+            hoursPerPersonPerDay: 'Hours Saved per Person per Day',
+            timeValueFactor: 'Value of Saved Time',
+            toiletLifespanYears: 'Toilet Service Life',
+        };
+        const errors = [];
+        const finite = key => Number.isFinite(inputs[key]);
+
+        for (const [key, label] of Object.entries(labels)) {
+            if (!finite(key)) errors.push(`${label} must be a finite number.`);
+        }
+
+        const requireWhenFinite = (keys, predicate, message) => {
+            for (const key of keys) {
+                if (finite(key) && !predicate(inputs[key])) {
+                    errors.push(`${labels[key]} ${message}`);
+                }
+            }
+        };
+
+        requireWhenFinite([
+            'investGrant', 'investLoan', 'fundRepaymentTerm', 'popReqToilets', 'districts',
+            'mePerDistrict', 'toiletsPerMeMonth', 'meSetupCost',
+            'annualFixedOpsCost', 'mgmtFeeRatio', 'meCostRate',
+            'contingencyRate', 'dalyPerPerson', 'dalyValue', 'avgAnnualIncome',
+            'co2PerToilet', 'co2Value', 'meMaxMonthlyGrowthRate',
+            'hoursPerPersonPerDay',
+        ], value => value >= 0, 'cannot be negative.');
+
+        requireWhenFinite([
+            'duration', 'avgHHSize', 'avgToiletCost', 'termHh', 'termMe',
+            'toiletLifespanYears',
+        ], value => value > 0, 'must be greater than zero.');
+
+        requireWhenFinite([
+            'grantSupportPct', 'hhDefaultRate', 'meDefaultRate', 'meExitRate',
+            'meExpansionBudgetShare', 'opsReserveCap', 'carbonCreditShare',
+            'timeValueFactor',
+        ], value => value >= 0 && value <= 1, 'must be between 0% and 100%.');
+
+        requireWhenFinite([
+            'popGrowthRate', 'inflationRate', 'loanInterestRate',
+            'meLoanInterestRate', 'fundCostOfCapital',
+        ], value => value > -1, 'must be greater than -100%.');
+
+        requireWhenFinite([
+            'districts', 'mePerDistrict', 'investorGracePeriod', 'termHh', 'termMe',
+        ], Number.isInteger, 'must be a whole number.');
+
+        if (finite('duration') && !Number.isInteger(inputs.duration * 12)) {
+            errors.push('Duration must resolve to a whole number of months.');
+        }
+        if (finite('fundRepaymentTerm') && !Number.isInteger(inputs.fundRepaymentTerm * 12)) {
+            errors.push('Fund Repayment Term must resolve to a whole number of months.');
+        }
+        if (finite('hoursPerPersonPerDay') && inputs.hoursPerPersonPerDay > 24) {
+            errors.push('Hours Saved per Person per Day cannot exceed 24.');
+        }
+        if (finite('investorGracePeriod') && inputs.investorGracePeriod < 0) {
+            errors.push('Investor Grace Period cannot be negative.');
+        }
+        if (finite('investLoan') && inputs.investLoan > 0
+            && finite('fundRepaymentTerm') && !(inputs.fundRepaymentTerm > 0)) {
+            errors.push('Fund Repayment Term must be greater than zero when Initial Loan Capital is positive.');
+        }
+        if (finite('investLoan') && inputs.investLoan > 0
+            && finite('investorGracePeriod') && finite('fundRepaymentTerm')
+            && inputs.investorGracePeriod > inputs.fundRepaymentTerm * 12) {
+            errors.push('Investor Grace Period cannot exceed the Fund Repayment Term.');
+        }
+
+        return errors;
+    },
+
     calculate(inputs) {
+        const validationErrors = this.validateInputs(inputs);
+        if (validationErrors.length > 0) {
+            const error = new RangeError(`Invalid model inputs:\n- ${validationErrors.join('\n- ')}`);
+            error.code = 'INVALID_INPUTS';
+            error.validationErrors = validationErrors;
+            throw error;
+        }
+
         // --- 1. Configuration & Standardization ---
         const durationMonths = inputs.duration * 12;
         const totalSimMonths = durationMonths; // Hard cap at duration * 12

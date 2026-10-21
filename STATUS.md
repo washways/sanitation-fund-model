@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.7.0 — complete investor debt settlement |
+| **Release** | 0.8.0 — fail-fast input validation |
 | **Stages complete** | S0, S1, S2, S3, S5; S4 solver correctness complete, other S4 work and S6 remain |
-| **Tests** | ✅ 89 pass, 0 todo, 0 fail (`npm test`, ~1s) |
+| **Tests** | ✅ 94 pass, 0 todo, 0 fail (`npm test`, ~1s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
-| **Findings register** | ✅ 45 of 45 resolved |
+| **Findings register** | ✅ 46 of 46 resolved |
 | **Open modelling question** | MODEL_SPEC R-7.6: whether the headline constraint label should derive directly from the production minimum |
 
 ## What remains unresolved
@@ -56,6 +56,13 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 - In the wind-up month, remaining original principal accelerates and positive loan-ledger cash is paid before the ledger freezes. Grant cash remains ring-fenced.
 - INV-20 reconciles the liability; INV-21 prevents stranded terminal loan cash. See [ADR-0036](docs/adr/0036-complete-investor-debt-waterfall.md).
 
+## Input contract
+
+- `ModelModule.calculate()` validates every numeric input before allocating arrays or running month 1.
+- Blank and malformed form values remain invalid; they never restore a hidden fallback.
+- A failed browser rerun reports all detected fields together, clears the prior result, and leaves no scenario available for export or advice.
+- Bounds are mathematical or definitional only. Do not add unsupported policy caps. See [ADR-0037](docs/adr/0037-fail-fast-input-validation.md).
+
 ## Environment
 
 Node is not on `PATH` on the maintainer's machine:
@@ -73,4 +80,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.7.0 closed F-44/F-45 under [ADR-0036](docs/adr/0036-complete-investor-debt-waterfall.md). Capitalised interest is now payable, terminal loan cash is settled before freeze, and the senior balance has two new integrity checks. The five-year Malawi reference headlines are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.8.0 closed F-46 under [ADR-0037](docs/adr/0037-fail-fast-input-validation.md). Invalid scenarios now stop before simulation, all detected fields are reported together, and a failed rerun cannot leave an older result exportable. All valid goldens and the five-year Malawi reference headlines are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

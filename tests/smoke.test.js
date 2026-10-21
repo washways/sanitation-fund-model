@@ -120,6 +120,17 @@ describe('application smoke', () => {
     assert.deepStrictEqual(alerts, [], `unexpected alert: ${alerts[0]}`);
   });
 
+  test('a blank required value stops calculation instead of restoring a hidden fallback (F-46)', () => {
+    const app = makeApp();
+    app.el('avgHHSize').value = '';
+    app.runCalculation(true);
+
+    assert.strictEqual(app.UI.lastResults, null,
+      'an invalid recalculation must clear the previous result rather than leave it exportable');
+    assert.strictEqual(app.alerts.length, 1, 'the user must receive one visible validation message');
+    assert.match(app.alerts[0], /Avg Household Size/);
+  });
+
   test('the controller does not write back into the user\'s inputs (F-04, F-05)', () => {
     // This is the whole point of Stage 2. The auto-solver used to cut grantSupportPct
     // up to five times per click, and updateSmartRates overwrote both interest rates,

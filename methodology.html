@@ -260,6 +260,7 @@
             <ol>
                 <li><a href="#scope">What this model does</a></li>
                 <li><a href="#verdicts">The two verdicts</a></li>
+                <li><a href="#validation">Input validation</a></li>
                 <li><a href="#waterfall">The monthly waterfall</a></li>
                 <li><a href="#ledgers">The dual ledger</a></li>
                 <li><a href="#portfolio">Loan portfolio mechanics</a></li>
@@ -344,6 +345,19 @@ V4  OSS >= 1.0                                operations cover themselves</div>
                 looking. The two verdicts are now computed separately, shown separately, and never merged into a single
                 &ldquo;model OK&rdquo; indicator.</p>
         </div>
+
+        <h2 id="validation">2A. Input validation</h2>
+
+        <p>The model checks every numeric input <strong>before</strong> running the first month. Blank, malformed,
+            infinite, or structurally impossible values produce no result. The message lists all fields detected at
+            once, and any result from an earlier run is cleared so it cannot be exported or mistaken for the revised
+            scenario.</p>
+        <p>The checks protect the equations rather than making policy choices: denominators and loan terms must be
+            positive; money, costs, counts, and impact quantities cannot be negative; shares and annual write-down or
+            closure hazards stay between 0% and 100%; compound rates must be above -100%; discrete month/count fields
+            must be whole; saved time cannot exceed 24 hours per day; and investor grace cannot extend beyond the
+            repayment term when loan capital exists. The model does not invent upper limits for prices, interest rates,
+            capital, or programme scale.</p>
 
         <!-- ================================================================ -->
         <h2 id="waterfall">3. The monthly waterfall</h2>
@@ -1036,7 +1050,7 @@ capitalPreservation = netAssets   / capitalInvested</div>
 
         <div class="alert-box green">
             <h3>How to check any of this yourself</h3>
-            <p>The model self-verifies on every run against nineteen ledger invariants, and the repository carries a
+            <p>The model self-verifies on every run against twenty-one ledger invariants, and the repository carries a
                 regression suite covering input wiring, those invariants, twenty-one recorded scenarios, and an
                 end-to-end run of the application.</p>
             <p style="margin-top:0.75rem;"><code>npm test</code> &mdash; the suite.<br>

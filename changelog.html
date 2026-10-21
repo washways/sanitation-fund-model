@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.7.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.8.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.8.0 — Invalid inputs stop before calculation</h2>
+        <ul>
+            <li>Blank, malformed, infinite, and mathematically invalid inputs now produce no model result instead of allowing NaN, Infinity, a crash, or a plausible-looking answer.</li>
+            <li>The model reports every detected field together so users can correct the scenario in one pass.</li>
+            <li>A failed rerun clears the previous result, preventing an older scenario from being exported under newly entered assumptions.</li>
+            <li>Checks cover mathematical requirements only; the model does not invent maximum prices, rates, capital, or programme scale.</li>
+            <li>F-46 is resolved. The 21 recorded scenarios and five-year Malawi reference result are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.7.0 — Investor debt settlement completed</h2>
         <ul>
             <li>Old capitalised investor interest is now repaid before current interest and original principal.</li>

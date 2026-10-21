@@ -9,9 +9,11 @@ const UI = {
             const el = document.getElementById(id);
             if (!el) return defaultVal;
             // Strip commas and currency symbols
-            const val = el.value.replace(/,/g, '').replace(/\$/g, '');
-            const parsed = parseFloat(val);
-            return isNaN(parsed) ? defaultVal : parsed;
+            const val = el.value.replace(/,/g, '').replace(/\$/g, '').trim();
+            // Blank or malformed user input is not permission to restore a hidden
+            // assumption. Preserve invalidity for ModelModule.validateInputs (F-46).
+            if (val === '') return Number.NaN;
+            return Number(val);
         };
         /**
          * Every rate is entered as a PERCENTAGE and converted to a decimal here,

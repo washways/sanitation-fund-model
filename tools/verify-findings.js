@@ -335,12 +335,35 @@ console.log('='.repeat(80));
     `${money(ts.investorLiabilityEnd)} remains visible rather than being written off.`);
 }
 
+// F-46 — invalid inputs must fail before the monthly loop rather than corrupting
+// arrays or leaving a plausible-looking partial result.
+{
+  const probes = [
+    { avgHHSize: 0 },
+    { avgToiletCost: -100 },
+    { hhDefaultRate: 1.5 },
+    { duration: -1 },
+    { investorGracePeriod: 100 },
+  ];
+  const rejected = probes.every(overrides => {
+    try {
+      run(overrides);
+      return false;
+    } catch (error) {
+      return error && error.code === 'INVALID_INPUTS'
+        && Array.isArray(error.validationErrors) && error.validationErrors.length > 0;
+    }
+  });
+  check('F-46', 'invalid model inputs are rejected before simulation', rejected,
+    'Zero household size, negative cost, 150% write-down, negative duration, and grace beyond term all return field-specific INVALID_INPUTS errors.');
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 45 of 45 resolved.');
+console.log('Findings register: 46 of 46 resolved.');
 console.log('Open modelling question: MODEL_SPEC R-7.6/Q14 (headline constraint reporting).');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

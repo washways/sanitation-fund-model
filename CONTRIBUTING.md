@@ -11,7 +11,7 @@ No install. Node is needed only for tests and tooling.
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # not on PATH by default
 node --version      # v25.8.1 — anything >= 20 works
-npm test            # 89 pass, 0 todo, 0 fail
+npm test            # 94 pass, 0 todo, 0 fail
 ```
 
 To run the app: `python -m http.server 8080`, or `npm run serve`.

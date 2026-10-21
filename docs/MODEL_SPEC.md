@@ -81,6 +81,14 @@ The country loader requests the World Bank API's latest non-empty observation an
 
 If any essential observation for the target population, growth, or income is unavailable, the related field is cleared and automatic calculation pauses. A value from the previous country must never survive as if it belonged to the new one. See [ADR-0034](adr/0034-observations-only-country-data.md).
 
+### R-2.8 Input validation **[AS-BUILT]** (F-46)
+
+`ModelModule.calculate()` validates the complete input object before allocating output arrays or running month 1. Invalid inputs produce no result. The browser reports every detected field together and clears the prior result so it cannot be exported under changed assumptions.
+
+The boundary enforces mathematical and definitional constraints only: numeric fields are finite; denominators, portfolio terms, duration, and service life are positive; capital, costs, counts, impact quantities, mark-ups, and the fund repayment term are non-negative; shares and annual hazards are within 0%–100%; compound rates exceed -100%; discrete counts and month fields are whole numbers; year-based duration and repayment terms resolve to whole months; saved time does not exceed 24 hours/day; and, when senior loan capital is positive, its repayment term is positive and grace does not exceed that term.
+
+Blank or malformed form values remain invalid rather than restoring a hidden fallback. Validation does not impose unsupported policy caps on prices, interest rates, capital, or programme scale. See [ADR-0037](adr/0037-fail-fast-input-validation.md).
+
 ---
 
 ## 3. Portfolio mechanics

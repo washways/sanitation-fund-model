@@ -8,6 +8,10 @@ Source categories matter:
 - **Malawi reference** values have country-specific evidence but remain editable.
 - **Programme assumption** values are illustrative terms or operating choices. They are never made country-specific by an API heuristic.
 
+## Validation boundary
+
+Every numeric input must be finite before the simulation starts. Blank or malformed form values are errors, not permission to restore a hidden default. The pure model applies only mathematical and definitional bounds: positive denominators, loan terms, duration, and service life; non-negative capital, costs, counts, impact quantities, mark-ups, and fund repayment term; 0%–100% shares and annual hazards; compound rates above -100%; whole discrete month/count fields; whole-month simulation and repayment horizons; no more than 24 saved hours per person per day; and grace no longer than the investor term when senior capital exists. All detected fields are reported together and no result is produced. There are deliberately no invented policy caps on interest rates, prices, capital, or programme scale. See [ADR-0037](adr/0037-fail-fast-input-validation.md).
+
 ## Capital and structure
 
 | id | Label | Default | Entered / model unit | Source | Meaning |

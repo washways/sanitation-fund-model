@@ -13,7 +13,7 @@ cat STATUS.md                 # where the work is right now
 npm test                      # must be green before you touch anything
 ```
 
-89 tests, about a second. `npm ci` first if `node_modules/` doesn't exist yet — ESLint
+94 tests, about a second. `npm ci` first if `node_modules/` doesn't exist yet — ESLint
 is the one devDependency. If you change anything a user touches — a default, a form
 control, the country fetch — the suite that matters most is `tests/startup.test.js`,
 because it is the only one that exercises the state the browser actually ends up in.
@@ -136,7 +136,7 @@ That last one is the real gate. A fix with no test is a fix that will be undone 
 | `docs/TESTING.md` | How the suite is built and how to add to it. |
 | `docs/ARCHITECTURE.md` | Current code shape and the target shape. |
 | `docs/adr/` | Decision records. One per behaviour change or modelling decision — the *why* behind a changelog entry. Never edit an old one; write a new one that supersedes it. |
-| `tests/` | The safety net — 7 suites. |
+| `tests/` | The safety net — 11 suites. |
 | `tools/load-model.js` | Loads the model headlessly. Keep the DOM stub minimal — if it has to *do* something, the model grew a hidden DOM dependency and that is the bug. |
 | `tests/fixtures/` | Recorded World Bank and administrative-unit responses. **Never fetch live in a test.** Re-record deliberately and treat the resulting move like a golden diff. |
 

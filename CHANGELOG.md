@@ -11,6 +11,21 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.8.0] — 2026-10-21 — Fail-fast input validation
+
+### Fixed
+
+- **Invalid inputs can no longer enter the monthly simulation.** The pure model now rejects blank, malformed, non-finite, and mathematically invalid values before allocating arrays or running month 1. A 150% annual write-down previously generated dozens of `NaN` values while viability still reported true; zero household size created an infinite backlog beside plausible headline finances; negative duration crashed with `Invalid array length`. These cases now produce no result. ([ADR-0037](docs/adr/0037-fail-fast-input-validation.md), F-46)
+- **The browser reports all detected fields together.** Blank form controls no longer silently restore hidden fallback assumptions. A failed rerun clears the prior result so exports and advice cannot be mistaken for the changed scenario.
+- **Validation stays evidence-neutral.** The rules enforce only arithmetic and parameter definitions—such as positive denominators and terms, non-negative costs, bounded shares/hazards, and whole discrete periods. The model does not invent policy caps for rates, prices, capital, or programme scale.
+- **Two stale form details were corrected.** The duplicate `step` attribute on cost of capital was removed, and the service-life help now correctly says carbon, health, and time benefits all stop at expiry.
+
+### Golden movement
+
+None. All 21 recorded scenarios and the post-fetch Malawi startup are valid and produce unchanged results.
+
+---
+
 ## [0.7.0] — 2026-10-21 — Complete investor debt settlement
 
 ### Fixed

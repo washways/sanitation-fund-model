@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 45 of 45 findings resolved as of 2026-10-21. F-38–F-43 were fixed with ADR-0034/0035; F-44/F-45 were fixed together under ADR-0036. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 46 of 46 findings resolved as of 2026-10-21. F-38–F-43 were fixed with ADR-0034/0035; F-44/F-45 were fixed together under ADR-0036; F-46 was fixed under ADR-0037. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,6 +54,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
+| ✅ [F-46](#f-46--invalid-inputs-enter-the-loop-and-can-look-plausible) | **Critical** | Inputs | Invalid or blank inputs can create NaN, Infinity, crashes, or plausible-looking output | run | S6 |
 | ✅ [F-45](#f-45--wind-up-can-freeze-cash-before-settling-investor-liability) | **High** | Core | Wind-up can freeze positive loan cash while senior liability remains outstanding | run | Post-S5 |
 | ✅ [F-44](#f-44--capitalised-interest-is-never-scheduled-for-catch-up) | **High** | Core | Capitalised interest grows the liability but is never scheduled for catch-up repayment | src, run | Post-S5 |
 | ✅ [F-43](#f-43--demand-growth-was-applied-after-production) | Medium | Core | Backlog subtracted production before growth, contrary to R-7.1 | src | Post-S5 |
@@ -969,6 +970,12 @@ Following that advice makes the outcome worse. The advisor was written against a
 **High — fixed.** Wind-up tested portfolio, production, and lendable cash but not investor liability. It then froze debt service. A reproduced no-demand scenario wound up with $172,237 of positive loan cash and $592,593 still owed, making the reported result depend on the terminal-state shortcut rather than the contractual waterfall.
 
 **Fix:** in the wind-up month, no new interest or operations accrue; remaining original principal accelerates and positive loan cash is applied through the investor waterfall before the ledger freezes. Grant cash remains ring-fenced. The no-demand regression now ends with zero loan cash, $420,355 liability, and unchanged net assets; INV-21 guards the rule. Resolved in `ab89a06`.
+
+### F-46 — Invalid inputs enter the loop and can look plausible
+
+**Critical — fixed.** The UI silently replaced blank or malformed values with hidden defaults, while the pure calculation accepted values outside the domain of its equations. Reproduced cases included a 150% annual write-down producing dozens of `NaN` values while viability remained true, zero household size producing an infinite demand backlog beside plausible finances, a negative toilet cost passing integrity, negative duration crashing with `Invalid array length`, and grace longer than the debt term silently scheduling no principal.
+
+**Fix:** `ModelModule.validateInputs()` now applies the mathematical and definitional contract before arrays are allocated or month 1 runs. It reports every invalid field, throws the typed `INVALID_INPUTS` error, and deliberately avoids unsupported policy caps. Blank/malformed browser values remain invalid, the controller reports all problems together, and a failed rerun clears the prior result. Four pure-boundary tests and one controller regression pin the behavior. [ADR-0037](adr/0037-fail-fast-input-validation.md). Resolution commit pending.
 
 ---
 
