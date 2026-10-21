@@ -1073,7 +1073,7 @@ an unfinished feature rather than a deliberate protection against mixing market 
 programme budgets, and USD forecasts.
 
 **Fix:** mark the four controls as amber programme assumptions and show the relevant dated API
-benchmarks and limitations beside them without overwriting their values. [ADR-0050](adr/0050-show-api-benchmarks-without-inventing-programme-terms.md). Resolved in `[implementation commit]`.
+benchmarks and limitations beside them without overwriting their values. [ADR-0050](adr/0050-show-api-benchmarks-without-inventing-programme-terms.md). Resolved in `e37ac50`.
 
 ---
 
