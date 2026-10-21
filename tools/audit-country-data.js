@@ -5,6 +5,7 @@
  * CI must not depend on the network. Run it when reviewing the country-data contract.
  */
 const { LDC_COUNTRIES } = require('./load-model');
+const { auditCountryScenario } = require('./country-runtime-audit');
 
 const INDICATORS = {
   ruralPopulation: 'SP.RUR.TOTL',
@@ -41,6 +42,8 @@ async function main() {
 
   const invalid = [];
   const incomplete = [];
+  const runtimeIssues = [];
+  let runnable = 0;
   for (const { country, data } of rows) {
     if (!inRange(data.ruralPopulation, 0, Number.MAX_SAFE_INTEGER)) invalid.push(`${country.name}: rural population`);
     if (!inRange(data.basicRuralSanitation, 0, 100)) invalid.push(`${country.name}: basic sanitation`);
@@ -54,6 +57,20 @@ async function main() {
     if (!data.populationGrowth) missing.push('population growth');
     if (!data.gniPerCapita && !data.gdpPerCapita) missing.push('GNI/GDP');
     if (missing.length) incomplete.push(`${country.name}: ${missing.join(', ')}`);
+
+    try {
+      const audit = auditCountryScenario(data);
+      if (audit.runnable) {
+        runnable += 1;
+      } else if (audit.missing.length === 0) {
+        const reasons = audit.validationErrors.length
+          ? audit.validationErrors
+          : audit.integrity?.violations || ['model did not report a reason'];
+        runtimeIssues.push(`${country.name}: ${reasons.join('; ')}`);
+      }
+    } catch (error) {
+      runtimeIssues.push(`${country.name}: ${error.message}`);
+    }
   }
 
   console.log(`Countries checked: ${rows.length}`);
@@ -62,12 +79,16 @@ async function main() {
     console.log(`${key}: ${available}/${rows.length}`);
   }
   console.log(`Auto-runnable from current observations: ${rows.length - incomplete.length}/${rows.length}`);
+  console.log(`Full model run with derived observations: ${runnable}/${rows.length}`);
   if (incomplete.length) console.log(`Incomplete (the app clears fields and pauses):\n- ${incomplete.join('\n- ')}`);
-  if (invalid.length) {
-    console.error(`Invalid values:\n- ${invalid.join('\n- ')}`);
+  if (runtimeIssues.length) {
+    console.error(`Model runtime/integrity failures:\n- ${runtimeIssues.join('\n- ')}`);
+  }
+  if (invalid.length) console.error(`Invalid values:\n- ${invalid.join('\n- ')}`);
+  if (invalid.length || runtimeIssues.length) {
     process.exitCode = 1;
   } else {
-    console.log('All returned values pass semantic range checks.');
+    console.log('All returned values pass semantic range checks and every complete country run preserves model integrity.');
   }
 }
 

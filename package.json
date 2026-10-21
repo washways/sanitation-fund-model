@@ -1,6 +1,6 @@
 {
   "name": "sanitation-fund-model",
-  "version": "0.19.1",
+  "version": "0.19.2",
   "private": true,
   "description": "Blended-finance revolving fund model for market-based sanitation in LDCs",
   "license": "UNLICENSED",
