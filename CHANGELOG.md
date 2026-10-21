@@ -11,6 +11,20 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.10.0] — 2026-10-21 — One model-tested advice path
+
+### Fixed
+
+- **The visible advice button no longer bypasses the safe advisor.** It previously called a legacy rule set that recommended extending the investor term even though F-32 demonstrated that this can worsen repayment, and recommended grant pacing as a scale lever despite F-30. The button now recalculates the current scenario and renders only changes that `ModelModule.suggestSolvencyFix()` has actually simulated. ([ADR-0039](docs/adr/0039-one-model-tested-advice-path.md), F-48)
+- **The misleading “AI Advisor” label is gone.** The control is now `Review model-tested advice`: the tool is explicit that recommendations come from deterministic scenario reruns, not artificial intelligence.
+- **The unsafe duplicate advisor was deleted.** Advice is shown on-page beside the viability result rather than in a modal assembled from live inputs and older stored results.
+
+### Golden movement
+
+None. The simulation, KPIs, all 21 recorded scenarios, and the post-fetch Malawi startup are unchanged; only the public advice route and wording changed.
+
+---
+
 ## [0.9.0] — 2026-10-21 — Trustworthy scenario exports
 
 ### Fixed

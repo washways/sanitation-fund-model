@@ -371,12 +371,25 @@ console.log('='.repeat(80));
     'Both export paths use lastResults.inputs; the clipboard report reads the tracked liability and canonical leverage KPI.');
 }
 
+// F-48 — the visible advice control must use the one simulation-tested path.
+{
+  const fs = require('fs'), path = require('path');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const usesModelTestedClick = /aiBtn\.addEventListener\('click', \(\) => runCalculation\(true\)\)/.test(APP_SRC);
+  const legacyGone = !/generateSuggestions/.test(APP_SRC)
+    && !/Extend 'Fund Repayment Term'/.test(APP_SRC);
+  const honestLabel = /Review model-tested advice/.test(html);
+  check('F-48', 'visible advice is recalculated and model-tested',
+    usesModelTestedClick && legacyGone && honestLabel,
+    'The button reruns the current form through suggestSolvencyFix; the legacy rule set and AI label are absent.');
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 47 of 47 resolved.');
+console.log('Findings register: 48 of 48 resolved.');
 console.log('Open modelling question: MODEL_SPEC R-7.6/Q14 (headline constraint reporting).');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

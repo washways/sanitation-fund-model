@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 47 of 47 findings resolved as of 2026-10-21. F-47 was fixed under ADR-0038. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 48 of 48 findings resolved as of 2026-10-21. F-48 was fixed under ADR-0039. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,6 +54,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
+| ✅ [F-48](#f-48--the-visible-advisor-bypasses-model-tested-advice) | **High** | Advice | The visible advisor calls legacy rules that repeat recommendations already proved unsafe | src | S6 |
 | ✅ [F-47](#f-47--exports-can-describe-a-different-scenario-and-liability) | **High** | Export | Exports reread live inputs and the copied report misstates senior liability and leverage | src, run | S6 |
 | ✅ [F-46](#f-46--invalid-inputs-enter-the-loop-and-can-look-plausible) | **Critical** | Inputs | Invalid or blank inputs can create NaN, Infinity, crashes, or plausible-looking output | run | S6 |
 | ✅ [F-45](#f-45--wind-up-can-freeze-cash-before-settling-investor-liability) | **High** | Core | Wind-up can freeze positive loan cash while senior liability remains outstanding | run | Post-S5 |
@@ -983,6 +984,12 @@ Following that advice makes the outcome worse. The advisor was written against a
 **High — fixed.** Both export paths reread the live form rather than retaining the inputs that produced `UI.lastResults`. A valid edit made immediately before export could therefore put new assumptions above old monthly results. The clipboard analysis also reconstructed investor liability as initial loan minus original principal repaid, omitting capitalised interest, and recomputed leverage with a formula different from the canonical KPI. In the audit stress, liability was understated by $1,327,694 and leverage was shown as 0.8x instead of 2.9x.
 
 **Fix:** every successful controller run retains its input snapshot; both exports use it. The clipboard report takes ending investor liability and leverage directly from their canonical KPIs. Two regressions pin edit-before-export provenance and the stressed balance sheet. [ADR-0038](adr/0038-export-the-calculated-scenario.md). Resolved in `14e1895`.
+
+### F-48 — The visible advisor bypasses model-tested advice
+
+**High — fixed.** The `AI Advisor` button called `UI.generateSuggestions()`, a legacy rule set that still recommended extending the fund repayment term and increasing grant pacing. F-32 already demonstrated that a longer investor term can reduce repayment, while F-30 established that grant pacing barely changes total reach because the grant ledger fixes total subsidy. The model-tested `suggestSolvencyFix()` path existed and was covered, but the visible button bypassed it.
+
+**Fix:** the renamed `Review model-tested advice` control runs the current form through `runCalculation(true)` and renders only simulated options. The duplicate rule set and modal path are deleted. [ADR-0039](adr/0039-one-model-tested-advice-path.md). Resolution commit pending.
 
 ---
 

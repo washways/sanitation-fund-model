@@ -487,6 +487,10 @@ A run is viable only if **all** hold:
 3. The two are never merged into a single "model OK" indicator.
 4. An integrity violation is a **defect in the model**; a viability failure is a **finding about the scenario**. The UI must not make them look alike.
 
+### R-10.4 Advice provenance **[AS-BUILT]** (F-48)
+
+Every financial recommendation shown by the application is produced by rerunning the model with that one candidate change. The visible advice control recalculates the current form and renders the same typed advice returned by `ModelModule.suggestSolvencyFix()`. No parallel rule-of-thumb advisor may recommend an untested change, and advice is never described as artificial intelligence.
+
 ---
 
 ## 11. KPI definitions

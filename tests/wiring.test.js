@@ -46,12 +46,23 @@ describe('input wiring', () => {
   test('the current changelog and known limitations are visible from the model', () => {
     assert.match(htmlSrc, /href="changelog\.html"/,
       'the dashboard must link to the on-site change record');
-    assert.match(changelogSrc, /Version 0\.9\.0/,
+    assert.match(changelogSrc, /Version 0\.10\.0/,
       'the on-site change record must identify the current release');
-    assert.match(changelogSrc, /<li>CSV and clipboard reports[\s\S]*F-47 is resolved/,
+    assert.match(changelogSrc, /<li>The advice button now recalculates[\s\S]*F-48 is resolved/,
       'the on-site change record must give users a simple bullet summary of the current release');
     assert.match(changelogSrc, /Known limitations requiring follow-up[\s\S]*Long-horizon warning[\s\S]*Constraint label question/,
       'remaining limitations must be visible, not buried in developer docs');
+  });
+
+  test('the visible advisor uses the one model-tested path (F-48)', () => {
+    assert.match(htmlSrc, /id="aiAdvisorBtn"[\s\S]*Review model-tested advice/,
+      'the button must describe what it actually does');
+    assert.doesNotMatch(appSrc, /generateSuggestions/,
+      'the legacy rule-of-thumb advisor must not remain callable');
+    assert.doesNotMatch(appSrc, /Extend 'Fund Repayment Term'/,
+      'advice must not resurrect the F-32 recommendation that worsens repayment');
+    assert.match(appSrc, /aiBtn\.addEventListener\('click',[\s\S]*runCalculation\(true\)/,
+      'the visible advice button must recalculate and use the model-tested advice path');
   });
 
   test('every id read by getInputs() exists in index.html (F-01)', () => {

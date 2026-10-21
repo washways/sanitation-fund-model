@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.9.0 — trustworthy scenario exports |
+| **Release** | 0.10.0 — one model-tested advice path |
 | **Stages complete** | S0, S1, S2, S3, S5; S4 solver correctness complete, other S4 work and S6 remain |
-| **Tests** | ✅ 96 pass, 0 todo, 0 fail (`npm test`, ~1s) |
+| **Tests** | ✅ 97 pass, 0 todo, 0 fail (`npm test`, ~1s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
-| **Findings register** | ✅ 47 of 47 resolved |
+| **Findings register** | ✅ 48 of 48 resolved |
 | **Open modelling question** | MODEL_SPEC R-7.6: whether the headline constraint label should derive directly from the production minimum |
 
 ## What remains unresolved
@@ -69,6 +69,12 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 - Clipboard liability and leverage come directly from their canonical KPIs. Do not reconstruct model measures inside export code.
 - The stressed export regression catches the former $1.328m liability understatement. See [ADR-0038](docs/adr/0038-export-the-calculated-scenario.md).
 
+## Advice contract
+
+- The visible control recalculates the current form and uses `ModelModule.suggestSolvencyFix()`.
+- Every displayed option has a measured repayment and reach result from a one-at-a-time model rerun.
+- No parallel rule-of-thumb advisor, modal advice, automatic input change, or “AI” claim. See [ADR-0039](docs/adr/0039-one-model-tested-advice-path.md).
+
 ## Environment
 
 Node is not on `PATH` on the maintainer's machine:
@@ -86,4 +92,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.9.0 closed F-47 under [ADR-0038](docs/adr/0038-export-the-calculated-scenario.md). CSV and clipboard reports now retain the calculated assumptions and use canonical senior-liability and leverage figures. All model outputs and the five-year Malawi reference headlines are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.10.0 closed F-48 under [ADR-0039](docs/adr/0039-one-model-tested-advice-path.md). The visible advice control now recalculates the current scenario and renders only simulated options; the contradictory legacy advisor and “AI” label are gone. All model outputs and the five-year Malawi reference headlines are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

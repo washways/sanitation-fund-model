@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.9.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.10.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.10.0 — Advice is now model-tested</h2>
+        <ul>
+            <li>The advice button now recalculates the current scenario and shows only changes that were tested by rerunning the model.</li>
+            <li>The old advisor could recommend a longer investor term even where the model showed that it worsened repayment; that duplicate path has been removed.</li>
+            <li>The control is now labelled “Review model-tested advice” rather than implying that its deterministic calculations are artificial intelligence.</li>
+            <li>Recommendations appear beside the viability result and never alter the user’s assumptions.</li>
+            <li>F-48 is resolved. Model outputs and the five-year Malawi reference result are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.9.0 — Scenario exports made self-consistent</h2>
         <ul>
             <li>CSV and clipboard reports now retain the exact assumptions used by the successful calculation, even if the form is edited before export.</li>

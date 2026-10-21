@@ -13,7 +13,7 @@ cat STATUS.md                 # where the work is right now
 npm test                      # must be green before you touch anything
 ```
 
-96 tests, about a second. `npm ci` first if `node_modules/` doesn't exist yet — ESLint
+97 tests, about a second. `npm ci` first if `node_modules/` doesn't exist yet — ESLint
 is the one devDependency. If you change anything a user touches — a default, a form
 control, the country fetch — the suite that matters most is `tests/startup.test.js`,
 because it is the only one that exercises the state the browser actually ends up in.

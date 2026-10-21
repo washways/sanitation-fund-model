@@ -317,17 +317,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Phase 47: AI Advisor
+    // One advice path only (F-48, ADR-0039). A click recalculates the current
+    // scenario and renders only options that ModelModule has actually simulated.
     const aiBtn = document.getElementById('aiAdvisorBtn');
     if (aiBtn) {
-        aiBtn.addEventListener('click', () => {
-            // Ensure stats are fresh
-            if (UI.lastResults) UI.generateSuggestions();
-            else {
-                runCalculation();
-                setTimeout(() => UI.generateSuggestions(), 100);
-            }
-        });
+        aiBtn.addEventListener('click', () => runCalculation(true));
     }
 
 
