@@ -93,6 +93,11 @@ The World Bank client requests the latest non-empty observation (`mrnev=1`) and 
 
 Safely managed sanitation, CPI inflation, commercial lending, Gini, and poverty are dated context only. Missing essential observations clear the affected field and pause automatic calculation; they never reuse the previous country’s value. Programme terms, costs, capacity, write-downs, and subsidy policy remain the user’s responsibility for every country.
 
+After a country load, the three model-driving fields share a blue outline and background. Hover
+text records whether the value is a direct observation or a derivation and names the observation
+year(s). A real user edit removes the blue state and changes its in-page provenance to user-entered;
+programme assumptions are never given the World Bank marker. See [ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md).
+
 ## Controller-only inputs
 
 | id | Meaning |

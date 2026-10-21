@@ -192,29 +192,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
     `;
 
-            const fillParam = (id, val) => {
+            const fillParam = (id, val, sourceDescription) => {
                 const el = document.getElementById(id);
                 if (el && val !== null && val !== undefined && !isNaN(val)) {
-                    // Fix: Formatting for Population and Grant
-                    if (id === 'popReqToilets' || id === 'wiz-invest-grant-sidebar') {
+                    if (id === 'popReqToilets') {
                         el.value = parseInt(val).toLocaleString();
                     } else {
                         el.value = val;
                     }
 
-                    // Fix: Do NOT add 'auto-filled' to manual grant input
-                    if (id !== 'wiz-invest-grant-sidebar') {
-                        el.classList.add('auto-filled');
-                        el.style.backgroundColor = "#fef3c7"; // Amber-100 (Consistent with Smart Rates)
-                    }
+                    // ADR-0046: this state belongs only to model inputs populated from
+                    // World Bank observations. A synthetic input event lets existing UI
+                    // listeners update without pretending a user supplied the value.
+                    el.classList.remove('auto-filled');
+                    el.classList.add('country-observation');
+                    el.dataset.sourceType = 'world-bank';
+                    el.dataset.sourceDescription = sourceDescription;
+                    el.title = `World Bank country data: ${sourceDescription}`;
 
-                    // Format if number
-                    if (!isNaN(val) && val.toString().length > 3) {
-                        // We can't put commas in type="number", so we just set value.
-                        // But user asked for separators. If inputs are type="number", visual only works via CSS or type text.
-                        // Assuming type="number", we leave as is but Color indicates it.
-                        // Actually, let's try to set title for readability
-                        el.title = val.toLocaleString();
+                    if (!el.dataset.hasProvenanceListener) {
+                        el.dataset.hasProvenanceListener = 'true';
+                        el.addEventListener('input', event => {
+                            if (!event.isTrusted) return;
+                            el.classList.remove('country-observation');
+                            el.dataset.sourceType = 'user';
+                            el.dataset.sourceDescription = 'User-entered value';
+                            el.title = 'User-entered value; World Bank provenance removed.';
+                        });
                     }
                     el.dispatchEvent(new Event('input'));
                 }
@@ -224,6 +228,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (el) {
                     el.value = '';
                     el.classList.remove('auto-filled');
+                    el.classList.remove('country-observation');
+                    delete el.dataset.sourceType;
+                    delete el.dataset.sourceDescription;
                     el.title = 'No country observation available; enter a cited value before recalculating.';
                 }
             };
@@ -233,7 +240,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hasNumber(data.pop) && hasNumber(data.basicSan)) {
                 const gap = (100 - data.basicSan) / 100;
                 const req = Math.floor(data.pop * gap); // Unserved People
-                fillParam('popReqToilets', req);
+                fillParam(
+                    'popReqToilets',
+                    req,
+                    `derived from rural population (${yearOf('pop')}) and rural basic sanitation access (${yearOf('basicSan')})`
+                );
 
                 // Update Transparency UI
                 const setText = (id, txt) => {
@@ -273,7 +284,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             if (hasNumber(data.popGrowth)) {
-                fillParam('popGrowthRate', data.popGrowth.toFixed(2));
+                fillParam(
+                    'popGrowthRate',
+                    data.popGrowth.toFixed(2),
+                    `population growth observation (${yearOf('popGrowth')})`
+                );
             } else {
                 clearParam('popGrowthRate');
                 missing.push('population growth');
@@ -281,7 +296,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Income is an observed input used to value saved time.
             if (hasNumber(incomeMetric)) {
-                fillParam('avgAnnualIncome', Math.round(incomeMetric));
+                fillParam(
+                    'avgAnnualIncome',
+                    Math.round(incomeMetric),
+                    `${hasNumber(data.gni) ? 'GNI' : 'GDP'} per capita observation ` +
+                        `(${yearOf(hasNumber(data.gni) ? 'gni' : 'gdp')})`
+                );
             } else {
                 clearParam('avgAnnualIncome');
                 missing.push('GNI/GDP per capita');

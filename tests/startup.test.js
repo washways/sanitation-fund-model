@@ -49,9 +49,12 @@ function bootApp(fixture = FIXTURE) {
   }
 
   const values = {};
+  const initialClasses = {};
   for (const m of html.matchAll(/<input[^>]*id="([A-Za-z0-9_-]+)"[^>]*>/g)) {
     const v = m[0].match(/value="([^"]*)"/);
     values[m[1]] = v ? v[1] : '';
+    const classes = m[0].match(/class="([^"]*)"/);
+    initialClasses[m[1]] = classes ? classes[1].split(/\s+/).filter(Boolean) : [];
   }
 
   const store = {};
@@ -59,43 +62,53 @@ function bootApp(fixture = FIXTURE) {
   const requestedUrls = [];
   const timers = [];
   const pending = [];   // promises returned by handlers, which the app itself discards
-  const el = (id) => store[id] || (store[id] = {
-    id,
-    tagName: tags[id] || 'DIV',
-    children: [],
-    // A real <input> coerces whatever you assign to a string. The app assigns numbers
-    // in places, so the stub has to do the same or getInputs() sees a type it never
-    // sees in a browser.
-    _v: String(values[id] ?? ''),
-    get value() { return this._v; },
-    set value(x) { this._v = String(x); },
-    innerText: '', innerHTML: '',
-    style: { setProperty() {}, removeProperty() {} },
-    classList: { add() {}, remove() {}, contains: () => false },
-    dataset: {},
-    addEventListener(type, fn) {
-      const byType = (listeners[id] = listeners[id] || {});
-      (byType[type] = byType[type] || []).push(fn);
-    },
-    dispatchEvent(event) {
-      for (const handler of listeners[id]?.[event.type] || []) handler.call(this, event);
-      return true;
-    },
-    appendChild(child) { this.children.push(child); },
-    insertAdjacentElement() {}, remove() {},
-    click() {
-      let last;
-      for (const handler of listeners[id]?.click || []) {
-        // The app fires this from a timer and discards the promise, so the harness has
-        // to hold on to it or the drain finishes before the fetch does.
-        last = handler.call(this, { type: 'click', isTrusted: true });
-        if (last && typeof last.then === 'function') pending.push(last);
-      }
-      return last;
-    },
-    querySelectorAll: () => [],
-    getContext: () => ({}),
-  });
+  const el = (id) => {
+    if (store[id]) return store[id];
+    const classes = new Set(initialClasses[id] || []);
+    store[id] = {
+      id,
+      tagName: tags[id] || 'DIV',
+      children: [],
+      // A real <input> coerces whatever you assign to a string. The app assigns numbers
+      // in places, so the stub has to do the same or getInputs() sees a type it never
+      // sees in a browser.
+      _v: String(values[id] ?? ''),
+      get value() { return this._v; },
+      set value(x) { this._v = String(x); },
+      innerText: '', innerHTML: '', title: '',
+      style: { setProperty() {}, removeProperty() {} },
+      classList: {
+        add(...names) { names.forEach(name => classes.add(name)); },
+        remove(...names) { names.forEach(name => classes.delete(name)); },
+        contains(name) { return classes.has(name); },
+      },
+      dataset: {},
+      addEventListener(type, fn) {
+        const byType = (listeners[id] = listeners[id] || {});
+        (byType[type] = byType[type] || []).push(fn);
+      },
+      dispatchEvent(event) {
+        if (!event.target) event.target = this;
+        for (const handler of listeners[id]?.[event.type] || []) handler.call(this, event);
+        return true;
+      },
+      appendChild(child) { this.children.push(child); },
+      insertAdjacentElement() {}, remove() {}, select() {}, blur() {},
+      click() {
+        let last;
+        for (const handler of listeners[id]?.click || []) {
+          // The app fires this from a timer and discards the promise, so the harness has
+          // to hold on to it or the drain finishes before the fetch does.
+          last = handler.call(this, { type: 'click', isTrusted: true, target: this });
+          if (last && typeof last.then === 'function') pending.push(last);
+        }
+        return last;
+      },
+      querySelectorAll: () => [],
+      getContext: () => ({}),
+    };
+    return store[id];
+  };
 
   let domReady = null;
 
@@ -103,7 +116,15 @@ function bootApp(fixture = FIXTURE) {
     body: el('body'),
     addEventListener(type, fn) { if (type === 'DOMContentLoaded') domReady = fn; },
     querySelector: (s) => (s === '.top-actions' ? el('__topActions') : null),
-    querySelectorAll: () => [],
+    querySelectorAll: (selector) => {
+      if (selector === '.formatted-number') {
+        return [...ids].filter(id => initialClasses[id]?.includes('formatted-number')).map(el);
+      }
+      if (selector === 'input, select') {
+        return [...ids].filter(id => ['INPUT', 'SELECT'].includes(tags[id])).map(el);
+      }
+      return [];
+    },
     getElementById: (id) => (ids.has(id) ? el(id) : null),
     createElement: () => el('__created' + Math.random()),
   };
@@ -212,6 +233,30 @@ describe('startup — the scenario a user actually opens', () => {
       'World Bank requests should ask for the latest non-empty observation');
     assert.ok(app.requestedUrls.every(url => !url.includes('countriesnow.space')),
       'country loading must not depend on a mixed-level administrative-unit list');
+  });
+
+  test('country-derived inputs have consistent, truthful source highlighting', () => {
+    const observedInputs = ['popReqToilets', 'popGrowthRate', 'avgAnnualIncome'];
+    for (const id of observedInputs) {
+      const input = app.el(id);
+      assert.ok(input.classList.contains('country-observation'),
+        `${id} should be visibly marked as country-derived after the API load`);
+      assert.strictEqual(input.dataset.sourceType, 'world-bank',
+        `${id} should retain machine-readable World Bank provenance`);
+      assert.match(input.title, /World Bank/i, `${id} should explain its source on hover`);
+    }
+
+    for (const id of ['loanInterestRate_v2', 'meLoanInterestRate_v2', 'fundCostOfCapital']) {
+      assert.ok(!app.el(id).classList.contains('country-observation'),
+        `${id} is a programme term and must not look API-derived`);
+    }
+
+    const edited = app.el('popReqToilets');
+    edited.dispatchEvent({ type: 'input', isTrusted: true, target: edited });
+    assert.ok(!edited.classList.contains('country-observation'),
+      'a real user edit must remove the API provenance highlight');
+    assert.strictEqual(edited.dataset.sourceType, 'user',
+      'a real user edit must replace API provenance with user provenance');
   });
 
   test('the fetch does not overwrite negotiated terms with market observables', () => {

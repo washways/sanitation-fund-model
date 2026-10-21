@@ -133,6 +133,9 @@ World Bank Indicators API, used to calibrate dated country context: rural popula
 
 Only directly observed target population, population growth, and income populate model fields. CPI, lending, poverty, Gini, and sanitation coverage are shown with their observation years as context. The fetch never overwrites a negotiated term, cost, capacity assumption, write-down, or policy choice; [docs/PARAMETERS.md](docs/PARAMETERS.md) records the boundary.
 
+Those three country-derived inputs are outlined in blue after loading and carry dated hover text.
+Editing one removes the marker, so a user-entered figure is never still presented as API-derived.
+
 ## Contributing
 
 Read [AGENTS.md](AGENTS.md) first — it's the working contract and it applies to humans too. In short: the specification outranks the code, behaviour changes only when a decision record predicted them, and never invent a number.

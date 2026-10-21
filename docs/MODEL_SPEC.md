@@ -539,6 +539,15 @@ Annual inflows plot above zero and annual outflows plot below zero. `dataGrants[
 
 Duration is month-granular. Each complete 12-month period is labelled `Year N`; if months remain after the last complete year, one final period is labelled `Year N (M months)`. Its flow fields sum only those remaining months, while cumulative fields snapshot the final simulated month. A valid duration shorter than one year therefore still produces one period and renders every chart.
 
+### R-10.7 Country-input provenance **[AS-BUILT]** (F-53)
+
+Every model input written or derived from World Bank country observations is marked with the same
+blue `country-observation` state and carries a human- and machine-readable source description. The
+state survives programmatic input events during loading and is removed when the user edits the
+value. Programme terms and policy assumptions must never carry that state. Context-only country
+indicators remain in the dated country strip and do not masquerade as model inputs. See
+[ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md).
+
 ---
 
 ## 11. KPI definitions

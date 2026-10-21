@@ -15,6 +15,11 @@
 const { ModelModule } = require('./load-model');
 const BASE = require('./baseline-inputs');
 const APP_SRC = require('./app-source').concatenated(); // src/, concatenated (S5, ADR-0033)
+const fs = require('node:fs');
+const path = require('node:path');
+const ROOT = path.join(__dirname, '..');
+const HTML_SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const CSS_SRC = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
 
 const sum = a => a.reduce((x, y) => x + y, 0);
 const money = n => (n < 0 ? '-' : '') + '$' + Math.abs(Math.round(n)).toLocaleString('en-US');
@@ -445,12 +450,29 @@ console.log('='.repeat(80));
     `18 months reports ${eighteenSeries.labels.join(', ')} and ${eighteenMonths.kpis.reach.toilets.toLocaleString()} toilets.`);
 }
 
+// F-53 — country observations have one truthful visual and data provenance state.
+// The browser event semantics are exercised in startup.test.js; this audit check keeps
+// the source boundary and the single CSS definition visible in the findings report.
+{
+  const markedOnlyByLoader = /classList\.add\('country-observation'\)/.test(APP_SRC)
+    && /dataset\.sourceType = 'world-bank'/.test(APP_SRC)
+    && /if \(!event\.isTrusted\) return;/.test(APP_SRC);
+  const hasLegend = /id="country-source-key"/.test(HTML_SRC)
+    && /Blue fields were loaded or derived from World Bank observations/.test(HTML_SRC);
+  const programmeTermsUnmarked = !/id="(?:loanInterestRate_v2|meLoanInterestRate_v2)"[^>]*class="[^"]*api-field/.test(HTML_SRC);
+  const oneCountryStyle = (CSS_SRC.match(/\.country-observation\s*\{/g) || []).length === 1;
+  check('F-53', 'country-derived inputs share one truthful provenance state',
+    markedOnlyByLoader && hasLegend && programmeTermsUnmarked && oneCountryStyle,
+    'All three API-driven fields use country-observation; trusted user edits clear it; ' +
+    'programme rates remain unmarked; one CSS rule and an on-page legend define the visual state.');
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 52 of 52 resolved.');
+console.log('Findings register: 53 of 53 resolved.');
 console.log('Open modelling questions: none. R-7.6/Q14 was resolved by ADR-0044.');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

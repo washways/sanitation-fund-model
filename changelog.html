@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.16.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.17.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.17.0 — Country-derived inputs are visibly sourced</h2>
+        <ul>
+            <li>The three model inputs loaded or derived from World Bank observations now share one clear blue background and outline.</li>
+            <li>Target population identifies its two-observation derivation; population growth and income identify their direct observation year. Hovering a blue field shows the source description.</li>
+            <li>Editing a blue field removes the marker, so a user-entered value is not still presented as API-derived.</li>
+            <li>Household, enterprise, and investor interest assumptions are not coloured as country observations; market lending remains dated context only.</li>
+            <li>F-53 is resolved. Model calculations and all reference results are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.16.0 — Evidence-bounded sensitivity analysis</h2>
         <ul>
             <li>A reproducible one-at-a-time sensitivity tool now compares low, base, and high cases for up to eight parameters and ranks them by the selected outcome swing.</li>
