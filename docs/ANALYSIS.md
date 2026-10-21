@@ -1019,6 +1019,12 @@ The equivalent genuine zero-cap run produces no enterprises or toilets and is no
 
 **Fix:** record a labelled final partial period after the loop, using the same aggregation path as complete years, and test both pure series reconciliation and the 6-month chart render. [ADR-0043](adr/0043-report-final-partial-year.md). Resolved in `e226cbb`.
 
+### F-53 — Country-derived input highlighting contradicts its own source state
+
+**Medium — fixed.** Country loading added an `auto-filled` class and an amber inline background, then dispatched an `input` event. The formatted-number listener removed that class from target population and income immediately, while population growth retained it. The inline background was never removed when a user edited the value, and three duplicate CSS rules specified different colours. Programme interest-rate controls were meanwhile labelled `api-field` even though country data is prohibited from setting them. A user therefore could not reliably tell which starting figures came from the API and which still did after editing.
+
+**Fix:** one blue `country-observation` state now marks the three model-driving World Bank observations, records a dated source description, and is removed only on real user edits. The startup regression exercises the post-fetch browser state and user-edit transition. [ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md). Resolved in `6ccf4e5`.
+
 ---
 
 ## 5. What is already good

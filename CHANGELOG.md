@@ -11,6 +11,21 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.17.0] — 2026-10-21 — Country-derived inputs are visibly sourced
+
+### Fixed
+
+- **All three model inputs written from World Bank data now share one clear blue provenance state.** Target population (derived from rural population and basic-sanitation access), population growth, and income per person are marked consistently after a country load. Each field records a source description and observation year(s). ([ADR-0046](docs/adr/0046-mark-country-derived-inputs-consistently.md), F-53)
+- **The marker now tells the truth after editing.** Programmatic events during loading retain the World Bank state; a real user edit removes the blue treatment and records the value as user-entered. The old code removed the class from two formatted fields immediately, retained it on the third, and left an inline colour behind after editing.
+- **Programme loan prices no longer carry misleading `api-field` labels.** Commercial lending remains dated context and does not colour or overwrite the household, enterprise, or fund term sheet.
+- **The startup harness now tracks real element classes and formatted-number listeners.** Its new regression checks the exact post-fetch state a browser displays and verifies that user edits clear provenance.
+
+### Golden movement
+
+None. This release changes presentation and provenance only. All 21 recorded scenarios and the Malawi startup numbers are unchanged.
+
+---
+
 ## [0.16.0] — 2026-10-21 — Evidence-bounded sensitivity analysis
 
 ### Added

@@ -33,6 +33,7 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | S6 partial-period reporting — 2026-10-21 | Added one canonical annual-period recorder for complete years and the final partial year; sub-year scenarios now render charts. | Duration is month-granular. Never drop months after the last 12-month boundary; label partial periods explicitly and reconcile them to monthly series. |
 | S4 constraint reporting — 2026-10-21 | Resolved R-7.6/Q14: monthly and headline constraints now derive from actual foregone production, retain mixed causes, and expose grant and loan capital separately. | `capacity + loanCapital` must reconcile demand to production. Grant-capital recovery overlaps loan-capital loss and must never be added to that partition. Viability remains a separate verdict. |
 | S4 sensitivity — 2026-10-21 | Added a pure, deterministic one-at-a-time engine and JSON CLI for up to eight evidence-bounded parameters. | Every low/high pair must bracket base, pass normal validation, and carry a source. Never add built-in generic shocks, undocumented country ranges, timestamps, network fetches, or mutation. |
+| S6 country provenance — 2026-10-21 | Gave the three World Bank-derived model inputs one blue, dated source state and made real user edits clear it. | Only `popReqToilets`, `popGrowthRate`, and `avgAnnualIncome` may receive `country-observation`. Programme assumptions never do; extend the startup regression if the API boundary changes. |
 
 The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) and [docs/adr/](docs/adr/). Never edit an accepted ADR; supersede it.
 
@@ -53,6 +54,10 @@ The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) a
 3. `avgAnnualIncome` from GNI per capita, with GDP per capita fallback.
 
 CPI, commercial lending, poverty, Gini, and sanitation levels are context. Do not resurrect `countriesnow.space`, `PV.EST` heuristics, smart-rate formulas, poverty-to-grant mappings, cost tiers, or cross-country operating-cost formulas.
+
+After loading, all three model-driving country fields use the blue `country-observation` state and
+carry a source description. Trusted user input removes that state. Do not use `auto-filled`, inline
+background colours, or the obsolete `api-field` class to represent World Bank provenance.
 
 ## Owner decisions — 2026-10-21
 

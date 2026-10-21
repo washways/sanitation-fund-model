@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.16.0 — evidence-bounded sensitivity analysis |
-| **Stages complete** | S0, S1, S2, S3, S5; S4 solvers, constraint reporting and sensitivity complete; caching/scenario comparison and S6 remain |
-| **Tests** | ✅ 110 pass, 0 todo, 0 fail (`npm test`, ~4s) |
+| **Release** | 0.17.0 — consistent country-input provenance |
+| **Stages complete** | S0, S1, S2, S3, S5; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance complete; caching/scenario comparison and remaining S6 work remain |
+| **Tests** | ✅ 111 pass, 0 todo, 0 fail (`npm test`, ~4s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
-| **Findings register** | ✅ 52 of 52 resolved |
+| **Findings register** | ✅ 53 of 53 resolved |
 | **Open modelling questions** | None — all 14 owner decisions are recorded |
 
 ## What remains unresolved
@@ -44,6 +44,7 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 ## Assumptions and country data
 
 - World Bank loading writes only target population, population growth, and GNI per capita (GDP fallback), using latest non-empty observations with dates.
+- Those three fields share a blue `country-observation` state after loading; each records direct/derived provenance and observation year(s), and a real user edit removes the marker.
 - CPI, commercial lending, poverty, Gini, and sanitation coverage are context only.
 - Missing essential observations clear the field and pause automatic calculation; another country's value is never retained.
 - Malawi references are documented in [docs/PARAMETERS.md](docs/PARAMETERS.md): 4.4 people/household, 28 districts, $100 toilet planning cost, $3,000 enterprise capital, 12-month loan terms, 0.25 hours saved/day, and a 50% time-value factor.
@@ -65,6 +66,13 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 - The baseline runs once; each distinct low/high case runs once. Output is deterministic JSON with net assets, ending/minimum cash, toilets, senior repayment, SROI, and viability, ranked by the selected metric swing.
 - There are no built-in generic shocks or undocumented Malawi ranges. `tests/fixtures/sensitivity-bounds-test.json` is synthetic and test-only.
 - Run `npm run sensitivity -- <bounds.json> [inputs.json]`. The CLI reads only project-contained files and performs no network fetch. See [ADR-0045](docs/adr/0045-require-evidence-bounded-sensitivity.md).
+
+## Country-input provenance contract
+
+- `popReqToilets`, `popGrowthRate`, and `avgAnnualIncome` are the only model inputs written by country loading and the only controls that receive `country-observation`.
+- The target population description names its rural-population/basic-sanitation derivation; growth and income name their direct observation year.
+- Programmatic load events retain the World Bank marker. A trusted user edit clears it and records user provenance.
+- Programme rates, costs, losses, capacity, contingency, and subsidy settings never receive the marker. See [ADR-0046](docs/adr/0046-mark-country-derived-inputs-consistently.md).
 
 ## Investor debt contract
 
@@ -122,4 +130,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.16.0 completed evidence-bounded one-at-a-time sensitivity under [ADR-0045](docs/adr/0045-require-evidence-bounded-sensitivity.md). The pure engine and deterministic JSON CLI refuse missing provenance, invalid or unbracketed bounds, duplicate/unknown inputs, unsupported metrics, and more than eight parameters. Direct-run regressions prove each case uses the canonical model. All 21 golden scenarios and the Malawi startup remain numerically unchanged. Transparent JSON scenario save/load/compare is next. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.17.0 fixed inconsistent country-input provenance under [ADR-0046](docs/adr/0046-mark-country-derived-inputs-consistently.md). All three API-driven inputs now share one blue, dated source state; user edits clear it; programme terms are not mislabelled as API fields. The startup harness now tracks browser-like class state and formatted-input listeners, closing the test gap that hid the problem. All 21 golden scenarios and Malawi startup numbers remain unchanged. Transparent JSON scenario save/load/compare is the next planned S4 feature; initial enterprise deployment pacing is under active assumptions review. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

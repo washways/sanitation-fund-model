@@ -115,7 +115,11 @@
 
                     <button id="fetchDataBtn">Load Country Data</button>
                     <small id="country-help">Change the country, then click Load to pull its
-                        population, inflation, income and lending rate.</small>
+                        observed population, growth and income plus dated context.</small>
+                    <small id="country-source-key" class="country-source-key">
+                        <span class="country-source-swatch" aria-hidden="true"></span>
+                        Blue fields were loaded or derived from World Bank observations. Editing one removes the marker.
+                    </small>
                 </div>
             </div>
 
@@ -217,7 +221,8 @@
                             title="Total rural population currently without access to basic sanitation. Can be auto-filled via API.">i</span>
                     </label>
                     <div class="input-wrapper">
-                        <input type="text" id="popReqToilets" value="9,244,139" class="formatted-number">
+                        <input type="text" id="popReqToilets" value="9,244,139" class="formatted-number"
+                            aria-describedby="country-source-key">
                     </div>
                 </div>
                 <div class="input-group">
@@ -225,7 +230,8 @@
                         <span class="info-icon" title="Annual population growth rate.">i</span>
                     </label>
                     <div class="input-wrapper has-suffix">
-                        <input type="number" id="popGrowthRate" value="2.56" step="0.1">
+                        <input type="number" id="popGrowthRate" value="2.56" step="0.1"
+                            aria-describedby="country-source-key">
                         <span class="input-suffix">%</span>
                     </div>
                 </div>
@@ -300,14 +306,14 @@
                         <span class="info-icon"
                             title="Illustrative programme term. The country commercial lending rate is shown for context but never overwrites this field.">i</span>
                     </label>
-                    <input type="number" id="loanInterestRate_v2" value="40" step="0.5" class="api-field">
+                    <input type="number" id="loanInterestRate_v2" value="40" step="0.5">
                 </div>
                 <div class="input-group">
                     <label>ME Loan Interest Rate (%)
                         <span class="info-icon"
                             title="Illustrative annual programme term for enterprise setup loans; never overwritten by country data.">i</span>
                     </label>
-                    <input type="number" id="meLoanInterestRate_v2" value="10" step="0.5" class="api-field">
+                    <input type="number" id="meLoanInterestRate_v2" value="10" step="0.5">
                 </div>
                 <div class="input-group">
                     <label>HH Loan Term (Months)
@@ -382,7 +388,8 @@
                         <span class="info-icon"
                             title="API Derived: GNI per capita. Used to value economic benefits (Job creation).">i</span>
                     </label>
-                    <input type="text" id="avgAnnualIncome" value="600" class="formatted-number">
+                    <input type="text" id="avgAnnualIncome" value="600" class="formatted-number"
+                        aria-describedby="country-source-key">
                 </div>
 
                 <div class="input-group">

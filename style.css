@@ -571,13 +571,38 @@ body {
     font-size: 0.85rem !important;
 }
 
-/* Auto-filled Input Highlight */
+/* Programme controls synchronised by the UI (not country observations). */
 .auto-filled {
     background-color: #fef3c7 !important;
-    /* Amber-100 (Unified) */
     border-color: #fcd34d !important;
-    /* Amber-300 */
     transition: background-color 0.3s ease;
+}
+
+/* Model inputs loaded or derived from dated World Bank observations (ADR-0046). */
+.country-observation {
+    background-color: #eff6ff !important;
+    border: 2px solid #2563eb !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
+    color: #172554 !important;
+}
+
+.country-source-key {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    margin-top: 0.6rem;
+    color: #334155;
+    line-height: 1.35;
+}
+
+.country-source-swatch {
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.08rem;
+    border: 2px solid #2563eb;
+    border-radius: 0.2rem;
+    background: #eff6ff;
 }
 
 /* Mobile Responsiveness */
@@ -783,13 +808,6 @@ body {
     font-size: 0.85rem !important;
 }
 
-/* Auto-filled Input Highlight */
-.auto-filled {
-    background-color: #fef9c3 !important;
-    border-color: #facc15 !important;
-    transition: background-color 0.3s ease;
-}
-
 /* Mobile Responsiveness */
 @media screen and (max-width: 768px) {
     body {
@@ -919,14 +937,6 @@ body {
 
 
 /* Reverted Month Column Fix (Broke UI Tables) */
-
-/* API Auto-Filled Input Style */
-.auto-filled {
-    background-color: #fffde7 !important;
-    border-color: #90caf9 !important;
-    /* Soft Blue Border */
-    color: #000;
-}
 
 /* Responsive Adjustments */
 @media screen and (max-width: 1024px) {

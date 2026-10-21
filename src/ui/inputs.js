@@ -153,9 +153,10 @@ Object.assign(UI, {
                 if (e.key === 'Enter') e.target.blur();
             });
 
-            // Remove auto-filled highlight on user edit
+            // Remove legacy programmatic highlighting only on a genuine user edit.
+            // Country-observation provenance owns its own listener in the controller.
             input.addEventListener('input', (e) => {
-                e.target.classList.remove('auto-filled');
+                if (e.isTrusted) e.target.classList.remove('auto-filled');
             });
         });
     },

@@ -92,7 +92,7 @@ Rules this stage followed, and how:
 | Offline-capable (service worker) | These are LDC field settings. Chart.js is already vendored for this reason (see `vendor/`) — extend the same principle to every other asset. |
 | Accessibility pass (contrast, labels, keyboard, screen reader) | Not assessed in this audit — assume it fails. |
 | Mobile / small-screen layout | Not assessed. |
-| Explicit "this is a model, not a forecast" framing with assumption provenance | Every parameter should show whether it came from the World Bank, a default, or the user. |
+| ◐ Explicit "this is a model, not a forecast" framing with assumption provenance | Country-derived model inputs now share a clear blue World Bank state that disappears on user edit ([ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md)). Full per-parameter default/user provenance and forecast framing remain. |
 | Multi-currency / local currency display | Keep the engine explicitly USD-only for now (owner decision 2026-10-21). A later dated, user-supplied reporting conversion still needs an ADR; do not apply a live spot rate to multi-year cashflows. |
 | ✅ Monthly audit-table integrity | Count/value columns are aligned and exact simulated ME launches are reported directly ([ADR-0040](adr/0040-report-exact-me-launches.md)). |
 
