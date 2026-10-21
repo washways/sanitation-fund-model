@@ -504,6 +504,10 @@ A run is viable only if **all** hold:
 
 Every financial recommendation shown by the application is produced by rerunning the model with that one candidate change. The visible advice control recalculates the current form and renders the same typed advice returned by `ModelModule.suggestSolvencyFix()`. No parallel rule-of-thumb advisor may recommend an untested change, and advice is never described as artificial intelligence.
 
+### R-10.5 Annual cash-flow chart **[AS-BUILT]** (F-51)
+
+Annual inflows plot above zero and annual outflows plot below zero. `dataGrants[y]` is already the grant spending flow for year `y`, so the grant dataset is `-dataGrants[y]`; it is never differenced as though cumulative. The chart configuration must reconcile to the engine's annual series.
+
 ---
 
 ## 11. KPI definitions

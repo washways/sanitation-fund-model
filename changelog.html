@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.12.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.13.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.13.0 — Annual grant chart corrected</h2>
+        <ul>
+            <li>Annual grant spending now always appears as an outflow in the cash-flow chart.</li>
+            <li>The old chart treated separate yearly totals as cumulative. Falling spending could therefore appear as positive grant income, including income in a year when no grant was spent.</li>
+            <li>For the Malawi reference run, the corrected grant bars are approximately -$278k, -$356k, -$292k, $0, and $0.</li>
+            <li>A new render-path check compares the actual chart configuration with the engine's annual grant series.</li>
+            <li>F-51 is resolved. The underlying ledger and headline Malawi result are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.12.0 — Zero capacity is now honored</h2>
         <ul>
             <li>Entering zero for <strong>Micro-enterprises / Unit</strong> now creates a genuine no-network stress case.</li>

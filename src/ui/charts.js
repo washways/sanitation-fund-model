@@ -2,12 +2,6 @@
  * charts.js — part of the S5 structural split (ADR-0033). Chart.js rendering. chartInstances lives here — nothing else touches it.
  */
 
-/* eslint-disable no-unused-vars --
- * F-19 baseline (docs/ANALYSIS.md), carried over from the pre-S5 single-file count —
- * 1 violation in this file (`meDef`). Recorded, not fixed, per docs/ROADMAP.md's S0
- * task. Run `npx eslint src/` before committing; if this file's count goes up, that
- * is a new defect, not baseline noise.
- */
 let chartInstances = {};
 
 Object.assign(UI, {
@@ -126,8 +120,10 @@ Object.assign(UI, {
 
         const annLoansHh = aggregateAnnual(series.dataMonthlyNewLoansHhVal).map(v => -v); // Outflow
         const annLoansMe = aggregateAnnual(series.dataMonthlyNewLoansMeVal).map(v => -v); // Outflow
-        const annGrants = series.dataGrants.map((v, i) => -(i === 0 ? v : v - series.dataGrants[i - 1])); // Delta, Outflow
-        // Note: series.dataGrants is Cumulative. We need Annual Delta.
+        // dataGrants already contains one flow per year; it is reset at each year-end
+        // in the engine. Difference it again and falling spend becomes fictitious
+        // positive grant income (F-51).
+        const annGrants = series.dataGrants.map(v => -v);
 
         const annFixOps = aggregateAnnual(series.dataMonthlyOps).map(v => -v); // Fixed
         const annVarOps = aggregateAnnual(series.dataMonthlyFees).map(v => -v); // Variable (Mgmt + M&E)
@@ -135,13 +131,9 @@ Object.assign(UI, {
         const annFundInt = aggregateAnnual(series.dataMonthlyFundInt).map(v => -v);
         const annFundPrin = aggregateAnnual(series.dataMonthlyFundPrincipal).map(v => -v);
         // Defaults (HH + ME)
-        const annDefaults = aggregateAnnual(series.dataMonthlyDefaultsHh).map((v, i) => {
-            const meDef = series.dataMonthlyDefaultsMe[i * 12 + 11] ? 0 : 0; // Just aggregating same way
-            // Wait, aggregateAnnual handles monthly array.
-            // But we need to sum HH and ME defaults.
-            // Let's optimize: sum monthly first? Or just map two annual arrays.
-            return -(v + (aggregateAnnual(series.dataMonthlyDefaultsMe)[i] || 0));
-        });
+        const annDefaultsMe = aggregateAnnual(series.dataMonthlyDefaultsMe);
+        const annDefaults = aggregateAnnual(series.dataMonthlyDefaultsHh)
+            .map((v, i) => -(v + (annDefaultsMe[i] || 0)));
         const annNet = aggregateAnnual(series.dataMonthlyNet);
 
         // Calculate Annual Principal Repayments (Inflow)

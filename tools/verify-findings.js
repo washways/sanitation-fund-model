@@ -414,12 +414,23 @@ console.log('='.repeat(80));
     `and reports viability ${zeroCapacity.viability.ok ? 'OK' : 'NOT OK'} instead of restoring 20 MEs/unit.`);
 }
 
+// F-51 — dataGrants is an annual flow; differencing it invents positive income.
+{
+  const chartsAnnualFlow = /const annGrants = series\.dataGrants\.map\(v => -v\)/.test(APP_SRC);
+  const oldDeltaGone = !/i === 0 \? v : v - series\.dataGrants\[i - 1\]/.test(APP_SRC);
+  const corrected = s.dataGrants.map(value => -value);
+  check('F-51', 'annual grant spending is charted as an outflow, never fictitious income',
+    chartsAnnualFlow && oldDeltaGone && corrected.every(value => value <= 0),
+    `Malawi annual grant bars now reconcile to yearly spending: ` +
+    corrected.map(value => money(value)).join(', ') + '.');
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 50 of 50 resolved.');
+console.log('Findings register: 51 of 51 resolved.');
 console.log('Open modelling question: MODEL_SPEC R-7.6/Q14 (headline constraint reporting).');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

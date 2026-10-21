@@ -504,6 +504,10 @@ lendable        = solvent ? max(0, loanCash - requiredReserve) : 0</div>
         <p>The headline cash figure is the <strong>sum</strong> of the two, which means a healthy grant ledger can mask
             an overdrawn loan ledger in the top-line chart. The CSV export separates them.</p>
 
+        <p>In the <strong>Annual Cash Flow Breakdown</strong>, inflows plot above zero and outflows below zero.
+            Grant bars are each year's actual grant spending, not the change from the prior year's spending. The net
+            cash-flow line is the annual sum of the monthly ledger movements.</p>
+
         <p><strong>Write-offs are not cash.</strong> A loan written down reduces the portfolio balance and is reported
             as a write-off, but no money leaves the building. This is checked on every run: net cash flow is rebuilt
             from its components and must reconcile.</p>

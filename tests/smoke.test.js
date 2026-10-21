@@ -60,6 +60,7 @@ function makeApp() {
   });
 
   const alerts = [];
+  const chartConfigs = [];
   const document = {
     body: el('body'),
     addEventListener() {},
@@ -82,13 +83,16 @@ function makeApp() {
     structuredClone, Intl,
     Event: function Event() {},
     alert: (m) => alerts.push(String(m)),
-    Chart: function Chart() { return { destroy() {}, update() {} }; },
+    Chart: function Chart(_context, config) {
+      chartConfigs.push(config);
+      return { destroy() {}, update() {} };
+    },
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(src + '\n;globalThis.__x = { UI, ModelModule, runCalculation };', sandbox, { filename: 'app-bundle.js' });
 
-  return { ...sandbox.__x, alerts, el, ids };
+  return { ...sandbox.__x, alerts, chartConfigs, el, ids };
 }
 
 describe('application smoke', () => {
@@ -264,5 +268,23 @@ describe('application smoke', () => {
       assert.strictEqual(dataCells, headerCells,
         `monthly table row has ${dataCells} cells under ${headerCells} headers`);
     }
+  });
+
+  test('annual cash-flow chart uses annual grant spending as an outflow (F-51, ADR-0042)', () => {
+    const app = makeApp();
+    app.runCalculation(true);
+
+    const config = app.chartConfigs.find(c =>
+      c.options?.plugins?.title?.text === 'Annual Cash Flow Breakdown');
+    assert.ok(config, 'the annual cash-flow chart configuration must be rendered');
+    const grants = config.data.datasets.find(dataset => dataset.label === 'Grants');
+    assert.ok(grants, 'the annual cash-flow chart must include material grant spending');
+
+    const actual = Array.from(grants.data);
+    const expected = Array.from(app.UI.lastResults.series.dataGrants, value => -value);
+    assert.deepStrictEqual(actual, expected,
+      'annual grant spending must be negated once, not differenced as if cumulative');
+    assert.ok(actual.every(value => value <= 0),
+      'grant spending must never appear as a positive cash inflow');
   });
 });

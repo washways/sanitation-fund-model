@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 50 of 50 findings resolved as of 2026-10-21. F-50 was fixed under ADR-0041. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 51 of 51 findings resolved as of 2026-10-21. F-51 was fixed under ADR-0042. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -1006,6 +1006,12 @@ That count is calculated as `new ME loan value / meSetupCost`, even though ADR-0
 The equivalent genuine zero-cap run produces no enterprises or toilets and is not viable, with about 87.8% of senior principal repaid. This is a silent replacement of a user-entered stress assumption with the healthy default.
 
 **Fix:** use the validated input directly; missing or malformed inputs already fail at the F-46 boundary. The regression requires zero capacity to produce zero enterprises and production. [ADR-0041](adr/0041-honor-zero-enterprise-capacity.md). Resolved in `33d9dea`.
+
+### F-51 — The annual chart turns grant spending into fictitious grant income
+
+**High — fixed.** The engine's `dataGrants` entries are annual flows, reset after every year. The annual cash-flow chart treated them as cumulative totals and differenced adjacent years. In the Malawi reference run, actual grant spending of approximately $278k, $356k, $292k, $0, and $0 became chart values of -$278k, -$78k, **+$64k**, **+$292k**, and $0. Positive bars implied grant income, including $292k in a year with no grant spending.
+
+**Fix:** negate each annual flow once and add a render-path regression against the actual Chart.js dataset. Remove the unused placeholder inside the same default aggregation. [ADR-0042](adr/0042-chart-annual-grants-as-flows.md). Resolved in `pending`.
 
 ---
 

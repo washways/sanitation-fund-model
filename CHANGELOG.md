@@ -11,6 +11,20 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.13.0] — 2026-10-21 — Correct annual grant cash-flow chart
+
+### Fixed
+
+- **The annual chart no longer turns falling grant spending into income.** The engine stores separate yearly grant flows, but the chart treated them as cumulative and differenced adjacent years. In the Malawi reference run, actual grant spending of about $278k, $356k, $292k, $0, and $0 was plotted as -$278k, -$78k, **+$64k**, **+$292k**, and $0. The positive bars were fictitious grant inflows, including $292k in a year with no grant spending. ([ADR-0042](docs/adr/0042-chart-annual-grants-as-flows.md), F-51)
+- **Grant spending is now negated exactly once.** Correct chart values are about -$278k, -$356k, -$292k, $0, and $0, reconciling directly to the annual results table.
+- **The render-path test now captures Chart.js configuration.** It compares the public `Grants` dataset to the engine's annual series and requires every grant value to be an outflow. The card heading now accurately says `Annual Cash Flow Breakdown` rather than `Annual Cost Breakdown`.
+
+### Golden movement
+
+None. The grant ledger, cashflows, KPIs, viability, 21 recorded scenarios, and Malawi startup are unchanged; only the chart's interpretation of an existing annual series changed.
+
+---
+
 ## [0.12.0] — 2026-10-21 — Zero capacity means zero capacity
 
 ### Fixed

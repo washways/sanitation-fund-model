@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.12.0 — explicit zero enterprise capacity honored |
+| **Release** | 0.13.0 — annual grant cash-flow chart corrected |
 | **Stages complete** | S0, S1, S2, S3, S5; S4 solver correctness complete, other S4 work and S6 remain |
-| **Tests** | ✅ 99 pass, 0 todo, 0 fail (`npm test`, ~2s) |
+| **Tests** | ✅ 100 pass, 0 todo, 0 fail (`npm test`, ~3s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations; returned values pass semantic ranges (`npm run audit:countries`) |
-| **Findings register** | ✅ 50 of 50 resolved |
+| **Findings register** | ✅ 51 of 51 resolved |
 | **Open modelling question** | MODEL_SPEC R-7.6: whether the headline constraint label should derive directly from the production minimum |
 
 ## What remains unresolved
@@ -82,6 +82,11 @@ The 20-year stress scenario is **not viable** under the same assumptions: 164,74
 - `New MEs` is a count; `New ME Loans` is the working-capital-inclusive currency amount. Do not infer one from setup cost alone.
 - Every monthly implementation row has exactly the same number of cells as its header. The render-path regression pins both alignment and the count/value reconciliation. See [ADR-0040](docs/adr/0040-report-exact-me-launches.md).
 
+## Chart reporting contract
+
+- `series.dataGrants` contains annual flows, not cumulative balances. The annual cash-flow chart negates each value once and never differences adjacent years.
+- Chart inflows are positive and outflows are negative. The smoke harness captures the Chart.js configuration and reconciles the `Grants` dataset to the engine series. See [ADR-0042](docs/adr/0042-chart-annual-grants-as-flows.md).
+
 ## Environment
 
 Node is not on `PATH` on the maintainer's machine:
@@ -99,4 +104,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.12.0 closed F-50 under [ADR-0041](docs/adr/0041-honor-zero-enterprise-capacity.md). An explicit zero enterprise-capacity assumption now produces no enterprises or toilets and exposes the resulting debt shortfall; it is no longer silently replaced by the healthy default of 20. The standard Malawi scenario is unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.13.0 closed F-51 under [ADR-0042](docs/adr/0042-chart-annual-grants-as-flows.md). The annual cash-flow chart now shows the engine's yearly grant spending as outflows instead of turning year-to-year declines into fictitious income. The ledger and Malawi headlines are unchanged. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
