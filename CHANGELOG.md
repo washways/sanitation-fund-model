@@ -11,6 +11,21 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.18.1] — 2026-10-21 — Programme summary fits the page
+
+### Fixed
+
+- **The programme-summary cards now reflow to the available main-panel width.** The old inline layout always demanded three columns even after the fixed sidebar had consumed much of a laptop or tablet viewport. Cards now use an auto-fitting grid and move to two or one column when needed. ([ADR-0048](docs/adr/0048-fit-programme-summary-to-viewport.md), F-55)
+- **Long summary labels and values wrap inside their cards.** A global rule had forced every summary cell to be at least 100px wide and prevented wrapping, which pushed the entire results area off-page.
+- **Only the monthly audit table remains deliberately wide.** Its 22 columns stay readable and scroll horizontally inside their own bounded container instead of widening the page.
+- **Two layout regressions pin the contract.** They require an adaptive grid, wrapping summary cells, and monthly-table-only no-wrap behavior.
+
+### Golden movement
+
+None. This release changes presentation only; all model calculations and the 21 recorded scenarios are unchanged.
+
+---
+
 ## [0.18.0] — 2026-10-21 — Enterprise rollout starts as a pilot
 
 ### Changed
