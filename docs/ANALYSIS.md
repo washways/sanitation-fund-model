@@ -989,7 +989,7 @@ Following that advice makes the outcome worse. The advisor was written against a
 
 **High — fixed.** The `AI Advisor` button called `UI.generateSuggestions()`, a legacy rule set that still recommended extending the fund repayment term and increasing grant pacing. F-32 already demonstrated that a longer investor term can reduce repayment, while F-30 established that grant pacing barely changes total reach because the grant ledger fixes total subsidy. The model-tested `suggestSolvencyFix()` path existed and was covered, but the visible button bypassed it.
 
-**Fix:** the renamed `Review model-tested advice` control runs the current form through `runCalculation(true)` and renders only simulated options. The duplicate rule set and modal path are deleted. [ADR-0039](adr/0039-one-model-tested-advice-path.md). Resolution commit pending.
+**Fix:** the renamed `Review model-tested advice` control runs the current form through `runCalculation(true)` and renders only simulated options. The duplicate rule set and modal path are deleted. [ADR-0039](adr/0039-one-model-tested-advice-path.md). Resolved in `b54159a`.
 
 ---
 
