@@ -50,7 +50,9 @@ describe('actual production constraints (R-7.6, ADR-0044)', () => {
   });
 
   test('a satisfied demand target is reported as success, with no invented bottleneck', () => {
-    const result = run({ popReqToilets: 5000 });
+    // Use a deliberately established opening network so this isolates the
+    // demand-satisfied reporting path rather than the gradual-rollout assumption.
+    const result = run({ popReqToilets: 5000, initialMeNetworkShare: 1 });
     assert.strictEqual(result.kpis.reach.dominantConstraint, 'Demand Met (Success)');
     assert.strictEqual(result.kpis.reach.constraintAnalysis.primary, 'demand');
     assert.deepStrictEqual(Array.from(result.kpis.reach.constraintAnalysis.secondary), []);

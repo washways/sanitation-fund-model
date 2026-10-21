@@ -3,7 +3,7 @@
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # Node is not on PATH
 npm ci                 # installs ESLint, the one devDependency — needed once
-npm test              # 110 tests, ~4s
+npm test              # 114 tests, ~4s
 npm run test:watch    # re-run on change
 npm run golden:diff   # what would move, without writing
 npm run verify        # reproduce the audit findings
@@ -26,6 +26,7 @@ This codebase's git history contains eight "Fix TypeError" commits from before t
 | `golden.test.js` | An unintended change in any output | *Did I move something I did not mean to move?* |
 | `smoke.test.js` | A crash or a write-back in the render path | *Does the whole app actually run?* |
 | `startup.test.js` | A broken scenario behind the country fetch | *Does the thing a user opens actually work?* |
+| `startup-scale.test.js` | An implausible time-zero enterprise cohort or hidden seed network | *Does rollout begin at the explicit affordable pilot and scale from there?* |
 | `writedown.test.js` | A write-down/default formula drifting from what the spec says it does | *Does a written-down loan behave the way `MODEL_SPEC.md` says?* |
 | `export.test.js` | A broken or untested export path | *Does clicking Export actually produce a file?* |
 | `solver.test.js` | A solver silently converging on a wrong or fake-zero answer where the model isn't monotone | *When there's no feasible answer, does the tool say so instead of guessing?* |
@@ -167,7 +168,8 @@ The problem it addresses: `tools/baseline-inputs.js` mirrors the `value=""` attr
 This suite boots the app with controllable timers, fires `DOMContentLoaded`, drains the deferred work in scheduled order, and lets the real fetch handler run against **recorded** World Bank and administrative-unit responses. It then asserts on the scenario that results:
 
 - the country selector lists every country, not just the default — it was an `<input list="...">` pre-filled with "Malawi", and browsers filter a datalist against what is already typed, so the dropdown showed one entry;
-- observed data reaches the form (inflation, population, income, districts);
+- observed data reaches the form (target population, population growth, and income);
+- every model-driving country observation receives the same dated blue provenance state, which a real user edit removes;
 - the fetch does **not** fill negotiated terms or policy choices — a commercial lending rate is not a term sheet, and a poverty headcount is not a policy;
 - the resulting fund is viable;
 - the derived household rate stays inside credible microfinance pricing and exceeds inflation.

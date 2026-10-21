@@ -59,10 +59,10 @@ for (const scen of [
   console.log(`  ${scen[0].padEnd(28)} ${inv} downward steps of ${pts.length - 1}`);
 }
 
-console.log('\n--- opsReserveCap sensitivity (one-shot month-0 gate) ------------------');
-for (const c of [0, 5, 10, 15, 20, 30, 50, 90]) {
-  const r = run({ opsReserveCap: c });
-  console.log(`  cap ${String(c).padStart(2)}%: startMEs ${String(r.series.startMEs).padStart(4)}` +
+console.log('\n--- initialMeNetworkShare sensitivity (month-0 pilot) -----------------');
+for (const c of [0, 0.05, 0.10, 0.15, 0.20, 0.30, 0.50, 0.90]) {
+  const r = run({ initialMeNetworkShare: c });
+  console.log(`  share ${String(Math.round(c * 100)).padStart(2)}%: startMEs ${String(r.series.startMEs).padStart(4)}` +
     `  toilets ${r.kpis.reach.toilets.toLocaleString().padStart(9)}  netAssets ${money(r.kpis.financials.netAssets)}`);
 }
 

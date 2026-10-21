@@ -53,7 +53,7 @@ module.exports = {
   mgmtFeeRatio: 0.01,
   meCostRate: 0.02,
   contingencyRate: 0.05,
-  opsReserveCap: 0.15,   // 15% — now converted at the boundary like every other rate
+  initialMeNetworkShare: 0.15, // explicit month-0 pilot share of the target ME network (ADR-0047)
 
   // Impact
   dalyPerPerson: 0,

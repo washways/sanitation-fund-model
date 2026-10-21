@@ -29,9 +29,21 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.17.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.18.0 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.18.0 — Enterprise rollout starts as a pilot</h2>
+        <ul>
+            <li>The Malawi default no longer assumes 285 enterprises are recruited, capitalised, and operating before month one.</li>
+            <li>A new <strong>Initial ME Network (% of Target)</strong> input starts an explicit pilot, capped by available loan capital. The illustrative 15% default starts 84 of the 560-enterprise target.</li>
+            <li>Month-one enterprise interest falls from about <strong>$25,800 to $7,600</strong>. The network then grows to about 232 enterprises by month 12 and 314 by month 24.</li>
+            <li>The five-year reference builds 83,350 toilets, fully repays senior principal, has FSS of 1.06, and remains viable. The previous 118,509-toilet result relied on the aggressive instant rollout.</li>
+            <li>A tested 10% pilot had FSS of only 0.995; 15% retains a modest operating margin while remaining far below the old 51% starting network.</li>
+            <li>F-54 is resolved. Stress scenarios are deliberately more conservative and the 21 recorded scenario results have been updated.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.17.0 — Country-derived inputs are visibly sourced</h2>
         <ul>
             <li>The three model inputs loaded or derived from World Bank observations now share one clear blue background and outline.</li>
@@ -175,7 +187,7 @@
     <section class="notice">
         <h2>Known limitations requiring follow-up</h2>
         <ul>
-            <li><strong>Long-horizon warning:</strong> the sourced 12-month Malawi household term makes the five-year reference run viable, but the current 20-year stress scenario eventually becomes insolvent because lower interest earned per loan does not cover indefinite operating costs. This result is disclosed rather than tuned away.</li>
+            <li><strong>Long-horizon warning:</strong> the five-year Malawi pilot case is viable, but the 20-year stress winds up in month 101 after 86,076 toilets and ends about $11,000 insolvent. This result is disclosed rather than tuned away.</li>
             <li><strong>Decision-support roadmap:</strong> sensitivity is currently a deterministic JSON tool; an on-page sensitivity view and transparent JSON scenario save/load/compare remain to be built.</li>
             <li><strong>Currency:</strong> the model remains explicitly USD-only. It does not apply a spot exchange rate to multi-year cashflows or model exchange-rate risk.</li>
             <li><strong>Calibration:</strong> financing, operating-cost, loss, capacity, contingency, and subsidy assumptions remain illustrative until replaced with programme evidence.</li>

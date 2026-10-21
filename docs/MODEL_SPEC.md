@@ -236,23 +236,35 @@ requiredReserves = windUpMonth !== null
 
 `fullFixedOps` is the *current month's* fixed ops cost **before** the hibernation cut (`opsCost`) is applied — a buffer that shrinks by 70% exactly when the fund is most fragile was not a buffer. The scheduled-principal lookahead reads directly from `investorSchedule` (R-4.1), which already exists and is indexed by month, so this is a lookup, not new machinery. The README's long-standing claim of a "3-month Debt Lookahead" is now true.
 
-`opsReserveCap` (the separate input formerly labelled "Liquidity Buffer %", now "Starting Capacity Throttle %") is **not** part of `requiredReserves` and was deliberately left that way — see R-6.1 and [ADR-0027](adr/0027-debt-service-lookahead-reserve.md)'s "Alternatives considered". It sizes the month-0 starting ME cohort only, which is its own well-defined (if narrow) job; folding it into the ongoing solvency reserve would conflate two different concepts under one input.
+The former `opsReserveCap` / "Starting Capacity Throttle" is removed. It subtracted a share of
+combined grant and loan capital from the loan ledger only at month zero and was never an ongoing
+reserve. The explicit pilot-network share in R-6.1 now controls opening scale; `requiredReserves`
+remains the only liquidity/debt-service reserve. See [ADR-0047](adr/0047-start-with-a-pilot-enterprise-network.md).
 
 ---
 
 ## 6. Micro-enterprises
 
-### R-6.1 Startup cohort (month 0) **[AS-BUILT]** (unified 2026-08-21, [ADR-0031](adr/0031-unify-me-capital-requirement.md), resolves F-21)
+### R-6.1 Startup cohort (month 0) **[AS-BUILT]** (pilot share added 2026-10-21, [ADR-0047](adr/0047-start-with-a-pilot-enterprise-network.md), resolves F-54)
 
 ```
 maxTotalMEs         = districts * mePerDistrict
 meCapitalRequirement = meSetupCost + (toiletsPerMeMonth * avgToiletCost * max(6, termHh))
-affordableStartMEs   = floor(max(0, loanCash - currentReserve) / meCapitalRequirement)
-startMEs             = min(maxTotalMEs, affordableStartMEs)
+affordableStartMEs   = floor(max(0, loanCash) / meCapitalRequirement)
+targetStartMEs       = initialMeNetworkShare == 0
+                       ? 0
+                       : ceil(maxTotalMEs * initialMeNetworkShare)
+startMEs             = min(maxTotalMEs, affordableStartMEs, targetStartMEs)
 startLoanVolume      = startMEs * meCapitalRequirement   // was meSetupCost alone
 ```
 
 `meCapitalRequirement(inputs)` is now a single function (`ModelModule.meCapitalRequirement`), used here, in R-6.2's expansion budget, and in the loan R-6.2 books — the same number decides how many MEs the fund can afford and how much it lends them. Before this, the loan booked used setup cost alone — 7.3x less than the affordability check's own number at the shipped defaults — so the fund decided how many enterprises it could afford using the realistic figure, then only lent them a seventh of it.
+
+`initialMeNetworkShare` defaults to 15% as an illustrative pilot-rollout assumption, not a country
+observation. The Malawi reference therefore starts 84 of its 560-enterprise target rather than the
+cash-maximising 285. Available loan capital remains a hard cap. A positive share uses `ceil` so a
+small network can still receive one seed enterprise; an explicit zero starts none and cannot grow
+later through a percentage of zero. Replace 15% with the programme's recruitment plan before use.
 
 `mePerDistrict = 0` is a valid zero-capacity stress case: `maxTotalMEs` is then zero and the model starts and expands no enterprises. The validated model uses the value directly and never replaces zero with the default ([ADR-0041](adr/0041-honor-zero-enterprise-capacity.md), F-50).
 

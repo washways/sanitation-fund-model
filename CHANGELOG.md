@@ -11,6 +11,24 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.18.0] — 2026-10-21 — Enterprise rollout starts as a pilot
+
+### Changed
+
+- **The model no longer launches the largest enterprise cohort that cash can buy before month one.** The Malawi default previously created 285 of the eventual 560 enterprises at time zero, lent them $3.249m, and therefore recorded $25,797 of enterprise interest and $259,190 of principal in month one. The arithmetic matched the cohort, but the instant national-scale mobilisation did not. ([ADR-0047](docs/adr/0047-start-with-a-pilot-enterprise-network.md), F-54)
+- **A new `Initial ME Network (% of Target)` control starts an explicit, affordable pilot.** The 15% default starts 84 enterprises in Malawi and produces about $7,603 of month-one enterprise interest. Available loan capital and the network ceiling remain hard caps; an explicit zero seeds no hidden cohort.
+- **The 15% default preserves a modest operating margin.** A smaller 10% pilot was also tested and repaid senior debt, but its five-year FSS was 0.995. At 15%, the network grows to about 232 enterprises by month 12 and 314 by month 24, senior principal is fully repaid, FSS is 1.064, and net assets are about $176,782.
+- **The old capital holdback is removed.** `Starting Capacity Throttle` subtracted a percentage of combined grant and loan capital from the loan ledger only for month-zero sizing, then disappeared. The rolling reserve remains three months of full fixed operations plus the next three months of scheduled investor principal.
+- **Three regressions pin the rollout contract.** They require the 15% Malawi pilot, affordability cap, continued network growth, full baseline senior repayment, operating margin, and a genuine zero-seed case.
+
+### Golden movement
+
+This intentional assumption correction changes 559 recorded values across the 21 scenarios. In the Malawi baseline, startup enterprises fall **285 → 84**, startup lending **$3.249m → $0.958m**, five-year toilets **118,509 → 83,350 (-29.7%)**, net assets **$472,563 → $176,782 (-62.6%)**, FSS **1.19 → 1.06**, and SROI **4.09 → 2.73**. The reference scenario remains solvent, internally consistent, and fully repays senior debt.
+
+Stress cases become appropriately more conservative: the 8% cost-of-capital case repays 85.1% of senior principal, high inflation repays 94.4%, and high enterprise attrition repays 99.5%. The capital-constrained case starts 43 rather than 35 enterprises because the obsolete formula had incorrectly withheld a share of grant capital from the loan ledger. These movements follow ADR-0047 and are not tuned away.
+
+---
+
 ## [0.17.0] — 2026-10-21 — Country-derived inputs are visibly sourced
 
 ### Fixed
