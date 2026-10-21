@@ -975,7 +975,7 @@ Following that advice makes the outcome worse. The advisor was written against a
 
 **Critical — fixed.** The UI silently replaced blank or malformed values with hidden defaults, while the pure calculation accepted values outside the domain of its equations. Reproduced cases included a 150% annual write-down producing dozens of `NaN` values while viability remained true, zero household size producing an infinite demand backlog beside plausible finances, a negative toilet cost passing integrity, negative duration crashing with `Invalid array length`, and grace longer than the debt term silently scheduling no principal.
 
-**Fix:** `ModelModule.validateInputs()` now applies the mathematical and definitional contract before arrays are allocated or month 1 runs. It reports every invalid field, throws the typed `INVALID_INPUTS` error, and deliberately avoids unsupported policy caps. Blank/malformed browser values remain invalid, the controller reports all problems together, and a failed rerun clears the prior result. Four pure-boundary tests and one controller regression pin the behavior. [ADR-0037](adr/0037-fail-fast-input-validation.md). Resolution commit pending.
+**Fix:** `ModelModule.validateInputs()` now applies the mathematical and definitional contract before arrays are allocated or month 1 runs. It reports every invalid field, throws the typed `INVALID_INPUTS` error, and deliberately avoids unsupported policy caps. Blank/malformed browser values remain invalid, the controller reports all problems together, and a failed rerun clears the prior result. Four pure-boundary tests and one controller regression pin the behavior. [ADR-0037](adr/0037-fail-fast-input-validation.md). Resolved in `5757dd0`.
 
 ---
 
