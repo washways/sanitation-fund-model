@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.19.1 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.19.2 — 21 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.19.2 — Cross-country and parameter robustness audit</h2>
+        <ul>
+            <li>The live audit now converts current World Bank observations exactly as the browser does and completes a full model run for every selectable country.</li>
+            <li>All 44 countries currently have the essential observations, pass semantic range checks, complete the model, and preserve every ledger invariant.</li>
+            <li>A permanent deterministic test now covers 384 combinations of capital, duration, demand, rates, defaults, operating costs, delivery capacity, health, carbon, and time-value assumptions.</li>
+            <li>Country-derivation tests verify whole-person target population, rounded growth, GNI-over-GDP fallback, and safe refusal when an essential observation is missing.</li>
+            <li>F-60 is resolved. Inputs, formulas, screen behavior, and all 21 recorded scenarios are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.19.1 — Financial assumptions show relevant API context</h2>
         <ul>
             <li>Household and enterprise loan rates now show the dated country commercial-lending benchmark beside each field, without replacing the programme&rsquo;s product prices.</li>

@@ -11,6 +11,20 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.19.2] — 2026-10-21 — Cross-country and parameter robustness audit
+
+### Added
+
+- **The live country audit now runs the complete model with every country’s current derived World Bank inputs.** It mirrors the browser’s whole-person target, two-decimal growth-rate entry, and whole-dollar GNI/GDP fallback before validating and calculating each scenario. The current audit passes for all 44 selector countries, not just Malawi. (F-60)
+- **A permanent deterministic robustness test exercises 384 valid parameter combinations.** It spans capital structures, horizons, demand, growth, inflation, borrower rates, defaults, enterprise attrition and capacity, costs, health, carbon, and time-value assumptions. Every case must preserve the full ledger-invariant set.
+- **Pure country-derivation helpers are now covered without live network calls.** CI tests both the GNI-over-GDP choice and the safe refusal of incomplete observation sets, while the optional live audit continues to expose changing API coverage.
+
+### Golden movement
+
+None. This release strengthens verification only; it does not change inputs, formulas, UI behavior, or any of the 21 recorded scenario results.
+
+---
+
 ## [0.19.1] — 2026-10-21 — Financial assumptions show relevant API context
 
 ### Changed

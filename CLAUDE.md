@@ -38,6 +38,7 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | S6 responsive results — 2026-10-21 | Replaced the fixed three-column programme summary and global no-wrap cells with an adaptive grid and scoped monthly-table scrolling. | Compact summary cards must wrap and fit the main panel. Only `#monthlyDataTable` may retain wide no-wrap cells inside its local scroll container. |
 | S3 impact evidence — 2026-10-21 | Made jobs per active enterprise explicit, derived a conservative sanitation-burden proxy from WHO plus matching-year World Bank exposure, applied an explicit intervention-effect assumption, and relabelled zero carbon as not estimated. | Jobs are point-in-time jobs supported, not job-years. Never treat 100% of attributable burden as averted: apply the editable `dalyImpactRealisation` factor (21% interim basic non-sewered sanitation estimate). DALY value stays zero unless separately evidenced. Carbon needs a project baseline/technology factor. |
 | S6 assumption context — 2026-10-21 | Put dated commercial lending and CPI context beside the financial assumptions they inform, and marked those controls amber. | Blue means API-derived value; amber means programme assumption. Never auto-fill HH/ME APRs from commercial lending, fixed operations from a macro heuristic, or USD escalation from local CPI without an FX and cost-basket forecast. |
+| S6 cross-country robustness — 2026-10-21 | Made the live country audit run the full model with browser-equivalent derived observations for all selector countries; added a 384-case deterministic parameter grid. | Keep live API checks outside CI, but keep derivation logic pure and regression-tested. `npm run audit:countries` must validate and calculate, not merely count observations. |
 
 The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) and [docs/adr/](docs/adr/). Never edit an accepted ADR; supersede it.
 
@@ -67,6 +68,8 @@ Commercial lending must be shown beside HH and ME rates with its observation yea
 them. Local CPI must be shown beside model-currency escalation with its year and USD/FX warning.
 Annual fixed operations must request the actual programme budget; no country macro API derives it.
 These four controls use amber `programme-assumption`, never blue `country-observation`.
+
+`tools/country-runtime-audit.js` mirrors the browser's exact conversion rules and is pure enough for CI. `npm run audit:countries` uses it to run the full model against every complete current country observation set; as of 2026-10-21 all 44 pass validation and ledger integrity. `tests/robustness-audit.test.js` also holds a fixed-seed 384-case parameter grid. Do not replace either with random, network-dependent CI behavior.
 
 After loading, all four model-driving country fields use the blue `country-observation` state and
 carry a source description. Trusted user input removes that state. Do not use `auto-filled`, inline

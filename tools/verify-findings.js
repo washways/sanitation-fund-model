@@ -14,6 +14,7 @@
  */
 const { ModelModule } = require('./load-model');
 const BASE = require('./baseline-inputs');
+const { auditCountryScenario } = require('./country-runtime-audit');
 const APP_SRC = require('./app-source').concatenated(); // src/, concatenated (S5, ADR-0033)
 const fs = require('node:fs');
 const path = require('node:path');
@@ -555,12 +556,34 @@ console.log('='.repeat(80));
     'commercial lending and CPI appear only in dated guidance.');
 }
 
+// F-60 — country coverage includes a full browser-equivalent model run.
+{
+  const audited = auditCountryScenario({
+    ruralPopulation: { value: 1000000, year: '2025' },
+    basicRuralSanitation: { value: 40, year: '2024' },
+    populationGrowth: { value: 2.5, year: '2025' },
+    gniPerCapita: null,
+    gdpPerCapita: { value: 700, year: '2025' },
+  });
+  const liveAuditUsesRuntime = /auditCountryScenario\(data\)/
+    .test(fs.readFileSync(path.join(ROOT, 'tools', 'audit-country-data.js'), 'utf8'));
+  check('F-60', 'country audit calculates browser-equivalent derived scenarios',
+    liveAuditUsesRuntime
+      && audited.runnable
+      && audited.integrity.ok
+      && audited.inputs.popReqToilets === 600000
+      && audited.inputs.popGrowthRate === 0.025
+      && audited.inputs.avgAnnualIncome === 700,
+    'The live audit now validates and calculates every complete selector-country scenario; ' +
+    'CI pins the conversion and a 384-case deterministic parameter grid.');
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 59 of 59 resolved.');
+console.log('Findings register: 60 of 60 resolved.');
 console.log('Open modelling questions: none. R-7.6/Q14 was resolved by ADR-0044.');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

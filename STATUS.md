@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.19.1 — financial assumptions with dated API context |
+| **Release** | 0.19.2 — cross-country and parameter robustness audit |
 | **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance and responsive results complete; caching/scenario comparison and remaining S6 work remain |
-| **Tests** | ✅ 123 pass, 0 todo, 0 fail (`npm test`, ~2s) |
+| **Tests** | ✅ 126 pass, 0 todo, 0 fail (`npm test`, ~2s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
-| **Country audit** | ✅ 44/44 selector countries have current essential observations; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
-| **Findings register** | ✅ 59 of 59 resolved |
+| **Country audit** | ✅ 44/44 selector countries have current essential observations and complete a full integrity-clean run; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
+| **Findings register** | ✅ 60 of 60 resolved |
 | **Open modelling questions** | None — all 14 owner decisions are recorded |
 
 ## What remains unresolved
@@ -156,4 +156,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.19.1 completed the requested API review for borrower rates, fixed operating cost, and cost escalation under [ADR-0050](docs/adr/0050-show-api-benchmarks-without-inventing-programme-terms.md). The four controls are amber programme assumptions. Malawi shows dated 37.1% commercial lending beside both borrower-rate fields and 28.4% local CPI beside USD cost escalation without applying either; fixed operations directs the user to the actual programme budget because no macro API can infer it. Model outputs and all 21 golden scenarios are unchanged. The suite has 123 passing tests and all 59 findings are closed. The next roadmap work is transparent scenario comparison or real-browser/accessibility checks. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-21 release 0.19.2 strengthened verification without changing the model. The live country audit now mirrors the browser's exact API conversions and completes a full run for every selector country: 44/44 currently pass validation and ledger integrity. A permanent fixed-seed regression also covers 384 valid combinations across finance, demand, delivery, cost, loss, and impact inputs. The suite has 126 passing tests, all 60 findings are closed, and all 21 golden scenarios are unchanged. The next roadmap work is transparent scenario comparison or real-browser/accessibility checks. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
