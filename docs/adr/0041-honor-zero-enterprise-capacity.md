@@ -59,5 +59,9 @@ value it receives.
 
 ## Verification
 
-Pending implementation. A regression will require zero startup enterprises, zero active
-enterprises, zero toilets, and a non-viable verdict when `mePerDistrict` is explicitly 0.
+- `npm test`: 99 pass. The F-50 regression requires zero startup enterprises, zero
+  active enterprises, zero toilets, and a non-viable verdict.
+- `npm run golden:diff`: no behaviour change across all 21 scenarios.
+- `npm run lint`: zero errors and zero warnings.
+- `node tools/verify-findings.js`: zero capacity starts and ends with 0 enterprises,
+  builds 0 toilets, and reports viability `NOT OK`; F-50 fixed.

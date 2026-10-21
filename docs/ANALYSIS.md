@@ -1005,7 +1005,7 @@ That count is calculated as `new ME loan value / meSetupCost`, even though ADR-0
 
 The equivalent genuine zero-cap run produces no enterprises or toilets and is not viable, with about 87.8% of senior principal repaid. This is a silent replacement of a user-entered stress assumption with the healthy default.
 
-**Fix:** use the validated input directly; missing or malformed inputs already fail at the F-46 boundary. The regression requires zero capacity to produce zero enterprises and production. [ADR-0041](adr/0041-honor-zero-enterprise-capacity.md). Resolved in `pending`.
+**Fix:** use the validated input directly; missing or malformed inputs already fail at the F-46 boundary. The regression requires zero capacity to produce zero enterprises and production. [ADR-0041](adr/0041-honor-zero-enterprise-capacity.md). Resolved in `33d9dea`.
 
 ---
 
