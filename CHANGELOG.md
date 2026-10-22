@@ -11,6 +11,20 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.19.7] — 2026-10-22 — Monthly audit card is independent of chart sizing
+
+### Fixed
+
+- **Monthly Implementation Data no longer inherits the fixed-height chart component.** The first containment fix relied on a later CSS height override while leaving the audit table classified as a chart, so its background could still render incorrectly when the cascade or viewport changed. The section now owns its complete card box and locally contains its bounded two-axis scrolling table. ([ADR-0055](docs/adr/0055-decouple-the-monthly-audit-card-from-chart-sizing.md), F-61 follow-up)
+- **The audit trail remains complete.** Five-year and longer scenarios retain every monthly row, sticky column headings, and horizontal and vertical scrolling; nothing is clipped or summarised away.
+- **The regression now forbids reintroducing the chart class.** It also requires the dedicated card to define its own background, padding, radius, shadow, sizing, and overflow contract.
+
+### Golden movement
+
+None. This is a layout-only correction; inputs, calculations, table contents, and all 21 recorded scenarios are unchanged.
+
+---
+
 ## [0.19.6] — 2026-10-22 — Population need is no longer presented as forecast demand
 
 ### Changed
