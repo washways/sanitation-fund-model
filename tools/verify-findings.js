@@ -578,12 +578,24 @@ console.log('='.repeat(80));
     'CI pins the conversion and a 384-case deterministic parameter grid.');
 }
 
+// F-61 — the monthly audit table is contained by its own auto-height card.
+{
+  const monthlyCard = /class="[^"]*monthly-table-card[^"]*"/.test(HTML_SRC);
+  const autoHeight = /\.monthly-table-card\s*\{[^}]*height:\s*auto/s.test(CSS_SRC);
+  const localScroll = /\.monthly-table-scroll\s*\{[^}]*overflow:\s*auto/s.test(CSS_SRC);
+  const stickyHeader = /#monthlyDataTable\s+thead\s+th\s*\{[^}]*position:\s*sticky[^}]*top:\s*0/s
+    .test(CSS_SRC);
+  check('F-61', 'monthly implementation rows remain inside their card',
+    monthlyCard && autoHeight && localScroll && stickyHeader,
+    'The table card grows around a bounded two-axis viewport, and headings remain visible while scrolling.');
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 60 of 60 resolved.');
+console.log('Findings register: 61 of 61 resolved.');
 console.log('Open modelling questions: none. R-7.6/Q14 was resolved by ADR-0044.');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

@@ -11,6 +11,20 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.19.3] — 2026-10-22 — Monthly audit table stays inside its panel
+
+### Fixed
+
+- **Monthly Implementation Data no longer extends below its white card background.** The section had inherited the generic 400px chart height while its table viewport could reach 500px, so ordinary five-year results visibly spilled out of the panel. ([ADR-0051](docs/adr/0051-contain-the-monthly-audit-table-vertically.md), F-61)
+- **Long audit tables now scroll locally in both directions.** The 22 readable no-wrap columns retain horizontal scrolling, while long horizons gain a bounded vertical scrollbar instead of lengthening beyond the card.
+- **Column headings remain visible while scrolling through months.** A layout regression pins the dedicated auto-height card, two-axis containment, and sticky header row.
+
+### Golden movement
+
+None. This release changes presentation only; monthly values, formulas, KPIs, and all 21 recorded scenarios are unchanged.
+
+---
+
 ## [0.19.2] — 2026-10-21 — Cross-country and parameter robustness audit
 
 ### Added

@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.19.2 — cross-country and parameter robustness audit |
+| **Release** | 0.19.3 — monthly audit-table containment |
 | **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance and responsive results complete; caching/scenario comparison and remaining S6 work remain |
-| **Tests** | ✅ 126 pass, 0 todo, 0 fail (`npm test`, ~2s) |
+| **Tests** | ✅ 127 pass, 0 todo, 0 fail (`npm test`, ~4s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations and complete a full integrity-clean run; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
-| **Findings register** | ✅ 60 of 60 resolved |
+| **Findings register** | ✅ 61 of 61 resolved |
 | **Open modelling questions** | None — all 14 owner decisions are recorded |
 
 ## What remains unresolved
@@ -136,7 +136,7 @@ The 20-year stress scenario is **not viable** under the same assumptions: it win
 - `series.dataGrants` contains annual flows, not cumulative balances. The annual cash-flow chart negates each value once and never differences adjacent years.
 - Chart inflows are positive and outflows are negative. The smoke harness captures the Chart.js configuration and reconciles the `Grants` dataset to the engine series. See [ADR-0042](docs/adr/0042-chart-annual-grants-as-flows.md).
 - Month-granular horizons always retain a final partial reporting period, labelled with its month count. A sub-year scenario must still render charts. See [ADR-0043](docs/adr/0043-report-final-partial-year.md).
-- Programme-summary cards use an auto-fitting grid and wrapping cells. Only the 22-column monthly audit table retains no-wrap cells, contained by its own horizontal scroller. See [ADR-0048](docs/adr/0048-fit-programme-summary-to-viewport.md).
+- Programme-summary cards use an auto-fitting grid and wrapping cells. The 22-column monthly audit table retains no-wrap cells inside a dedicated auto-height card, with a bounded two-axis scroller and sticky headings. See [ADR-0048](docs/adr/0048-fit-programme-summary-to-viewport.md) and [ADR-0051](docs/adr/0051-contain-the-monthly-audit-table-vertically.md).
 
 ## Environment
 
@@ -156,4 +156,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-21 release 0.19.2 strengthened verification without changing the model. The live country audit now mirrors the browser's exact API conversions and completes a full run for every selector country: 44/44 currently pass validation and ledger integrity. A permanent fixed-seed regression also covers 384 valid combinations across finance, demand, delivery, cost, loss, and impact inputs. The suite has 126 passing tests, all 60 findings are closed, and all 21 golden scenarios are unchanged. The next roadmap work is transparent scenario comparison or real-browser/accessibility checks. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-22 release 0.19.3 fixed the Monthly Implementation Data panel reported by the model owner. The table no longer exceeds a generic 400px chart background: its dedicated card grows around a bounded two-axis viewport and the header remains visible while scrolling. The methodology now explains how to navigate the month-level audit trail. The suite has 127 passing tests, all 61 findings are closed, and all 21 golden scenarios are unchanged. The next review work is clearer on-page model-flow/provenance documentation followed by real-browser accessibility checks. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

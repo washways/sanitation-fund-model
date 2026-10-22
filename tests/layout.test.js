@@ -28,4 +28,15 @@ describe('responsive results layout (F-55, ADR-0048)', () => {
     assert.ok(!/\.summary-table th,\s*\.summary-table td\s*\{[^}]*white-space:\s*nowrap/s.test(CSS),
       'no-wrap must not apply globally to the compact programme-summary tables');
   });
+
+  test('the monthly audit table stays inside an auto-height card and scrolls locally', () => {
+    const monthlyCard = HTML.match(/<div class="[^"]*monthly-table-card[^"]*"[^>]*>[\s\S]*?<h3>Monthly Implementation Data<\/h3>/)?.[0] || '';
+    assert.ok(monthlyCard, 'Monthly Implementation Data needs its own card class');
+    assert.match(CSS, /\.monthly-table-card\s*\{[^}]*height:\s*auto/s,
+      'the monthly table card must override the generic fixed 400px chart height');
+    assert.match(CSS, /\.monthly-table-scroll\s*\{[^}]*overflow:\s*auto/s,
+      'the bounded table viewport must contain overflow on both axes');
+    assert.match(CSS, /#monthlyDataTable\s+thead\s+th\s*\{[^}]*position:\s*sticky[^}]*top:\s*0/s,
+      'column headings should remain visible during local vertical scrolling');
+  });
 });

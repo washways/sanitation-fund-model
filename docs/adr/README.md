@@ -55,3 +55,4 @@ For the short version of what each one decided, [CHANGELOG.md](../../CHANGELOG.m
 | [0048](0048-fit-programme-summary-to-viewport.md) | Fit the programme summary to the available viewport |
 | [0049](0049-derive-health-and-report-impact-honestly.md) | Derive health impact conservatively and report jobs/carbon honestly |
 | [0050](0050-show-api-benchmarks-without-inventing-programme-terms.md) | Show API benchmarks without inventing programme terms |
+| [0051](0051-contain-the-monthly-audit-table-vertically.md) | Contain the monthly audit table vertically |

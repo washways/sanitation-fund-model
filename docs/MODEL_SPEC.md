@@ -581,6 +581,13 @@ covered by ADR-0050 use a separate amber `programme-assumption` state and retain
 values while dated context is rendered beside them. Context-only country indicators remain in the dated country strip and do not masquerade as model inputs. See
 [ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md), [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md), and [ADR-0050](adr/0050-show-api-benchmarks-without-inventing-programme-terms.md).
 
+### R-10.8 Monthly audit-table containment **[AS-BUILT]** (F-61)
+
+The 22-column Monthly Implementation Data table remains inside an auto-height card. Its viewport is
+bounded and scrolls on both axes; the header row remains visible during vertical scrolling. The
+generic fixed chart height must not clip the card background or allow rows to spill below it. See
+[ADR-0051](adr/0051-contain-the-monthly-audit-table-vertically.md).
+
 ---
 
 ## 11. KPI definitions
