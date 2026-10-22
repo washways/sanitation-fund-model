@@ -51,12 +51,13 @@
 
                     <h3>📚 How to Run</h3>
                     <ol style="padding-left: 1.2rem; line-height: 1.6; font-size:0.95rem;">
-                        <li><strong>1. Auto-Load:</strong> The model is fetching real-time data for
-                            <strong>Malawi</strong>...
+                        <li><strong>1. Auto-Load:</strong> The model loads the latest available dated World Bank
+                            observations and, where available, WHO health evidence for <strong>Malawi</strong>.
                         </li>
-                        <li><strong>2. Run Model:</strong> Click "Calculated Model" to see the projection.</li>
-                        <li><strong>3. Optimize:</strong> Tweaking <em>Interest Rates</em> affects demand. Tweaking
-                            <em>Grant Support</em> affects projected fund life.
+                        <li><strong>2. Run Model:</strong> Click "Recalculate Model" to run the scenario.</li>
+                        <li><strong>3. Calibrate:</strong> Rates and terms change portfolio cashflow; enterprise
+                            capacity and rollout assumptions change delivery. Grant-Funded Pacing changes which
+                            ledger funds production, not the total grant capital available.
                         </li>
                     </ol>
                 </div>
@@ -67,15 +68,16 @@
                         style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.75rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
                         <h3 style="margin-top:0; font-size:1rem; color:#166534;">🔄 Theory of Change (Revised)</h3>
                         <p style="font-size:0.85rem; color:#15803d; line-height:1.4;">
-                            This model uses a <strong>Double-Entry Audit Engine</strong>.
+                            This model uses a <strong>reconciled two-ledger monthly simulation</strong>.
                             It runs <strong>integrity checks</strong> on every simulation to ensure cash continuity,
                             unit-cost validity, and logical consistency.
                             <br><br>
                             If the fund forecasts a cash shortfall (based on your chosen Term), it will automatically
                             <strong>slow down lending</strong> or hibernate to preserve liquidity.
                             <br><br>
-                            <strong>Your Mission:</strong> Find the balance where the fund grows fast enough to reach
-                            the poor, but slow enough to guarantee the Investor gets their money back.
+                            <strong>Your task:</strong> Test whether the proposed programme can combine credible
+                            rollout, adequate liquidity, and investor repayment under documented assumptions. This is
+                            a scenario model, not a guarantee.
                         </p>
                     </div>
 
@@ -142,9 +144,9 @@
                         ⬇️ CSV
                     </button>
 
-                    <a href="methodology.html" class="secondary-btn"
+                    <a href="methodology.html#model-map" class="secondary-btn"
                         style="text-decoration:none; text-align:center; padding:0.6rem; border:1px solid #cbd5e1; background:#fff; color:#334155; font-size:0.8rem; border-radius:0.25rem;">
-                        📘 Method
+                        📘 How it works
                     </a>
 
                     <a id="changelogLink" href="changelog.html" class="secondary-btn"

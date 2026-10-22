@@ -11,6 +11,21 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.19.4] — 2026-10-22 — Model flow and calibration are visible on site
+
+### Changed
+
+- **The application now links directly to a five-step “How it works” map.** It traces dated evidence and assumptions through the separate grant and loan ledgers, monthly waterfall, enterprise capacity, loan cohorts, and reported results. ([ADR-0052](docs/adr/0052-put-the-model-flow-and-calibration-path-on-site.md), F-62)
+- **A decision-use checklist makes calibration explicit.** It tells users to verify dated blue country values, replace material amber assumptions with programme evidence, test delivery and financing assumptions, and report sensitivities plus both verdicts.
+- **Unsupported capability claims are removed.** The splash no longer calls dated observations real-time, says interest rates affect demand, describes the model as double-entry accounting, or suggests a scenario can guarantee repayment.
+- **Parameter-documentation coverage is now enforced.** A regression fails if any numeric control read by the UI lacks a complete row in the canonical parameter dictionary; all 41 currently pass.
+
+### Golden movement
+
+None. This release changes explanation and verification only; inputs, formulas, KPIs, and all 21 recorded scenarios are unchanged.
+
+---
+
 ## [0.19.3] — 2026-10-22 — Monthly audit table stays inside its panel
 
 ### Fixed

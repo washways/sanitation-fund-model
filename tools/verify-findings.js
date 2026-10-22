@@ -590,12 +590,27 @@ console.log('='.repeat(80));
     'The table card grows around a bounded two-axis viewport, and headings remain visible while scrolling.');
 }
 
+// F-62 — the public explanation matches the implemented model and exposes calibration.
+{
+  const methodology = fs.readFileSync(path.join(ROOT, 'methodology.html'), 'utf8');
+  const hasModelMap = /id="model-map"/.test(methodology)
+    && (methodology.match(/data-model-step=/g) || []).length === 5
+    && /id="calibration-checklist"/.test(methodology);
+  const linked = /href="methodology\.html#model-map"/.test(HTML_SRC);
+  const unsupportedClaimsAbsent = !/Double-Entry Audit Engine/.test(HTML_SRC)
+    && !/Interest Rates<\/em> affects demand/.test(HTML_SRC)
+    && !/guarantee the Investor gets their money back/i.test(HTML_SRC);
+  check('F-62', 'on-site model map explains flow, calibration, and limitations',
+    hasModelMap && linked && unsupportedClaimsAbsent,
+    'The app links to a five-step flow and calibration checklist without unsupported capability claims.');
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 61 of 61 resolved.');
+console.log('Findings register: 62 of 62 resolved.');
 console.log('Open modelling questions: none. R-7.6/Q14 was resolved by ADR-0044.');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

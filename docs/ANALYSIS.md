@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 61 of 61 findings resolved as of 2026-10-22. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 62 of 62 findings resolved as of 2026-10-22. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,6 +54,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
+| ✅ [F-62](#f-62--the-on-site-explanation-overstates-capabilities-and-hides-the-model-flow) | Medium | Docs / UX | The splash claims real-time data, rate-driven demand, double-entry accounting, and guaranteed repayment while the detailed method lacks a concise model map | src | S6 |
 | ✅ [F-61](#f-61--monthly-implementation-data-spills-below-its-card) | Low | UI | The table viewport is taller than its fixed-height card, so rows extend below the background | src, user report | S6 |
 | ✅ [F-60](#f-60--country-audit-does-not-run-the-model-with-derived-api-inputs) | Low | Tests / Data | The live audit range-checks raw observations but never calculates the resulting country scenarios | src, API audit | S6 |
 | ✅ [F-59](#f-59--api-context-is-disconnected-from-the-financial-assumptions-it-informs) | Medium | UX / Data | Dated lending and CPI context does not explain the related manual programme assumptions | src | S6 |
@@ -1100,6 +1101,23 @@ the rows beyond the bottom of the white background even though horizontal overfl
 scroll viewport, and keep the header row visible during vertical scrolling. A layout regression
 pins all three requirements. [ADR-0051](adr/0051-contain-the-monthly-audit-table-vertically.md).
 Resolved in `5291762`.
+
+### F-62 — The on-site explanation overstates capabilities and hides the model flow
+
+**Medium — fixed.** The detailed methodology documented the formulas, but the application linked to
+it only as “Method” and offered no short route through evidence, capital, monthly cashflow,
+delivery, and results. The splash also described dated API observations as real-time data, called
+the reconciled ledgers a double-entry engine, said interest rates affect demand although demand has
+no price elasticity, and framed scenario selection as guaranteeing investor repayment. Those
+claims made a transparent deterministic model appear more predictive and capable than it is.
+
+**Fix:** link the app directly to a five-step plain-language model map and decision-use calibration
+checklist. Distinguish blue country evidence from amber programme assumptions, show how the two
+ledgers and monthly waterfall feed loan cohorts and delivery, and keep integrity separate from
+viability. Replace the unsupported splash claims with accurate limitations. A documentation
+regression also requires every numeric input read by the UI to retain a complete canonical row in
+`PARAMETERS.md`. [ADR-0052](adr/0052-put-the-model-flow-and-calibration-path-on-site.md).
+Resolved in `[implementation commit]`.
 
 ---
 

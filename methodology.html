@@ -228,6 +228,58 @@
             font-weight: 700;
             white-space: nowrap;
         }
+
+        .model-flow {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+            gap: 0.75rem;
+            padding: 0;
+            list-style: none;
+            counter-reset: model-step;
+        }
+
+        .model-flow li {
+            counter-increment: model-step;
+            margin: 0;
+            padding: 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.5rem;
+            background: #f8fafc;
+        }
+
+        .model-flow li::before {
+            content: counter(model-step);
+            display: inline-grid;
+            place-items: center;
+            width: 1.6rem;
+            height: 1.6rem;
+            margin: 0 0.4rem 0.5rem 0;
+            border-radius: 999px;
+            background: #4338ca;
+            color: white;
+            font-weight: 700;
+        }
+
+        .calibration-list {
+            columns: 2;
+            column-gap: 2.5rem;
+        }
+
+        .source-blue,
+        .source-amber {
+            padding: 0.1rem 0.35rem;
+            border-radius: 0.2rem;
+            font-weight: 700;
+        }
+
+        .source-blue { background: #eff6ff; color: #172554; }
+        .source-amber { background: #fffbeb; color: #78350f; }
+
+        @media (max-width: 700px) {
+            body { padding: 0.75rem; }
+            .container { padding: 1.25rem; }
+            .toc ol, .calibration-list { columns: 1; }
+        }
     </style>
 </head>
 
@@ -241,7 +293,7 @@
         <h1>Methodology &amp; Technical Note</h1>
         <p class="lead">How this model calculates what it calculates &mdash; the financial mechanics, the impact
             assumptions, and the things it deliberately does not attempt.</p>
-        <p class="meta">Last revised 2026-10-20. This note is kept in step with the model specification in
+        <p class="meta">Last revised 2026-10-22. This note is kept in step with the model specification in
             <code>docs/MODEL_SPEC.md</code>; where the two disagree, the specification is authoritative and this page
             is out of date.
         </p>
@@ -256,8 +308,47 @@
             <p>Developers: the full change record is in <code>docs/ANALYSIS.md</code> and <code>docs/adr/</code>.</p>
         </div>
 
+        <section id="model-map" aria-labelledby="model-map-title">
+            <h2 id="model-map-title">Model logic at a glance</h2>
+            <p>This is the shortest honest route through the model. It is a deterministic scenario calculation,
+                <strong>not a forecast</strong>: the same assumptions always produce the same result, and the model
+                does not assign probabilities to them.</p>
+
+            <ol class="model-flow">
+                <li data-model-step="evidence"><strong>Set evidence and assumptions.</strong> Blue fields are dated
+                    country observations or transparent derivations. Amber fields are programme choices that the API
+                    may inform but never sets.</li>
+                <li data-model-step="capital"><strong>Separate the two ledgers.</strong> Grant capital pays subsidy;
+                    loan capital funds enterprises, household credit, operations, and senior debt. The ledgers never
+                    lend to each other.</li>
+                <li data-model-step="waterfall"><strong>Run the monthly waterfall.</strong> Collections arrive,
+                    investor debt and operating costs are paid, and the operating reserve is protected before new
+                    lending is allowed.</li>
+                <li data-model-step="delivery"><strong>Build through capacity and loan cohorts.</strong> Active
+                    enterprises, demand, unit cost, and available grant/loan capital limit monthly toilets. Each
+                    disbursement then amortises as its own cohort.</li>
+                <li data-model-step="results"><strong>Report results and two verdicts.</strong> Reach, cash, debt,
+                    and impact come from those monthly records. Integrity asks whether the arithmetic reconciles;
+                    viability asks whether the specified fund works.</li>
+            </ol>
+
+            <div class="alert-box blue" id="calibration-checklist">
+                <h3>Before using a result in a decision</h3>
+                <ul class="calibration-list">
+                    <li>Check the year and relevance of every <span class="source-blue">blue country value</span>.</li>
+                    <li>Replace every material <span class="source-amber">amber programme assumption</span> with a
+                        term sheet, budget, portfolio record, delivery plan, or explicit policy decision.</li>
+                    <li>Confirm enterprise starting numbers, recruitment pace, productivity, and closure evidence.</li>
+                    <li>Confirm household and enterprise rates, terms, write-down hazards, and senior debt terms.</li>
+                    <li>Keep DALY valuation and carbon off unless the programme has an approved method and evidence.</li>
+                    <li>Run sourced low/base/high sensitivities and report both integrity and viability—not only reach.</li>
+                </ul>
+            </div>
+        </section>
+
         <div class="toc">
             <ol>
+                <li><a href="#model-map">Model logic at a glance</a></li>
                 <li><a href="#scope">What this model does</a></li>
                 <li><a href="#verdicts">The two verdicts</a></li>
                 <li><a href="#validation">Input validation</a></li>

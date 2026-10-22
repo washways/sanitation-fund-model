@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.19.3 — monthly audit-table containment |
-| **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance and responsive results complete; caching/scenario comparison and remaining S6 work remain |
-| **Tests** | ✅ 127 pass, 0 todo, 0 fail (`npm test`, ~4s) |
+| **Release** | 0.19.4 — on-site model flow and calibration guide |
+| **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance, responsive results, and model-transparency guide complete; caching/scenario comparison and remaining S6 work remain |
+| **Tests** | ✅ 129 pass, 0 todo, 0 fail (`npm test`, ~4s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations and complete a full integrity-clean run; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
-| **Findings register** | ✅ 61 of 61 resolved |
+| **Findings register** | ✅ 62 of 62 resolved |
 | **Open modelling questions** | None — all 14 owner decisions are recorded |
 
 ## What remains unresolved
@@ -156,4 +156,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-22 release 0.19.3 fixed the Monthly Implementation Data panel reported by the model owner. The table no longer exceeds a generic 400px chart background: its dedicated card grows around a bounded two-axis viewport and the header remains visible while scrolling. The methodology now explains how to navigate the month-level audit trail. The suite has 127 passing tests, all 61 findings are closed, and all 21 golden scenarios are unchanged. The next review work is clearer on-page model-flow/provenance documentation followed by real-browser accessibility checks. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-22 release 0.19.4 made the model easier to audit without reading the repository. The app now links directly to a five-step model map and decision-use calibration checklist; all 41 numeric controls have complete canonical parameter documentation. Misleading claims about real-time data, rate-driven demand, double-entry accounting, and guaranteed repayment were removed. The suite has 129 passing tests, all 62 findings are closed, and all 21 golden scenarios are unchanged. The next review work is real-browser accessibility and chart interaction, then transparent scenario save/load/compare. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

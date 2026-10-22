@@ -588,6 +588,17 @@ bounded and scrolls on both axes; the header row remains visible during vertical
 generic fixed chart height must not clip the card background or allow rows to spill below it. See
 [ADR-0051](adr/0051-contain-the-monthly-audit-table-vertically.md).
 
+### R-10.9 On-site model explanation **[AS-BUILT]** (F-62)
+
+The published application links directly to a concise five-step model map and a decision-use
+calibration checklist. The explanation distinguishes dated country evidence from editable
+programme assumptions, describes the separate grant and loan ledgers, and connects the monthly
+waterfall, delivery constraints, loan cohorts, and results. It states that the tool is a
+deterministic scenario model rather than a forecast, and that arithmetic integrity is not the same
+as programme viability. The interface must not claim that rates create a demand response the
+engine does not model or that any selected scenario guarantees repayment. See
+[ADR-0052](adr/0052-put-the-model-flow-and-calibration-path-on-site.md).
+
 ---
 
 ## 11. KPI definitions
