@@ -1099,7 +1099,7 @@ the rows beyond the bottom of the white background even though horizontal overfl
 **Fix:** give this section a dedicated auto-height card, contain the table in a bounded two-axis
 scroll viewport, and keep the header row visible during vertical scrolling. A layout regression
 pins all three requirements. [ADR-0051](adr/0051-contain-the-monthly-audit-table-vertically.md).
-Resolved in `[implementation commit]`.
+Resolved in `5291762`.
 
 ---
 
