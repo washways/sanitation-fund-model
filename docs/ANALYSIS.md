@@ -1107,7 +1107,7 @@ section retained the generic `chart-card` class and depended on cascade order fo
 **Follow-up fix:** remove the chart class entirely and give `monthly-table-card` its own complete
 background, spacing, sizing, shadow, and overflow contract. The regression now forbids the chart
 class on this section rather than merely checking for a later height override.
-[ADR-0055](adr/0055-decouple-the-monthly-audit-card-from-chart-sizing.md). Resolved in `PENDING`.
+[ADR-0055](adr/0055-decouple-the-monthly-audit-card-from-chart-sizing.md). Resolved in `16adaee`.
 
 ### F-62 — The on-site explanation overstates capabilities and hides the model flow
 
