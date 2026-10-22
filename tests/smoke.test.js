@@ -174,6 +174,30 @@ describe('application smoke', () => {
     assert.ok(Math.min(...r.series.dataMonthlyCashBalance) >= 0, 'the fund must never go cash-negative');
   });
 
+  test('the sustainability scorecard renders canonical metrics under accurate labels (F-63)', () => {
+    const app = makeApp();
+    app.runCalculation(true);
+    const k = app.UI.lastResults.kpis;
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+
+    assert.strictEqual(app.el('sum-preserved').innerText,
+      `${k.financials.grantEquityMultiple.toFixed(2)}x`,
+      'Grant Equity Multiple must render its canonical ratio, not a missing percentage field');
+    assert.strictEqual(app.el('sum-health').innerText,
+      `${(k.value.capitalPreservation * 100).toFixed(1)}%`,
+      'Capital Preservation must be ending net assets divided by all initial capital');
+    assert.strictEqual(app.el('sum-sufficiency').innerText,
+      `${(k.sustainability.fss * 100).toFixed(1)}%`,
+      'FSS must render the canonical full-cost-coverage ratio');
+
+    assert.match(html, />Capital Preservation\s*</);
+    assert.match(html, />Financial Self-Sufficiency \(FSS\)\s*</);
+    assert.doesNotMatch(html, /Revenue \/ \(Ops \+ Defaults \+ Grants\)/,
+      'the OSS tooltip must not describe a denominator the model does not use');
+    assert.strictEqual(typeof app.UI.updateProgrammeSummary, 'undefined',
+      'one canonical renderer must own the scorecard');
+  });
+
   test('computeKPIs is flat and idempotent — calling UI.updateKPIs twice does not corrupt it (F-14, ADR-0028)', () => {
     // Before ADR-0028, updateKPIs destructured kpis.impact and overwrote k.financials /
     // k.sustainability / k.portfolio / k.value / k.impact on every call. The second call

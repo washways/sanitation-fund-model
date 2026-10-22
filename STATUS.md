@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.19.4 — on-site model flow and calibration guide |
-| **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance, responsive results, and model-transparency guide complete; caching/scenario comparison and remaining S6 work remain |
-| **Tests** | ✅ 129 pass, 0 todo, 0 fail (`npm test`, ~4s) |
+| **Release** | 0.19.5 — sustainability scorecard reporting integrity |
+| **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance, responsive results, model transparency, and scorecard integrity complete; caching/scenario comparison and remaining S6 work remain |
+| **Tests** | ✅ 130 pass, 0 todo, 0 fail (`npm test`, ~4s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations and complete a full integrity-clean run; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
-| **Findings register** | ✅ 62 of 62 resolved |
+| **Findings register** | ✅ 63 of 63 resolved |
 | **Open modelling questions** | None — all 14 owner decisions are recorded |
 
 ## What remains unresolved
@@ -156,4 +156,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-22 release 0.19.4 made the model easier to audit without reading the repository. The app now links directly to a five-step model map and decision-use calibration checklist; all 41 numeric controls have complete canonical parameter documentation. Misleading claims about real-time data, rate-driven demand, double-entry accounting, and guaranteed repayment were removed. The suite has 129 passing tests, all 62 findings are closed, and all 21 golden scenarios are unchanged. The next review work is real-browser accessibility and chart interaction, then transparent scenario save/load/compare. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-22 release 0.19.5 fixed the sustainability scorecard. Grant Equity Multiple now shows the canonical `0.18x` Malawi result instead of a false `0.0%`; Capital Preservation shows about 3.5%; and FSS is explicitly distinguished from 165% OSS. Ring-fenced grant cash is no longer described as investor recovery, and the unused competing summary renderer is gone. The suite has 130 passing tests, all 63 findings are closed, and all 21 golden scenarios are unchanged. The next review should address the distinction between population need and borrower uptake, then the limits of the current undiscounted social-value ratio. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

@@ -29,9 +29,21 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.19.4 — 22 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.19.5 — 22 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.19.5 — Sustainability scorecard uses canonical metrics</h2>
+        <ul>
+            <li>Grant Equity Multiple now shows the model’s real ratio in <code>x</code>, rather than a false <code>0.0%</code> produced by a missing field.</li>
+            <li>Capital Preservation now reports ending net assets against all initial capital; it no longer mixes ring-fenced grant cash into a supposed investor-recovery ratio.</li>
+            <li>OSS and FSS are separately named and defined: OSS covers operations, while FSS also includes write-downs and investor interest.</li>
+            <li>The methodology now explains all five sustainability measures side by side.</li>
+            <li>An unused second summary renderer with conflicting formulas was removed, and a browser-path regression now pins the visible values to the canonical KPIs.</li>
+            <li>F-63 is resolved. Engine calculations and all 21 recorded scenarios are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.19.4 — Model flow and calibration are visible on site</h2>
         <ul>
             <li>The model now links directly to a five-step plain-language guide showing how evidence and assumptions flow through capital, monthly cashflow, delivery, loan cohorts, and results.</li>

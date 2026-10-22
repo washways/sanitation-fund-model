@@ -605,12 +605,26 @@ console.log('='.repeat(80));
     'The app links to a five-step flow and calibration checklist without unsupported capability claims.');
 }
 
+// F-63 — sustainability scorecard fields and labels use canonical KPI definitions.
+{
+  const renderer = fs.readFileSync(path.join(ROOT, 'src', 'ui', 'kpis.js'), 'utf8');
+  const canonicalMappings = /sum-preserved[^\n]*grantEquityMultiple/.test(renderer)
+    && /sum-health[^\n]*capitalPreservation/.test(renderer)
+    && /sum-sufficiency[^\n]*sustainability\.fss/.test(renderer);
+  const accurateLabels = /Capital Preservation/.test(HTML_SRC)
+    && /Financial Self-Sufficiency \(FSS\)/.test(HTML_SRC)
+    && !/Revenue \/ \(Ops \+ Defaults \+ Grants\)/.test(HTML_SRC);
+  check('F-63', 'sustainability scorecard renders canonical values and definitions',
+    canonicalMappings && accurateLabels && !/updateProgrammeSummary\s*\(/.test(renderer),
+    'Grant equity, capital preservation, OSS, FSS, and senior repayment remain distinct and traceable.');
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 62 of 62 resolved.');
+console.log('Findings register: 63 of 63 resolved.');
 console.log('Open modelling questions: none. R-7.6/Q14 was resolved by ADR-0044.');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');
