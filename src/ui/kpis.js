@@ -166,7 +166,7 @@ Object.assign(UI, {
 
             // Legacy/Other
             setText('sum-leverage', fmtNum(k.financials.leverage || 0) + 'x');
-            setText('sum-sroi', fmtNum(k.value.sroi || 0) + 'x');
+            setText('sum-sroi', fmtNum(k.value.grossSocialValueMultiple || 0) + 'x');
 
         } catch (e) {
             console.error("ERROR IN UPDATEKPIS:", e);

@@ -43,4 +43,13 @@ describe('transparent impact estimates (F-56, ADR-0049)', () => {
     assert.strictEqual(zeroEffect.kpis.impact.dalys, 0,
       'zero health-effect realisation must produce zero averted DALYs');
   });
+
+  test('gross social value multiple has a canonical field and an identical legacy alias', () => {
+    const result = run({});
+    const expected = result.kpis.value.socialValue / (BASE.investGrant + BASE.investLoan);
+
+    assert.ok(Math.abs(result.kpis.value.grossSocialValueMultiple - expected) < 1e-12);
+    assert.strictEqual(result.kpis.value.sroi, result.kpis.value.grossSocialValueMultiple,
+      'legacy sroi machine key must remain an exact compatibility alias');
+  });
 });

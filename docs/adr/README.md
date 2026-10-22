@@ -60,3 +60,4 @@ For the short version of what each one decided, [CHANGELOG.md](../../CHANGELOG.m
 | [0053](0053-use-canonical-sustainability-scorecard-metrics.md) | Use canonical sustainability scorecard metrics |
 | [0054](0054-distinguish-population-need-from-borrower-demand.md) | Distinguish population need from borrower demand |
 | [0055](0055-decouple-the-monthly-audit-card-from-chart-sizing.md) | Decouple the monthly audit card from chart sizing |
+| [0056](0056-label-the-gross-social-value-multiple-honestly.md) | Label the gross social value multiple honestly |

@@ -6,14 +6,14 @@
 
 | | |
 |---|---|
-| **Release** | 0.19.7 — monthly audit card fully decoupled from chart sizing |
+| **Release** | 0.19.8 — social value ratio relabelled as a gross multiple; robustness review registered |
 | **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance, responsive results, model transparency, scorecard integrity, and need-versus-demand terminology complete; caching/scenario comparison and remaining S6 work remain |
-| **Tests** | ✅ 131 pass, 0 todo, 0 fail (`npm test`, ~4s) |
+| **Tests** | ✅ 134 pass, 0 todo, 0 fail (`npm test`, ~4s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations and complete a full integrity-clean run; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
-| **Findings register** | ✅ 64 of 64 resolved |
-| **Open modelling questions** | None — all 14 owner decisions are recorded |
+| **Findings register** | 65 of 73 resolved — F-66 to F-73 registered 2026-10-22, open |
+| **Open modelling questions** | Q15–Q18 open (solvency basis, repayment window, OSS definition, working-capital floor); Q1–Q14 decided |
 
 ## What remains unresolved
 
@@ -22,7 +22,7 @@
 | Solver caching and scenario save/load/compare | S4 items 2 and 4 remain. | Build transparent JSON scenario comparison next; add caching when the browser exposes repeated analysis runs. |
 | Real-browser chart/advisor click-through | Headless tests cover startup, calculation, export, and wiring, but not visual chart interaction. | Add a browser smoke pass during S6 accessibility/mobile work. |
 | Borrower adoption and eligible market | The observed unserved rural population is a maximum target; the model assumes enough uptake to use delivery capacity and does not forecast willingness, affordability, eligibility, or product choice. | Use programme market research to bound uptake before treating toilets as a forecast; do not infer a national rate from the API. |
-| Social-value ratio methodology | The displayed SROI is an undiscounted gross social-value multiple with no deadweight, attribution, displacement, or benefit discounting. | Review the label and disclosure next; add a full appraisal method only with an explicit standard and sourced assumptions. |
+| Formal SROI method | The displayed Gross Social Value Multiple is honestly labelled (F-65) but still has no deadweight, attribution, displacement or discounting. | Add a full appraisal method only with an explicit standard and sourced programme assumptions. |
 | Robustness review findings F-66 to F-73 (2026-10-22) | The solvency verdict tests pooled cash although the ledgers never transfer (F-66, High); the browser force-binds repayment term to horizon and V2 counts debt not yet due as default (F-67); OSS mixes ledgers and misreports zero-expense runs (F-69); plus four Low items. Details in [docs/ANALYSIS.md §4B](docs/ANALYSIS.md). | Resolve Q15–Q18 in MODEL_SPEC §13 with the model owner, then take F-66 first: it changes a verdict users see. |
 
 ## Malawi reference run
@@ -159,4 +159,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-22 release 0.19.7 completed the Monthly Implementation Data containment fix after the user reported that the table could still extend below its background. The audit section no longer inherits the fixed-height chart component; it owns its complete card box around the bounded two-axis scrolling table. The regression now forbids restoring `chart-card`. The suite has 131 passing tests, all 64 findings are closed, and all 21 golden scenarios are numerically unchanged. The next review is the current undiscounted social-value ratio, followed by evidence-based borrower uptake if programme market research becomes available. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-22 release 0.19.8 relabelled the social value ratio as a Gross Social Value Multiple with an explicit "not a formal SROI" disclosure on every surface (F-65, ADR-0056), with no numeric change. The same day a robustness review registered F-66 to F-73 and open questions Q15–Q18. The owner has since decided Q15 (loan-ledger solvency), Q16 (unbind term from horizon; report past-due principal only) and Q17 (OSS excludes carbon, `null` at zero expenses); those are being implemented next, each with its own ADR and golden re-record. Q18 (the 6-month working-capital floor) stays a documented constant for now. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

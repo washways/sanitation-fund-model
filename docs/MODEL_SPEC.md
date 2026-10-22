@@ -449,13 +449,14 @@ dalyPerPerson                = WHO sanitation-attributable diarrhoeal DALYs lowe
 
 The WHO record must be `WSH_30_SAN`, both sexes and all ages; the World Bank denominator must use `SP.POP.TOTL` and `SH.STA.BASS.ZS` for the WHO year. The lower uncertainty bound is used deliberately. This is a population-level burden proxy, not a programme effect. `dalyImpactRealisation` is therefore a separate editable share, defaulting to **21%** from the Wolf et al. 2022 point estimate for basic sanitation without sewer connection versus unimproved or limited sanitation (RR 0.79; 95% CI 0.61–1.03, moderate certainty). The assumption is applied proportionally to DALYs across all ages and should be replaced with programme evidence when available. Malawi 2019 resolves to `0.0096719` burden DALY per exposed person-year and about 2,139 physical DALYs averted in the default five-year run. If any API component is absent or invalid, the burden input resets to zero and is shown as not estimated; another country's value is never retained. `dalyValue` remains zero by default, so this physical estimate does not change SROI unless the user separately supplies a supported valuation. See [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md).
 
-### R-8.4 Social value and SROI **[AS-BUILT]** (was F-08; Q1 resolved 2026-08-20, Q2 accepted 2026-08-21)
+### R-8.4 Social value and the gross social value multiple **[AS-BUILT]** (was F-08; Q1 resolved 2026-08-20, Q2 accepted 2026-08-21; relabelled 2026-10-22, [ADR-0056](adr/0056-label-the-gross-social-value-multiple-honestly.md), F-65)
 ```
-socialValue = DALYs x dalyValue + hoursSaved x hourValue + carbonTonnes x co2Value
-SROI        = socialValue / capitalInvested
+socialValue              = DALYs x dalyValue + hoursSaved x hourValue + carbonTonnes x co2Value
+grossSocialValueMultiple = socialValue / capitalInvested        // kpis.value.grossSocialValueMultiple
+                                                                 // kpis.value.sroi is an identical legacy alias
 ```
 
-SROI is **social value only**. DALY value is included; ending cash is not. Financial performance is reported alongside as `capitalPreservation = netAssets / capitalInvested`, never folded in. See [ADR-0011](adr/0011-sroi-is-social-value-only.md).
+The multiple is **social value only**. DALY value is included; ending cash is not. It is **not a formal SROI** (R-10.12): no discounting, deadweight, attribution, displacement or drop-off is applied, and none may be invented. Financial performance is reported alongside as `capitalPreservation = netAssets / capitalInvested`, never folded in. See [ADR-0011](adr/0011-sroi-is-social-value-only.md).
 
 Previously the DALY term was computed, displayed prominently, and then silently excluded — so the screen contradicted itself — while ending cash sat in a *social* numerator, letting a fund that hoards capital and builds nothing score well.
 
@@ -623,6 +624,16 @@ demand or SDG 6 gap closure. The methodology states the implicit full-uptake con
 coverage data does not measure willingness to borrow, affordability, eligibility, product choice,
 or monthly adoption. No uptake percentage is inferred without programme evidence. See
 [ADR-0054](adr/0054-distinguish-population-need-from-borrower-demand.md).
+
+### R-10.12 The social value ratio is labelled as a gross multiple, not an SROI **[AS-BUILT]** (F-65)
+
+The public label for `socialValue / capitalInvested` is **Gross Social Value Multiple**. Every
+place it appears (dashboard, export, methodology) states that it is undiscounted and unadjusted
+and is not a formal SROI, and names the missing adjustments: deadweight, attribution,
+displacement, drop-off and discounting. No generic percentage may be invented for any of them.
+`kpis.value.grossSocialValueMultiple` is canonical; `kpis.value.sroi` and the `sroi` sensitivity
+metric remain as identical legacy aliases for existing specification files. See
+[ADR-0056](adr/0056-label-the-gross-social-value-multiple-honestly.md).
 
 ---
 

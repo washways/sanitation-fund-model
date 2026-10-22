@@ -29,9 +29,21 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.19.7 — 22 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.19.8 — 22 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.19.8 — The social value ratio is no longer called an SROI</h2>
+        <ul>
+            <li>The scorecard row formerly labelled “SROI Ratio” is now “Gross Social Value Multiple”.</li>
+            <li>It is the undiscounted sum of monetised DALYs, time saved and carbon divided by initial grant plus loan capital. It applies no deadweight, attribution, displacement or drop-off, so it is not a formal SROI.</li>
+            <li>The tooltip, clipboard report, CSV export and methodology all say so and list the missing adjustments.</li>
+            <li>No generic adjustment percentages were invented; a formal SROI needs programme evidence for each one.</li>
+            <li>A robustness review registered eight further findings (F-66 to F-73) and four open questions; the most important is that the solvency verdict currently tests both ledgers together although grant cash cannot pay operations. These are documented, not yet fixed.</li>
+            <li>F-65 is resolved. Numeric results and all 21 recorded scenarios are unchanged; the Malawi reference remains 2.73x.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.19.7 — Monthly audit card is independent of chart sizing</h2>
         <ul>
             <li>Monthly Implementation Data no longer inherits the fixed-height component used for charts.</li>

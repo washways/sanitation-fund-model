@@ -180,7 +180,9 @@ Object.assign(ModelModule, {
             + (totalCarbon * (inputs.co2Value || 0));
 
         const initialInv = inputs.investGrant + inputs.investLoan;
-        const sroi = initialInv > 0 ? (totalSocialValue / initialInv) : 0;
+        // ADR-0056: this is an undiscounted, unadjusted gross multiple, not formal
+        // SROI. `sroi` remains below only as a backwards-compatible machine alias.
+        const grossSocialValueMultiple = initialInv > 0 ? (totalSocialValue / initialInv) : 0;
         // The financial counterpart, reported alongside rather than folded in.
         const capitalPreservation = initialInv > 0 ? (netAssetsEnd / initialInv) : 0;
 
@@ -308,7 +310,8 @@ Object.assign(ModelModule, {
                 subsidyPerLatrine,
                 economicCostPerLatrine,
                 depletionYear,
-                sroi: sroi
+                grossSocialValueMultiple,
+                sroi: grossSocialValueMultiple // Legacy alias; do not use in new UI/export code.
             }
         };
     },

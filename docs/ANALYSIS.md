@@ -61,6 +61,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | [F-69](#f-69--oss-mixes-ledgers-and-reports-0-when-there-are-no-operating-expenses) | Medium | Model / Reporting | OSS counts ring-fenced carbon revenue as operating income (565x in the carbon scenario), is a cumulative ratio although the spec says “steady state”, and reports 0 and fails V4 when operating expenses are zero | run | S4 |
 | [F-68](#f-68--fractional-micro-enterprises-are-launched-near-the-network-cap) | Low | Model | `space = maxTotalMEs - currentMEs` is fractional after attrition, so the loop launches 0.035 of an enterprise and books a $400 loan for it; 45 such months in the capacity-constrained golden scenario | run | S4 |
 | [F-67](#f-67--the-repayment-term-is-force-bound-to-the-horizon-and-v2-measures-the-wrong-window) | Medium | UI / Model | A second, unguarded two-way listener keeps `fundRepaymentTerm` equal to `duration`, so the browser cannot express a term that differs from the horizon; and V2 reports debt not yet due as a default (5-year horizon, 10-year term: “52.6% default”) | run | S4 |
+| ✅ [F-65](#f-65--the-social-value-ratio-is-labelled-as-a-formal-sroi) | Medium | Reporting | `socialValue / capital` is called an SROI although it is undiscounted and applies no deadweight, attribution, displacement or drop-off | src | S6 |
 | [F-66](#f-66--a-negative-loan-ledger-is-hidden-by-ring-fenced-grant-cash) | **High** | Model / Reporting | V1, `depletionMonth` and `opsRunway` test the pooled cash balance, although the ledgers never transfer; a fund whose loan ledger is overdrawn reports “never insolvent” and an 80-year runway when grant cash is large | run | S4 |
 | ✅ [F-64](#f-64--population-need-is-presented-as-forecast-borrower-demand-and-sdg-6-closure) | **High** | Assumptions / Reporting | API sanitation need is called demand and the reach ratio is called SDG6 gap closure despite no uptake or service-level model | src, source audit | S6 |
 | ✅ [F-63](#f-63--the-sustainability-scorecard-shows-the-wrong-values-and-definitions) | **High** | UI / Reporting | Grant Equity Multiple always shows 0.0%, Loan Recovery mixes ledgers, and the OSS tooltip defines a different ratio from the engine | src, run | S6 |
@@ -1168,6 +1169,23 @@ implicit full-uptake condition prominently and describe toilets as conditional d
 not a forecast. Do not invent a national uptake rate from the pilot’s geographic targeting figure.
 [ADR-0054](adr/0054-distinguish-population-need-from-borrower-demand.md).
 Resolved in `0bf4aa8`.
+
+### F-65 — The social value ratio is labelled as a formal SROI
+
+**Medium — fixed.** The dashboard row, the clipboard report and the methodology called
+`socialValue / (investGrant + investLoan)` an "SROI Ratio". The numerator sums monetised DALYs,
+time saved and carbon over the run with no discounting (ADR-0003 rules discounting out of the
+whole model), and the ratio applies no deadweight, attribution, displacement or drop-off. Social
+Value International's SROI standard and the UK Green Book require all of those. The 2.73 Malawi
+figure is a useful gross multiple, but the label claimed a method that was never applied, and a
+headline label is what funders repeat.
+
+**Fix:** rename the public metric *Gross Social Value Multiple* everywhere it appears, state on
+each surface that it is not a formal SROI and list the omitted adjustments, add
+`grossSocialValueMultiple` as the canonical KPI field and keep `sroi` as an identical legacy
+alias so sensitivity specifications keep working. No generic adjustment percentages were
+invented. [ADR-0056](adr/0056-label-the-gross-social-value-multiple-honestly.md). Numeric
+results and all 21 golden scenarios unchanged.
 
 ---
 

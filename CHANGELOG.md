@@ -11,6 +11,24 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.19.8] — 2026-10-22 — The social value ratio is no longer called an SROI
+
+### Changed
+
+- **"SROI Ratio" is now "Gross Social Value Multiple."** The ratio sums monetised DALYs, time saved and carbon over the run without discounting and applies no deadweight, attribution, displacement or drop-off, so it does not meet the Social Value International or Green Book definition of SROI. The dashboard tooltip, the clipboard report, the CSV export and the methodology now say so and list the missing adjustments. ([ADR-0056](docs/adr/0056-label-the-gross-social-value-multiple-honestly.md), F-65)
+- **`grossSocialValueMultiple` is the canonical KPI field.** The `sroi` field and the `sroi` sensitivity metric remain as identical legacy aliases so existing sensitivity specification files keep working.
+- **No generic adjustment percentages were invented.** A formal SROI remains unavailable until the programme supplies a counterfactual, attribution, displacement, time profile, discount rate and valuation basis.
+
+### Documentation
+
+- A robustness and logic review registered findings F-66 to F-73 in [docs/ANALYSIS.md §4B](docs/ANALYSIS.md) and open questions Q15–Q18 in [docs/MODEL_SPEC.md §13](docs/MODEL_SPEC.md). Three spec rules were corrected to describe the code as built. [docs/PARAMETERS.md](docs/PARAMETERS.md) gained a table of fixed model constants. Hard-coded test and finding counts were removed from AGENTS.md, README.md and TESTING.md.
+
+### Golden movement
+
+None. Labels and documentation only; the Malawi reference remains 2.73x and all 21 recorded scenarios are unchanged.
+
+---
+
 ## [0.19.7] — 2026-10-22 — Monthly audit card is independent of chart sizing
 
 ### Fixed

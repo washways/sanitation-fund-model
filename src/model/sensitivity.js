@@ -14,7 +14,8 @@ Object.assign(ModelModule, {
             minimumCash: Math.min(...s.dataMonthlyCashBalance),
             toilets: k.reach.toilets,
             investorRepaidPct: k.financials.investorRepaidPct,
-            sroi: k.value.sroi,
+            grossSocialValueMultiple: k.value.grossSocialValueMultiple,
+            sroi: k.value.sroi, // Legacy metric key retained for existing specification files.
             viable: viability.ok
         };
     },
@@ -29,7 +30,7 @@ Object.assign(ModelModule, {
     runSensitivity(inputs, specification) {
         const supportedMetrics = [
             'netAssets', 'cashEnd', 'minimumCash', 'toilets',
-            'investorRepaidPct', 'sroi'
+            'investorRepaidPct', 'grossSocialValueMultiple', 'sroi'
         ];
         const metric = specification && specification.metric;
         const parameters = specification && specification.parameters;
