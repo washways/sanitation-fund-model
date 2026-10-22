@@ -619,12 +619,27 @@ console.log('='.repeat(80));
     'Grant equity, capital preservation, OSS, FSS, and senior repayment remain distinct and traceable.');
 }
 
+// F-64 — country sanitation need is not presented as observed borrower demand.
+{
+  const methodology = fs.readFileSync(path.join(ROOT, 'methodology.html'), 'utf8');
+  const honestLabels = /Rural Population Without Basic Sanitation/.test(HTML_SRC)
+    && /Share of Unserved Rural Target Reached/.test(HTML_SRC)
+    && !/Pop\. Needing Toilets/.test(HTML_SRC)
+    && !/SDG6 Gap Closed/.test(HTML_SRC);
+  const disclosed = /not a demand forecast/i.test(methodology)
+    && /willing and able to borrow/i.test(methodology)
+    && /does not model[^.]*uptake/i.test(methodology);
+  check('F-64', 'population need and borrower uptake are distinguished',
+    honestLabels && disclosed,
+    'The target is observed sanitation need; delivery remains conditional on sufficient programme uptake.');
+}
+
 console.log('');
 console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 63 of 63 resolved.');
+console.log('Findings register: 64 of 64 resolved.');
 console.log('Open modelling questions: none. R-7.6/Q14 was resolved by ADR-0044.');
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

@@ -139,7 +139,7 @@ const ModelModule = {
             fundRepaymentTerm: 'Fund Repayment Term',
             investorGracePeriod: 'Investor Grace Period',
             fundCostOfCapital: 'Fund Cost of Capital',
-            popReqToilets: 'Population Needing Toilets',
+            popReqToilets: 'Rural Population Without Basic Sanitation',
             popGrowthRate: 'Annual Population Growth',
             avgHHSize: 'Avg Household Size',
             avgToiletCost: 'Avg Toilet Cost',
@@ -769,7 +769,7 @@ const ModelModule = {
             if (loanCapitalForegone > 0) bindingCauses.push("Loan Capital");
             if (grantCapitalForegone > 0) bindingCauses.push("Grant Capital");
             const constraint = bindingCauses.length === 0
-                ? "Demand"
+                ? "Target Need"
                 : bindingCauses.length === 1
                     ? bindingCauses[0]
                     : `Mixed: ${bindingCauses.join(" + ")}`;

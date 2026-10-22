@@ -3,7 +3,7 @@
 ```bash
 export PATH="/c/Users/jrobertson/Repositories/node-v25.8.1-win-x64:$PATH"   # Node is not on PATH
 npm ci                 # installs ESLint, the one devDependency — needed once
-npm test              # 130 tests, ~4s
+npm test              # 131 tests, ~4s
 npm run test:watch    # re-run on change
 npm run golden:diff   # what would move, without writing
 npm run verify        # reproduce the audit findings
@@ -33,7 +33,7 @@ This codebase's git history contains eight "Fix TypeError" commits from before t
 | `export.test.js` | A broken or untested export path | *Does clicking Export actually produce a file?* |
 | `solver.test.js` | A solver silently converging on a wrong or fake-zero answer where the model isn't monotone | *When there's no feasible answer, does the tool say so instead of guessing?* |
 | `purity.test.js` | A DOM or browser dependency leaking into `src/model/` | *Can the model run as a pure calculation with no stub?* |
-| `constraint-reporting.test.js` | A headline constraint drifting away from the production allocation it explains | *Do monthly losses reconcile demand to production, and does the headline rank those actual losses?* |
+| `constraint-reporting.test.js` | A headline constraint drifting away from the production allocation it explains | *Do monthly losses reconcile unserved target need to production, and does the headline rank those actual losses?* |
 | `sensitivity.test.js` | Undocumented ranges, mutation, non-reproducible ranking, or sensitivity output that disagrees with direct runs | *Does every low/high result come from a valid, explicitly sourced scenario?* |
 | `robustness-audit.test.js` | Country-derived values or interacting edge assumptions that pass validation but break the ledger | *Do browser-equivalent country inputs and a broad deterministic parameter grid survive a full model run?* |
 | `documentation.test.js` | Numeric inputs losing their parameter documentation, or the public explanation drifting back into unsupported claims | *Can a user trace the model and calibrate every input without repository access?* |

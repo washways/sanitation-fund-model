@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 63 of 63 findings resolved as of 2026-10-22. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 64 of 64 findings resolved as of 2026-10-22. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,6 +54,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
+| ✅ [F-64](#f-64--population-need-is-presented-as-forecast-borrower-demand-and-sdg-6-closure) | **High** | Assumptions / Reporting | API sanitation need is called demand and the reach ratio is called SDG6 gap closure despite no uptake or service-level model | src, source audit | S6 |
 | ✅ [F-63](#f-63--the-sustainability-scorecard-shows-the-wrong-values-and-definitions) | **High** | UI / Reporting | Grant Equity Multiple always shows 0.0%, Loan Recovery mixes ledgers, and the OSS tooltip defines a different ratio from the engine | src, run | S6 |
 | ✅ [F-62](#f-62--the-on-site-explanation-overstates-capabilities-and-hides-the-model-flow) | Medium | Docs / UX | The splash claims real-time data, rate-driven demand, double-entry accounting, and guaranteed repayment while the detailed method lacks a concise model map | src | S6 |
 | ✅ [F-61](#f-61--monthly-implementation-data-spills-below-its-card) | Low | UI | The table viewport is taller than its fixed-height card, so rows extend below the background | src, user report | S6 |
@@ -1136,6 +1137,24 @@ their canonical KPI fields; give each its actual formula and unit; and remove th
 renderer. The browser-path regression now compares the visible Malawi values with the model output.
 [ADR-0053](adr/0053-use-canonical-sustainability-scorecard-metrics.md).
 Resolved in `5056033`.
+
+### F-64 — Population need is presented as forecast borrower demand and SDG 6 closure
+
+**High — fixed.** The country API derives rural population without basic sanitation. The UI called
+that “Pop. Needing Toilets,” the model documentation called its household equivalent “demand,” and
+the dashboard called the reach ratio “SDG6 Gap Closed.” None of those layers models willingness to
+borrow, affordability, eligibility, product choice, monthly uptake, construction quality, or the
+full SDG 6.2 service definition. The Malawi source is explicit that the revolving fund serves
+low-income households that are willing and able to borrow and describes barriers for the
+ultra-poor. Treating all observed need as forecast demand makes calculated delivery look like an
+adoption forecast.
+
+**Fix:** label the observation as Rural Population Without Basic Sanitation, the internal cap as
+unserved target need, and the reach ratio as Share of Unserved Rural Target Reached. State the
+implicit full-uptake condition prominently and describe toilets as conditional delivery potential,
+not a forecast. Do not invent a national uptake rate from the pilot’s geographic targeting figure.
+[ADR-0054](adr/0054-distinguish-population-need-from-borrower-demand.md).
+Resolved in `[implementation commit]`.
 
 ---
 

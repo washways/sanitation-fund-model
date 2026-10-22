@@ -6,13 +6,13 @@
 
 | | |
 |---|---|
-| **Release** | 0.19.5 — sustainability scorecard reporting integrity |
-| **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance, responsive results, model transparency, and scorecard integrity complete; caching/scenario comparison and remaining S6 work remain |
-| **Tests** | ✅ 130 pass, 0 todo, 0 fail (`npm test`, ~4s) |
+| **Release** | 0.19.6 — population need distinguished from borrower demand |
+| **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance, responsive results, model transparency, scorecard integrity, and need-versus-demand terminology complete; caching/scenario comparison and remaining S6 work remain |
+| **Tests** | ✅ 131 pass, 0 todo, 0 fail (`npm test`, ~4s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations and complete a full integrity-clean run; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
-| **Findings register** | ✅ 63 of 63 resolved |
+| **Findings register** | ✅ 64 of 64 resolved |
 | **Open modelling questions** | None — all 14 owner decisions are recorded |
 
 ## What remains unresolved
@@ -21,6 +21,8 @@
 |---|---|---|
 | Solver caching and scenario save/load/compare | S4 items 2 and 4 remain. | Build transparent JSON scenario comparison next; add caching when the browser exposes repeated analysis runs. |
 | Real-browser chart/advisor click-through | Headless tests cover startup, calculation, export, and wiring, but not visual chart interaction. | Add a browser smoke pass during S6 accessibility/mobile work. |
+| Borrower adoption and eligible market | The observed unserved rural population is a maximum target; the model assumes enough uptake to use delivery capacity and does not forecast willingness, affordability, eligibility, or product choice. | Use programme market research to bound uptake before treating toilets as a forecast; do not infer a national rate from the API. |
+| Social-value ratio methodology | The displayed SROI is an undiscounted gross social-value multiple with no deadweight, attribution, displacement, or benefit discounting. | Review the label and disclosure next; add a full appraisal method only with an explicit standard and sourced assumptions. |
 
 ## Malawi reference run
 
@@ -156,4 +158,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-22 release 0.19.5 fixed the sustainability scorecard. Grant Equity Multiple now shows the canonical `0.18x` Malawi result instead of a false `0.0%`; Capital Preservation shows about 3.5%; and FSS is explicitly distinguished from 165% OSS. Ring-fenced grant cash is no longer described as investor recovery, and the unused competing summary renderer is gone. The suite has 130 passing tests, all 63 findings are closed, and all 21 golden scenarios are unchanged. The next review should address the distinction between population need and borrower uptake, then the limits of the current undiscounted social-value ratio. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-22 release 0.19.6 stopped presenting observed population need as forecast borrower demand. The API field is now Rural Population Without Basic Sanitation, the reach card reports Share of Unserved Rural Target Reached, and the methodology states that calculated toilets are conditional delivery potential under sufficient uptake—not an adoption forecast or proof of complete SDG 6 closure. No unsupported national uptake rate was invented. The suite has 131 passing tests, all 64 findings are closed, and all 21 golden scenarios are numerically unchanged. The next review is the current undiscounted social-value ratio, followed by evidence-based borrower uptake if programme market research becomes available. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

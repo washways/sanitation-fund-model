@@ -42,3 +42,14 @@ test('the published app links to a concise model map and calibration checklist',
   assert.doesNotMatch(INDEX, /guarantee the Investor gets their money back/i,
     'the interface must not imply that a chosen scenario guarantees repayment');
 });
+
+test('country sanitation need is not presented as forecast borrower demand (F-64)', () => {
+  assert.match(INDEX, /Need and Coverage Parameters/);
+  assert.match(INDEX, /Rural Population Without Basic Sanitation/);
+  assert.match(INDEX, /Share of Unserved Rural Target Reached/);
+  assert.doesNotMatch(INDEX, /Pop\. Needing Toilets/);
+  assert.doesNotMatch(INDEX, /SDG6 Gap Closed/);
+  assert.match(METHODOLOGY, /not a demand forecast/i);
+  assert.match(METHODOLOGY, /willing and able to borrow/i);
+  assert.match(METHODOLOGY, /does not model[^.]*uptake/i);
+});

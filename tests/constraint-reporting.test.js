@@ -12,7 +12,7 @@ const BASE = require('../tools/baseline-inputs');
 const run = overrides => ModelModule.calculate({ ...BASE, ...overrides });
 
 describe('actual production constraints (R-7.6, ADR-0044)', () => {
-  test('monthly additive losses reconcile demand to actual production', () => {
+  test('monthly additive losses reconcile target need to actual production', () => {
     const { series: s } = run({});
     assert.strictEqual(s.dataConstraintForegone.length, s.dataMonthlyBacklog.length);
 
@@ -20,13 +20,13 @@ describe('actual production constraints (R-7.6, ADR-0044)', () => {
     for (let month = 0; month < s.dataMonthlyBacklog.length; month++) {
       const cumulativeToilets = s.dataToiletsMonthlyLoan[month] + s.dataToiletsMonthlyGrant[month];
       const production = cumulativeToilets - previousToilets;
-      const demandBeforeProduction = Math.floor(s.dataMonthlyBacklog[month] + production);
+      const targetNeedBeforeProduction = Math.floor(s.dataMonthlyBacklog[month] + production);
       const loss = s.dataConstraintForegone[month];
 
       assert.strictEqual(
         loss.capacity + loss.loanCapital,
-        demandBeforeProduction - production,
-        `month ${month + 1}: constraint losses must reconcile demand to production`
+        targetNeedBeforeProduction - production,
+        `month ${month + 1}: constraint losses must reconcile target need to production`
       );
       assert.ok(loss.grantCapital >= 0 && loss.grantCapital <= loss.loanCapital,
         `month ${month + 1}: grant recovery is an overlapping subset of capital loss`);
@@ -49,13 +49,15 @@ describe('actual production constraints (R-7.6, ADR-0044)', () => {
       'months constrained by both capacity and capital must be reported as mixed');
   });
 
-  test('a satisfied demand target is reported as success, with no invented bottleneck', () => {
+  test('a satisfied unserved target is reported as success, with no invented bottleneck', () => {
     // Use a deliberately established opening network so this isolates the
     // demand-satisfied reporting path rather than the gradual-rollout assumption.
     const result = run({ popReqToilets: 5000, initialMeNetworkShare: 1 });
-    assert.strictEqual(result.kpis.reach.dominantConstraint, 'Demand Met (Success)');
-    assert.strictEqual(result.kpis.reach.constraintAnalysis.primary, 'demand');
+    assert.strictEqual(result.kpis.reach.dominantConstraint, 'Unserved Target Met');
+    assert.strictEqual(result.kpis.reach.constraintAnalysis.primary, 'targetNeed');
     assert.deepStrictEqual(Array.from(result.kpis.reach.constraintAnalysis.secondary), []);
+    assert.ok(result.series.dataConstraintBinding.every(label => label === 'Target Need'),
+      'monthly reporting must not present population need as observed demand');
     assert.deepStrictEqual({ ...result.kpis.reach.constraintAnalysis.foregone }, {
       capacity: 0,
       loanCapital: 0,

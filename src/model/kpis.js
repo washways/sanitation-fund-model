@@ -207,8 +207,8 @@ Object.assign(ModelModule, {
             .filter(([, foregone]) => foregone > 0)
             .sort((a, b) => b[1] - a[1]);
 
-        let dominantConstraint = "Demand Met (Success)";
-        let primaryConstraint = "demand";
+        let dominantConstraint = "Unserved Target Met";
+        let primaryConstraint = "targetNeed";
         let secondaryConstraints = [];
         if (rankedConstraints.length > 0) {
             const greatestLoss = rankedConstraints[0][1];

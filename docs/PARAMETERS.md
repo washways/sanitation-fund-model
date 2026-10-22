@@ -23,12 +23,12 @@ Every numeric input must be finite before the simulation starts. Blank or malfor
 | `investorGracePeriod` | Investor Grace Period | 6 | months / months | programme assumption | Defers principal only; interest accrues from month 1. |
 | `fundCostOfCapital` | Fund Cost of Capital | 2 | percent / decimal | programme assumption | Illustrative concessional term. The dated commercial lending rate is displayed as context and never overwrites it. |
 
-## Market and demand
+## Population need and coverage
 
 | id | Label | Default | Entered / model unit | Source | Meaning |
 |---|---|---:|---|---|---|
-| `popReqToilets` | Pop. Needing Toilets | 9,244,139 | people / people | observed: `SP.RUR.TOTL × (1 − SH.STA.BASS.RU.ZS/100)` | Malawi uses 18,307,197 rural people (2025) and 49.5054% basic rural sanitation (2024). Divided by household size to form the toilet backlog. |
-| `popGrowthRate` | Annual Pop Growth | 2.56 | percent / decimal | observed: `SP.POP.GROW` | Compounds the carried backlog monthly before current production is subtracted. |
+| `popReqToilets` | Rural Population Without Basic Sanitation | 9,244,139 | people / people | observed: `SP.RUR.TOTL × (1 − SH.STA.BASS.RU.ZS/100)` | Malawi uses 18,307,197 rural people (2025) and 49.5054% basic rural sanitation (2024). Divided by household size to form the maximum unserved target. This is need, not observed willingness, affordability, eligibility, or loan uptake. |
+| `popGrowthRate` | Annual Pop Growth | 2.56 | percent / decimal | observed: `SP.POP.GROW` | Compounds the carried unserved target monthly before current production is subtracted. |
 | `avgHHSize` | Avg Household Size | 4.4 | people / people | Malawi reference: [NSO IHS5 2019/20](https://microdata.worldbank.org/catalog/3818) | One toilet serves one household. Not auto-filled for other countries. |
 | `avgToiletCost` | Avg Toilet Cost | 100 | USD / USD | Malawi reference: [UNICEF Malawi sanitation revolving funds](https://www.unicef.org/malawi/media/3886/file/Sanitation%2520Revolving%2520Funds%2520for%2520Rural%2520and%2520Peri-Urban%2520Communities%2520in%2520Malawi.pdf) | Rounded 2024-USD planning value; the cited 2020 rural VIP retail price was $83.80. Replace with a current local bill of quantities. |
 | `avgAnnualIncome` | Avg Annual Income | 600 | USD/year / USD/year | observed: `NY.GNP.PCAP.CD`, falling back to `NY.GDP.PCAP.CD` | Used only to value saved time; it is not household disposable income. |

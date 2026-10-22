@@ -24,7 +24,7 @@ const TOL = 1.0; // dollars — see R-2.6
 const sum = a => a.reduce((x, y) => x + y, 0);
 const run = over => ModelModule.calculate({ ...BASE, ...over });
 
-test('INV-19: demand grows before current production is subtracted (R-7.1)', () => {
+test('INV-19: target need grows before current production is subtracted (R-7.1)', () => {
   const inputs = { ...BASE, popGrowthRate: 0.12 };
   const result = ModelModule.calculate(inputs);
   const monthlyGrowth = ModelModule.getMonthlyRate(inputs.popGrowthRate);
