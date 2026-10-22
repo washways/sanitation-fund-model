@@ -1,7 +1,7 @@
 # Model Specification
 
 **Status:** Normative. This document, not the code (`src/model/`), is the source of truth for the financial mathematics.
-**Version:** 1.1 (2026-10-20) — includes the post-S5 assumptions and country-data audit.
+**Version:** 1.2 (2026-10-22) — adds the open questions Q15–Q18 from the robustness review ([ANALYSIS.md §4B](ANALYSIS.md)) and corrects three rules whose wording no longer matched the code.
 
 ---
 
@@ -132,7 +132,7 @@ This is a *fractional continuous write-down*, not a discrete "x% of loans fail".
 **Label the UI field accordingly** — "Annual portfolio write-down rate", not "Default rate". `tests/writedown.test.js` (`T-DEF-1`) pins realised loss to disbursed principal at several terms so the crossover stays visible instead of silently drifting.
 
 ### R-3.5 Defaults are not cash **[AS-BUILT]**
-Write-offs reduce cohort balances and are reported in `dataMonthlyDefaults*`, but they are **never** a cash outflow. They must not appear in `netFlow`. (The variable lives in the `outflows` object for reporting convenience only — this naming is misleading and should be renamed to `writeOffs` in Stage 3.)
+Write-offs reduce cohort balances and are reported in `dataMonthlyDefaults*`, but they are **never** a cash outflow. They must not appear in `netFlow`. The variable still lives in the `outflows` object under the name `defaultsHh` / `defaultsMe` for reporting convenience only; the rename to `writeOffs` planned for Stage 3 was never done and is tracked under F-71. Read the name as "write-down", not "cash out".
 
 ---
 
@@ -211,7 +211,9 @@ The two never transfer to each other. `dataMonthlyCashBalance[i]` is their **sum
 
 ### R-5.3 Operating costs **[AS-BUILT]**
 Fixed: `(annualFixedOpsCost / 12) * inflationFactor[m]`, paid from `loanCash`.
-During winding-down or insolvency (`loanCash < 0`) this drops to **30%** — the "collections floor", representing a skeleton team that still recovers loans.
+While the loan ledger is overdrawn (`loanCash < 0` after debt service) this drops to **30%** — the "collections floor", representing a skeleton team that still recovers loans. After wind-up (R-9.2) it is zero.
+
+The code also tests an `isWindingDown` flag (`m > activeMonths`) for the same cut, but `activeMonths` always equals the full horizon, so that branch is unreachable: the floor is triggered only by an overdrawn loan ledger. Treat "winding-down" in older text as meaning that.
 
 Variable ("fees"): `disbursedValue * variableRate`, where
 
@@ -276,6 +278,8 @@ newMEs = min(floor(expansionBudget / meCapitalRequirement),
              ceil(currentMEs * meMaxMonthlyGrowthRate),
              maxTotalMEs - currentMEs)
 ```
+
+`maxTotalMEs - currentMEs` is **not floored** before the minimum is taken, and `currentMEs` is continuous after attrition (R-6.3), so once a network reaches its cap the loop can launch a fraction of an enterprise and book a proportionally small loan for it. That contradicts R-2.5 and the count column in R-6.5; it is registered as F-68 and must not be relied on. The baseline never reaches its cap and is unaffected.
 
 Both shares are user inputs, both defaulting to 10% — the values that were previously hardcoded, so no scenario's output moved when *that* landed. `meMaxMonthlyGrowthRate` is the dominant driver of the growth curve (10%/month compounds to about 3.1x/year); it was previously invisible to the user. The divisor was `meSetupCost` until 2026-08-21 — the same under-pricing as R-6.1, fixed in the same change.
 
@@ -548,10 +552,10 @@ A run is viable only if **all** hold:
 
 | | Criterion |
 |---|---|
-| V1 | `min(cashBalance) >= 0` — never insolvent |
-| V2 | `totalRepaidPrincipal >= investLoan - $1,000` — senior debt repaid in full |
+| V1 | `min(cashBalance) >= 0` — never insolvent. **`cashBalance` is the pooled sum of both ledgers** (R-5.2), so a negative loan ledger masked by grant cash passes this test today. Registered as F-66; see Q15. |
+| V2 | `totalRepaidPrincipal >= investLoan - $1,000` — senior debt repaid in full **by the end of the simulated horizon**, not by the end of the repayment term. With a term longer than the horizon this reports principal that is not yet due as a default. Registered as F-67; see Q16. |
 | V3 | `capitalisedInterest < $1,000` — no investor interest had to be rolled up when due; the warning also reports the amount still outstanding |
-| V4 | `OSS >= 1.0` at steady state — operations cover themselves |
+| V4 | `OSS >= 1.0` — operations cover themselves. OSS is the **whole-horizon cumulative** ratio defined in R-11.1, not a steady-state or trailing-window figure, and its numerator includes carbon revenue that accrues to the grant ledger. When operating expenses are zero the ratio is reported as 0 and V4 fails. Registered as F-69; see Q17. |
 
 ### R-10.3 Reporting rules **[AS-BUILT]**
 1. Both verdicts render **on screen**. The console is not a reporting channel.
@@ -635,7 +639,7 @@ All are computed in `ModelModule.computeKPIs`, which is **pure**: no DOM access 
 | `toilets` | `dataToiletsMonthlyLoan[last] + dataToiletsMonthlyGrant[last]` | AS-BUILT |
 | `people` | `toilets * avgHHSize` (1 toilet = 1 household) | AS-BUILT |
 | `jobs` | `floor(activeMEsAtHorizon) * jobsPerMe`; a point-in-time jobs-supported estimate, not job-years | AS-BUILT — [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md) |
-| `OSS` | operating revenue / operating expenses, where revenue = loan interest + carbon and expenses = fixed + variable ops. **Excludes** write-offs and finance cost. | AS-BUILT |
+| `OSS` | operating revenue / operating expenses over the whole horizon, where revenue = loan interest + carbon and expenses = fixed + variable ops. **Excludes** write-offs and finance cost. Returns `0`, not `null`, when expenses are zero. Carbon is grant-ledger income (R-8.1) although operations are paid from the loan ledger — see F-69 / Q17. | AS-BUILT |
 | `FSS` | operating revenue / (operating expenses + write-offs + investor interest) | AS-BUILT — investor interest is now real, given a non-zero cost of capital (F-01) |
 | `netAssets` | `cashEnd + portfolioOutstanding - investorLiabilityEnd`, where the liability is the one the loop tracked | AS-BUILT — includes capitalised arrears since 2026-08-20 (F-06) |
 | `grantEquityMultiple` | `netAssets / investGrant` | AS-BUILT |
@@ -644,8 +648,8 @@ All are computed in `ModelModule.computeKPIs`, which is **pure**: no DOM access 
 | `costPerLatrine` | `(loansDisbursed + grants + ops + writeOffs + investorInterest) / toilets` | AS-BUILT — note this counts *disbursed* loan principal, most of which returns |
 | `economicCostPerLatrine` | `(ops + writeOffs + grants + investorInterest) / toilets` — excludes recovered principal | AS-BUILT — this is the more defensible of the two |
 | `effectiveCostPerLatrine` | `investGrant / toilets` — subsidy intensity of the whole programme | AS-BUILT |
-| `depletionMonth` | first month with negative total cash, or `null` | AS-BUILT — numeric; `isSustainable` carries the boolean. `depletionYear` is retained as a display string only |
-| `opsRunway` | `cashEnd / annualFixedOpsCost`, or `null` | AS-BUILT — the `99` sentinel is gone |
+| `depletionMonth` | first month with negative **pooled** cash (both ledgers), or `null` | AS-BUILT — numeric; `isSustainable` carries the boolean. `depletionYear` is retained as a display string only. Pooled, so subject to F-66 / Q15 |
+| `opsRunway` | **pooled** `cashEnd / annualFixedOpsCost`, or `null` | AS-BUILT — the `99` sentinel is gone. Includes ring-fenced grant cash that cannot pay operations; the UI labels values above 20 years "Sustainable". Subject to F-66 / Q15 |
 | `dominantConstraint` | user-facing primary and secondary production constraints; see R-7.6 | AS-BUILT |
 | `constraintAnalysis` | machine-readable primary, ranked secondary causes, and foregone-output totals; see R-7.6 | AS-BUILT |
 
@@ -705,9 +709,9 @@ These must hold for **every** run. They are the contract that makes the model au
 
 ## 13. Modelling decisions
 
-No modelling questions remain open. New questions must be recorded here and marked
-`[OPEN]`; they must not be resolved in code without the model owner's decision and an
-ADR first.
+Q1–Q14 are decided. **Q15–Q18 are `[OPEN]`**, raised by the 2026-10-22 robustness review
+([ANALYSIS.md §4B](ANALYSIS.md)); they must not be resolved in code without the model owner's
+decision and an ADR first. New questions are recorded here the same way.
 
 | # | Question | Decision |
 |---|---|---|
@@ -725,6 +729,10 @@ ADR first.
 | Q12 | What's a reasonable default cost of capital? | 2%, concessional. [ADR-0013](adr/0013-viable-default-scenario.md) |
 | Q13 | Should service life gate DALYs and time-saved too, not just carbon? | Yes. [ADR-0025](adr/0025-service-life-gates-all-impact.md) |
 | Q14 | Should constraint reporting derive from actual production limits and retain simultaneous causes? | Yes — partition actual foregone production into capacity and loan-capital loss, expose grant-capital recovery separately, and report secondary causes. [ADR-0044](adr/0044-report-actual-production-constraints.md) |
+| Q15 | **[OPEN]** Should the solvency verdict (V1), `depletionMonth` and `opsRunway` test the loan ledger alone rather than the pooled balance, given that the ledgers never transfer (R-5.2)? | Not decided. Reviewer's recommendation: yes — the in-loop gate already uses the loan ledger, and a pooled test lets grant cash hide an overdrawn loan ledger (F-66). Expect `depletionYear` / `monthsInsolvent` to move in grant-heavy golden scenarios only. |
+| Q16 | **[OPEN]** Should a repayment term longer than the horizon be (a) rejected by validation, or (b) reported by V2 as "not yet due" rather than as a default? And should the UI stop force-binding term to horizon? | Not decided. Reviewer's recommendation: remove the unguarded two-way sync in `src/app.js` and take (b), reporting past-due scheduled principal separately from principal not yet due (F-67). |
+| Q17 | **[OPEN]** Should OSS exclude carbon revenue (grant ledger), return `null` when operating expenses are zero, and be measured over a trailing window rather than the whole horizon? | Not decided. Reviewer's recommendation: exclude carbon or report a loan-ledger OSS beside the current one; `null` and skip V4 at zero expenses; keep whole-horizon unless the owner wants a steady-state test (F-69). |
+| Q18 | **[OPEN]** Is the 6-month working-capital floor in `meCapitalRequirement` (`max(6, termHh)`) a sourced assumption, and should it be an input? | Not decided. It has no citation and it multiplies every enterprise loan; see [PARAMETERS.md](PARAMETERS.md#fixed-model-constants) and F-70. |
 
 ---
 

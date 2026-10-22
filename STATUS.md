@@ -23,6 +23,7 @@
 | Real-browser chart/advisor click-through | Headless tests cover startup, calculation, export, and wiring, but not visual chart interaction. | Add a browser smoke pass during S6 accessibility/mobile work. |
 | Borrower adoption and eligible market | The observed unserved rural population is a maximum target; the model assumes enough uptake to use delivery capacity and does not forecast willingness, affordability, eligibility, or product choice. | Use programme market research to bound uptake before treating toilets as a forecast; do not infer a national rate from the API. |
 | Social-value ratio methodology | The displayed SROI is an undiscounted gross social-value multiple with no deadweight, attribution, displacement, or benefit discounting. | Review the label and disclosure next; add a full appraisal method only with an explicit standard and sourced assumptions. |
+| Robustness review findings F-66 to F-73 (2026-10-22) | The solvency verdict tests pooled cash although the ledgers never transfer (F-66, High); the browser force-binds repayment term to horizon and V2 counts debt not yet due as default (F-67); OSS mixes ledgers and misreports zero-expense runs (F-69); plus four Low items. Details in [docs/ANALYSIS.md §4B](docs/ANALYSIS.md). | Resolve Q15–Q18 in MODEL_SPEC §13 with the model owner, then take F-66 first: it changes a verdict users see. |
 
 ## Malawi reference run
 
