@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 60 of 60 findings resolved as of 2026-10-21. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 61 of 61 findings resolved as of 2026-10-22. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,6 +54,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
+| ✅ [F-61](#f-61--monthly-implementation-data-spills-below-its-card) | Low | UI | The table viewport is taller than its fixed-height card, so rows extend below the background | src, user report | S6 |
 | ✅ [F-60](#f-60--country-audit-does-not-run-the-model-with-derived-api-inputs) | Low | Tests / Data | The live audit range-checks raw observations but never calculates the resulting country scenarios | src, API audit | S6 |
 | ✅ [F-59](#f-59--api-context-is-disconnected-from-the-financial-assumptions-it-informs) | Medium | UX / Data | Dated lending and CPI context does not explain the related manual programme assumptions | src | S6 |
 | ✅ [F-58](#f-58--carbon-zero-is-presented-as-a-measured-result) | Medium | Impact | Zero carbon is presented as measured mitigation although no technology factor exists | src | S3 |
@@ -1088,6 +1089,17 @@ the full model for every complete live country observation set, and fail the aud
 integrity problem. Add CI regressions for the derivation, incomplete evidence, and 384 deterministic
 valid parameter combinations. The 2026-10-21 live audit completed integrity-clean runs for all 44
 selector countries. Resolved in `627c090`.
+
+### F-61 — Monthly Implementation Data spills below its card
+
+**Low — fixed.** The Monthly Implementation Data section inherited the generic `.chart-card`
+height of 400px, while its inner table viewport could reach 500px. A five-year run therefore drew
+the rows beyond the bottom of the white background even though horizontal overflow was contained.
+
+**Fix:** give this section a dedicated auto-height card, contain the table in a bounded two-axis
+scroll viewport, and keep the header row visible during vertical scrolling. A layout regression
+pins all three requirements. [ADR-0051](adr/0051-contain-the-monthly-audit-table-vertically.md).
+Resolved in `[implementation commit]`.
 
 ---
 
