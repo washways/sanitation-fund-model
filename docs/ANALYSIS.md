@@ -1135,7 +1135,7 @@ more competing mappings.
 their canonical KPI fields; give each its actual formula and unit; and remove the unused parallel
 renderer. The browser-path regression now compares the visible Malawi values with the model output.
 [ADR-0053](adr/0053-use-canonical-sustainability-scorecard-metrics.md).
-Resolved in `[implementation commit]`.
+Resolved in `5056033`.
 
 ---
 
