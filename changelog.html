@@ -29,9 +29,21 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.19.5 — 22 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.19.6 — 22 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.19.6 — Population need is no longer presented as forecast demand</h2>
+        <ul>
+            <li>The blue country field is now labelled Rural Population Without Basic Sanitation: an observed measure of need, not forecast borrowers.</li>
+            <li>The reach card now says Share of Unserved Rural Target Reached rather than claiming that the result closes the SDG 6 gap.</li>
+            <li>The methodology states that willingness to borrow, affordability, eligibility, product preference, and monthly uptake are not modelled.</li>
+            <li>Toilet output is therefore conditional delivery potential under sufficient uptake, not an adoption forecast.</li>
+            <li>No national uptake percentage was invented from the Malawi pilot’s unrelated geographic target.</li>
+            <li>F-64 is resolved. All numeric results and all 21 recorded scenarios are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.19.5 — Sustainability scorecard uses canonical metrics</h2>
         <ul>
             <li>Grant Equity Multiple now shows the model’s real ratio in <code>x</code>, rather than a false <code>0.0%</code> produced by a missing field.</li>

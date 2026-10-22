@@ -71,13 +71,13 @@ Single nominal currency, labelled USD in the UI. All values are **nominal** (inf
 The `inflationRate` input is therefore **forward cost escalation in the model currency**, not automatically local CPI. A local-currency CPI observation cannot consistently escalate USD cashflows without an exchange-rate path. CPI is shown as dated context beside the amber programme assumption but never written into it; see [ADR-0034](adr/0034-observations-only-country-data.md) and [ADR-0050](adr/0050-show-api-benchmarks-without-inventing-programme-terms.md).
 
 ### R-2.5 Fractional units **[AS-BUILT]**
-Toilets are integers (`Math.floor` at the point of production, R-7.5). Micro-enterprises are integers. Money, loan balances and demand backlog are continuous.
+Toilets are integers (`Math.floor` at the point of production, R-7.5). Micro-enterprises are integers. Money, loan balances and the unserved-target backlog are continuous.
 
 ### R-2.6 Rounding tolerance **[AS-BUILT]**
 Invariant checks tolerate $1.00 of floating-point drift per month. Never compare money with `===`.
 
 ### R-2.7 Country observations **[AS-BUILT]**
-The country loader requests the World Bank API's latest non-empty observation and preserves its year. It may populate observed or transparently derived model inputs: rural population without basic sanitation, population growth, GNI per capita (falling back to GDP per capita), and the conservative sanitation-attributable DALY factor specified in R-8.3. CPI, commercial lending, poverty, Gini, and sanitation coverage are dated context. They do not set financing terms, subsidy policy, write-downs, costs, or capacity. Commercial lending is repeated beside both borrower-rate assumptions and CPI beside model-currency escalation; fixed operating cost explains that no macro API can infer the programme budget. These contextual messages never alter a value.
+The country loader requests the World Bank API's latest non-empty observation and preserves its year. It may populate observed or transparently derived model inputs: rural population without basic sanitation, population growth, GNI per capita (falling back to GDP per capita), and the conservative sanitation-attributable DALY factor specified in R-8.3. The population field measures need, not forecast willingness, affordability, eligibility, or loan uptake. CPI, commercial lending, poverty, Gini, and sanitation coverage are dated context. They do not set financing terms, subsidy policy, write-downs, costs, or capacity. Commercial lending is repeated beside both borrower-rate assumptions and CPI beside model-currency escalation; fixed operating cost explains that no macro API can infer the programme budget. These contextual messages never alter a value.
 
 If any essential observation for the target population, growth, or income is unavailable, the related field is cleared and automatic calculation pauses. A value from the previous country must never survive as if it belonged to the new one. See [ADR-0034](adr/0034-observations-only-country-data.md).
 
@@ -311,14 +311,14 @@ The monthly implementation table presents these as separate `New MEs` (count) an
 
 ## 7. Toilet production
 
-### R-7.1 Demand **[AS-BUILT]** (was F-09, fixed 2026-08-20)
-The backlog grows with population, net of production:
+### R-7.1 Unserved target need **[AS-BUILT]** (was F-09, fixed 2026-08-20; clarified by F-64)
+The target backlog grows with population, net of production:
 
 ```
 backlog[m] = backlog[m-1] * (1 + popGrowthRate)^(1/12) - production[m]
 ```
 
-`popGrowthRate` used to be collected, auto-filled from the World Bank, and used nowhere — runs at 0% and 10% growth produced byte-identical output (F-09). The recurrence was also implemented in the reverse order until F-43: it subtracted production and then grew the remainder, understating demand by `production × monthlyGrowth`. `dataMonthlyBacklog` is now an audit series and INV-19 pins the specified order. See [ADR-0010](adr/0010-wire-up-collected-inputs.md) and [ADR-0035](adr/0035-zero-writedowns-and-demand-order.md).
+`popReqToilets` is rural population without basic sanitation divided by household size. It is a maximum unserved target, not forecast borrower demand: the model does not estimate willingness to borrow, affordability, eligibility, product preference, or monthly uptake. Output is conditional on sufficient uptake to use the available delivery capacity. `popGrowthRate` used to be collected, auto-filled from the World Bank, and used nowhere — runs at 0% and 10% growth produced byte-identical output (F-09). The recurrence was also implemented in the reverse order until F-43: it subtracted production and then grew the remainder, understating target need by `production × monthlyGrowth`. `dataMonthlyBacklog` is now an audit series and INV-19 pins the specified order. See [ADR-0010](adr/0010-wire-up-collected-inputs.md), [ADR-0035](adr/0035-zero-writedowns-and-demand-order.md), and [ADR-0054](adr/0054-distinguish-population-need-from-borrower-demand.md).
 
 ### R-7.2 Unit cost **[AS-BUILT]**
 
@@ -333,8 +333,8 @@ grossUnitCost[m]   = unitCost[m] * (1 + variableRate)
 ### R-7.3 Constraint resolution **[AS-BUILT]**
 
 ```
-capacity  = currentMEs * toiletsPerMeMonth      // supply
-demand    = backlogToilets                      // market
+capacity   = currentMEs * toiletsPerMeMonth     // supply
+targetNeed = backlogToilets                     // maximum unserved target, not observed uptake
 maxUnits  = floor(lendable / grossUnitCost)     // capital (loans only)
 maxGrants = floor(grantCash / grossUnitCost)    // capital (grants only)
 ```
@@ -343,13 +343,13 @@ maxGrants = floor(grantCash / grossUnitCost)    // capital (grants only)
 Grants are allocated **first**, then loans fill the remainder:
 
 ```
-production      = min(capacity, demand)
+production      = min(capacity, targetNeed)
 targetGrants    = floor(production * grantSupportPct)
 grantCount      = min(targetGrants, maxGrants)
 loanCount       = min(production - grantCount, maxUnits)
 ```
 
-> **Consequence to be aware of:** because `production` is set from capacity and demand *before* capital is checked, and grants take priority, a grant-rich / loan-poor fund will build its grant quota in full and then build few loan units. Constraint reporting follows this same sequence and separately exposes capacity, loan-capital and grant-capital pressure (R-7.6).
+> **Consequence to be aware of:** because `production` is set from capacity and target need *before* capital is checked, and grants take priority, a grant-rich / loan-poor fund will build its grant quota in full and then build few loan units. Constraint reporting follows this same sequence and separately exposes capacity, loan-capital and grant-capital pressure (R-7.6).
 
 > **`grantSupportPct` is a pacing control, not a volume control (F-30).** Total grant-funded output is capped by the grant ledger, so `maxGrants` binds long before the target percentage does. Measured: sweeping 5% to 90% moves grant-funded toilets from 8,894 to 9,214 (a 3.6% change) while moving the month the grant fund is exhausted from 28 to 4. Any UI copy, advisor rule or solver strategy that treats this parameter as a subsidy-depth dial is wrong. If a genuine depth-of-subsidy control is required, it must be a per-unit subsidy that draws proportionally from both ledgers — a spec change, not a relabel.
 
@@ -362,26 +362,26 @@ Constraint reporting is derived after the final grant and loan counts are known,
 the same quantities as R-7.4. For whole-toilet output in month `m`:
 
 ```
-planned                = min(floor(demand), floor(capacity))
-capacityForegone       = floor(demand) - planned
+planned                = min(floor(targetNeed), floor(capacity))
+capacityForegone       = floor(targetNeed) - planned
 loanCapitalForegone    = planned - actualProduction
 grantCapitalForegone   = output with the target grant allocation fully funded
                           (loan capacity unchanged) - actualProduction
 ```
 
-`capacityForegone + loanCapitalForegone` exactly reconciles whole-toilet demand to
+`capacityForegone + loanCapitalForegone` exactly reconciles whole-toilet target need to
 actual production. `grantCapitalForegone` is an overlapping diagnostic, not an
 additive third component: loans backfill a missed grant target, so loan affordability
 is the direct final capital limit while grant affordability can still be a material
 contributor.
 
-`dataConstraintBinding[m]` reports `"Demand"` when nothing was foregone, a single
+`dataConstraintBinding[m]` reports `"Target Need"` when nothing was foregone, a single
 cause when only one applied, and `"Mixed: ..."` when capacity and capital suppressed
 output together. `dataConstraintForegone[m]` retains the three quantities above for
 audit and KPI aggregation.
 
 The headline `dominantConstraint` ranks causes by summed foregone monthly output,
-reports all other positive causes as secondary, and reports demand met only when no
+reports all other positive causes as secondary, and reports `Unserved Target Met` only when no
 output was foregone. Because the same backlog can persist, the aggregate ranks monthly
 production opportunities; it is not a count of unique unserved households. See
 [ADR-0044](adr/0044-report-actual-production-constraints.md).
@@ -608,6 +608,15 @@ Senior repayment is reported separately as principal and percentage repaid. No r
 may mix ring-fenced grant cash with senior principal. Public labels and help text state the exact
 definitions in R-11.1. One renderer owns these mappings. See
 [ADR-0053](adr/0053-use-canonical-sustainability-scorecard-metrics.md).
+
+### R-10.11 Need is not forecast demand **[AS-BUILT]** (F-64)
+
+The public application labels `popReqToilets` as rural population without basic sanitation and the
+reach ratio as share of the unserved rural target reached. It does not call either value forecast
+demand or SDG 6 gap closure. The methodology states the implicit full-uptake condition: World Bank
+coverage data does not measure willingness to borrow, affordability, eligibility, product choice,
+or monthly adoption. No uptake percentage is inferred without programme evidence. See
+[ADR-0054](adr/0054-distinguish-population-need-from-borrower-demand.md).
 
 ---
 

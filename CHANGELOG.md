@@ -11,6 +11,21 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.19.6] — 2026-10-22 — Population need is no longer presented as forecast demand
+
+### Changed
+
+- **The country-derived field is now “Rural Population Without Basic Sanitation.”** It is an observed measure of need, not a forecast of willing or eligible borrowers. ([ADR-0054](docs/adr/0054-distinguish-population-need-from-borrower-demand.md), F-64)
+- **The dashboard now reports “Share of Unserved Rural Target Reached,” not “SDG6 Gap Closed.”** The model does not test construction quality or every SDG 6.2 service criterion, so the old label overstated what the ratio proved.
+- **The methodology exposes the full-uptake condition.** It explains that the API does not observe willingness to borrow, affordability, eligibility, product choice, or monthly adoption. Calculated toilets are conditional delivery potential under sufficient uptake, not an adoption forecast.
+- **No unsupported uptake rate was invented.** The cited Malawi pilot’s 80% geographic target is not treated as borrower uptake; decision users are directed to programme market research or explicit scenario bounds.
+
+### Golden movement
+
+None. Terminology and limitations changed; all numeric calculations and all 21 recorded scenario results are unchanged.
+
+---
+
 ## [0.19.5] — 2026-10-22 — Sustainability scorecard uses canonical metrics
 
 ### Fixed

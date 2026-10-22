@@ -325,7 +325,7 @@
                     investor debt and operating costs are paid, and the operating reserve is protected before new
                     lending is allowed.</li>
                 <li data-model-step="delivery"><strong>Build through capacity and loan cohorts.</strong> Active
-                    enterprises, demand, unit cost, and available grant/loan capital limit monthly toilets. Each
+                    enterprises, unserved target need, unit cost, and available grant/loan capital limit monthly toilets. Each
                     disbursement then amortises as its own cohort.</li>
                 <li data-model-step="results"><strong>Report results and two verdicts.</strong> Reach, cash, debt,
                     and impact come from those monthly records. Integrity asks whether the arithmetic reconciles;
@@ -715,19 +715,27 @@ pay principal    = min(principal due, cash remaining)</div>
             equivalence that does not hold. Previously only write-down was modelled, so a 50% write-down rate left
             production capacity completely untouched.</p>
 
-        <h3>Demand</h3>
+        <h3>Unserved target need — not a demand forecast</h3>
         <div class="formula-box">backlog[m] = backlog[m-1] × (1 + populationGrowth)^(1/12) - production[m]</div>
-        <p>The unserved backlog <strong>grows</strong>. Population growth was previously collected from the user,
+        <p>The unserved target <strong>grows</strong>. Population growth was previously collected from the user,
             auto-filled from World Bank data, and used nowhere &mdash; so the model showed a fund closing a gap that is
             in reality widening.</p>
+        <div class="alert-box">
+            <p><strong>This is population need, not measured borrower demand.</strong> The API observes rural people
+                without basic sanitation. It does not observe willingness to borrow, affordability, eligibility,
+                product preference, or monthly uptake. The <a href="https://www.unicef.org/malawi/media/3886/file/Sanitation%20Revolving%20Funds%20for%20Rural%20and%20Peri-Urban%20Communities%20in%20Malawi.pdf">UNICEF Malawi pilot</a>
+                targeted households that were <em>willing and able to borrow</em>; this model does not model those uptake dynamics. Toilet output is
+                therefore conditional delivery potential under sufficient uptake, not a forecast of adoption. Do not
+                invent a national uptake percentage: use programme market research or an explicit scenario bound.</p>
+        </div>
 
         <h3>What binds</h3>
-        <p>Each month, demand and enterprise capacity set planned production. Grants are allocated first, up to the
+        <p>Each month, the remaining target and enterprise capacity set planned production. Grants are allocated first, up to the
             grant support percentage and available grant cash; loans fill the remainder as far as loan capital allows.</p>
         <div class="formula-box">planned             = min(floor(demand), floor(capacity))
 capacity foregone   = floor(demand) - planned
 loan-capital loss   = planned - actual production</div>
-        <p>The two losses reconcile demand to actual production. The model also reports how much additional output
+        <p>The two losses reconcile target need to actual production. The model also reports how much additional output
             would have been possible if the intended grant allocation had been fully funded while loan capacity stayed
             unchanged. That grant figure overlaps the loan-capital loss, so it is explanatory rather than additive.</p>
         <p>The dashboard ranks these actual monthly output losses over the horizon. It shows the largest as the primary
@@ -939,9 +947,9 @@ capitalPreservation = netAssets   / capitalInvested</div>
                     <td colspan="3"><span class="tag">Market context</span></td>
                 </tr>
                 <tr>
-                    <td>Pop. Needing Toilets</td>
+                    <td>Rural Population Without Basic Sanitation</td>
                     <td>people</td>
-                    <td>People, not households. Divided by household size to give the toilet backlog.</td>
+                    <td>Observed people, not households or forecast borrowers. Divided by household size to give the maximum unserved target.</td>
                 </tr>
                 <tr>
                     <td>Annual Pop Growth</td>

@@ -44,9 +44,9 @@
                     </p>
                     <ul style="margin-bottom:1rem; font-size:0.95rem; list-style: disc; padding-left:1.5rem;">
                         <li><strong>Capital:</strong> $4M Loan + $1M Grant</li>
-                        <li><strong>Goal:</strong> Sustainable growth to close the SDG6 Gap.</li>
-                        <li><strong>Challenge:</strong> Balance affordability (Low Interest) with Fund Survival
-                            (Solvency).</li>
+                        <li><strong>Goal:</strong> Test delivery toward the rural basic-sanitation need.</li>
+                        <li><strong>Challenge:</strong> Balance borrower pricing and portfolio revenue with fund
+                            solvency.</li>
                     </ul>
 
                     <h3>📚 How to Run</h3>
@@ -83,7 +83,7 @@
 
                     <h3>🚀 How to Use</h3>
                     <ul style="font-size:0.9rem; text-align:left; color:#1e293b; padding-left:1.5rem;">
-                        <li><strong>Step 1:</strong> Select a Country (loads real economic data).</li>
+                        <li><strong>Step 1:</strong> Select a country (loads dated country observations).</li>
                         <li><strong>Step 2:</strong> Adjust the "Levers" (Interest Rates, Loan Terms, Grant %).</li>
                         <li><strong>Step 3:</strong> Watch the Charts & Scorecard. Avoid "Insolvency"!</li>
                     </ul>
@@ -220,11 +220,11 @@
                     <small id="coc-help" class="help-text"></small>
                 </div>
 
-                <h3>Demand Parameters</h3>
+                <h3>Need and Coverage Parameters</h3>
                 <div class="input-group">
-                    <label>Pop. Needing Toilets
+                    <label>Rural Population Without Basic Sanitation
                         <span class="info-icon"
-                            title="Total rural population currently without access to basic sanitation. Can be auto-filled via API.">i</span>
+                            title="Observed population need, not forecast loan demand. The model assumes sufficient uptake to use available delivery capacity; replace or constrain it with programme evidence.">i</span>
                     </label>
                     <div class="input-wrapper">
                         <input type="text" id="popReqToilets" value="9,244,139" class="formatted-number"
@@ -629,7 +629,7 @@
                                             <td id="sum-mes">--</td>
                                         </tr>
                                         <tr>
-                                            <td>SDG6 Gap Closed</td>
+                                            <td>Share of Unserved Rural Target Reached</td>
                                             <td id="sum-sdg6" class="font-bold text-green">--</td>
                                         </tr>
                                         <tr class="separator"></tr>
