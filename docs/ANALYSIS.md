@@ -1117,7 +1117,7 @@ ledgers and monthly waterfall feed loan cohorts and delivery, and keep integrity
 viability. Replace the unsupported splash claims with accurate limitations. A documentation
 regression also requires every numeric input read by the UI to retain a complete canonical row in
 `PARAMETERS.md`. [ADR-0052](adr/0052-put-the-model-flow-and-calibration-path-on-site.md).
-Resolved in `[implementation commit]`.
+Resolved in `d42a2b3`.
 
 ---
 
