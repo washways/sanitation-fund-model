@@ -32,8 +32,14 @@ describe('responsive results layout (F-55, ADR-0048)', () => {
   test('the monthly audit table stays inside an auto-height card and scrolls locally', () => {
     const monthlyCard = HTML.match(/<div class="[^"]*monthly-table-card[^"]*"[^>]*>[\s\S]*?<h3>Monthly Implementation Data<\/h3>/)?.[0] || '';
     assert.ok(monthlyCard, 'Monthly Implementation Data needs its own card class');
+    assert.doesNotMatch(monthlyCard, /\bchart-card\b/,
+      'the audit table must not inherit the fixed-height chart component');
     assert.match(CSS, /\.monthly-table-card\s*\{[^}]*height:\s*auto/s,
-      'the monthly table card must override the generic fixed 400px chart height');
+      'the monthly table card must size to its contents');
+    for (const declaration of ['background:', 'padding:', 'border-radius:', 'box-shadow:', 'overflow:']) {
+      assert.match(CSS, new RegExp(`\\.monthly-table-card\\s*\\{[^}]*${declaration}`, 's'),
+        `the independent monthly card must define ${declaration}`);
+    }
     assert.match(CSS, /\.monthly-table-scroll\s*\{[^}]*overflow:\s*auto/s,
       'the bounded table viewport must contain overflow on both axes');
     assert.match(CSS, /#monthlyDataTable\s+thead\s+th\s*\{[^}]*position:\s*sticky[^}]*top:\s*0/s,

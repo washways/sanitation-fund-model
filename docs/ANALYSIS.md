@@ -1099,10 +1099,15 @@ selector countries. Resolved in `627c090`.
 height of 400px, while its inner table viewport could reach 500px. A five-year run therefore drew
 the rows beyond the bottom of the white background even though horizontal overflow was contained.
 
-**Fix:** give this section a dedicated auto-height card, contain the table in a bounded two-axis
-scroll viewport, and keep the header row visible during vertical scrolling. A layout regression
-pins all three requirements. [ADR-0051](adr/0051-contain-the-monthly-audit-table-vertically.md).
-Resolved in `5291762`.
+**Initial fix:** give this section a dedicated auto-height class, contain the table in a bounded
+two-axis scroll viewport, and keep the header row visible during vertical scrolling. Resolved in
+`5291762`, but the user reported that the background could still end above the table because the
+section retained the generic `chart-card` class and depended on cascade order for its height.
+
+**Follow-up fix:** remove the chart class entirely and give `monthly-table-card` its own complete
+background, spacing, sizing, shadow, and overflow contract. The regression now forbids the chart
+class on this section rather than merely checking for a later height override.
+[ADR-0055](adr/0055-decouple-the-monthly-audit-card-from-chart-sizing.md). Resolved in `16adaee`.
 
 ### F-62 — The on-site explanation overstates capabilities and hides the model flow
 

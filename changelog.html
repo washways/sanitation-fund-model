@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.19.6 — 22 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.19.7 — 22 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.19.7 — Monthly audit card is independent of chart sizing</h2>
+        <ul>
+            <li>Monthly Implementation Data no longer inherits the fixed-height component used for charts.</li>
+            <li>The audit section now owns its white background, padding, rounded border, shadow, width, and overflow behaviour.</li>
+            <li>All monthly rows remain available inside the bounded horizontal and vertical scroller, with sticky column headings.</li>
+            <li>A regression now fails if the chart class is put back on the audit table.</li>
+            <li>This completes the F-61 follow-up. Model calculations and all 21 recorded scenarios are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.19.6 — Population need is no longer presented as forecast demand</h2>
         <ul>
             <li>The blue country field is now labelled Rural Population Without Basic Sanitation: an observed measure of need, not forecast borrowers.</li>

@@ -580,14 +580,16 @@ console.log('='.repeat(80));
 
 // F-61 — the monthly audit table is contained by its own auto-height card.
 {
-  const monthlyCard = /class="[^"]*monthly-table-card[^"]*"/.test(HTML_SRC);
+  const monthlyTag = HTML_SRC.match(/<div class="[^"]*monthly-table-card[^"]*"[^>]*>/)?.[0] || '';
+  const monthlyCard = monthlyTag && !/\bchart-card\b/.test(monthlyTag);
   const autoHeight = /\.monthly-table-card\s*\{[^}]*height:\s*auto/s.test(CSS_SRC);
+  const ownsBackground = /\.monthly-table-card\s*\{[^}]*background:/s.test(CSS_SRC);
   const localScroll = /\.monthly-table-scroll\s*\{[^}]*overflow:\s*auto/s.test(CSS_SRC);
   const stickyHeader = /#monthlyDataTable\s+thead\s+th\s*\{[^}]*position:\s*sticky[^}]*top:\s*0/s
     .test(CSS_SRC);
   check('F-61', 'monthly implementation rows remain inside their card',
-    monthlyCard && autoHeight && localScroll && stickyHeader,
-    'The table card grows around a bounded two-axis viewport, and headings remain visible while scrolling.');
+    monthlyCard && autoHeight && ownsBackground && localScroll && stickyHeader,
+    'The independent table card owns its background around a bounded two-axis viewport; headings remain visible while scrolling.');
 }
 
 // F-62 — the public explanation matches the implemented model and exposes calibration.

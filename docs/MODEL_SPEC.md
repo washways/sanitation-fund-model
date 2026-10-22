@@ -583,10 +583,12 @@ values while dated context is rendered beside them. Context-only country indicat
 
 ### R-10.8 Monthly audit-table containment **[AS-BUILT]** (F-61)
 
-The 22-column Monthly Implementation Data table remains inside an auto-height card. Its viewport is
-bounded and scrolls on both axes; the header row remains visible during vertical scrolling. The
-generic fixed chart height must not clip the card background or allow rows to spill below it. See
-[ADR-0051](adr/0051-contain-the-monthly-audit-table-vertically.md).
+The 22-column Monthly Implementation Data table remains inside a dedicated auto-height card that
+does not inherit the generic chart component or depend on a later height override. The card owns
+its complete background and overflow box. Its viewport is bounded and scrolls on both axes; the
+header row remains visible during vertical scrolling. See
+[ADR-0051](adr/0051-contain-the-monthly-audit-table-vertically.md) and
+[ADR-0055](adr/0055-decouple-the-monthly-audit-card-from-chart-sizing.md).
 
 ### R-10.9 On-site model explanation **[AS-BUILT]** (F-62)
 

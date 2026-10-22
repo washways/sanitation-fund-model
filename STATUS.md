@@ -6,7 +6,7 @@
 
 | | |
 |---|---|
-| **Release** | 0.19.6 — population need distinguished from borrower demand |
+| **Release** | 0.19.7 — monthly audit card fully decoupled from chart sizing |
 | **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance, responsive results, model transparency, scorecard integrity, and need-versus-demand terminology complete; caching/scenario comparison and remaining S6 work remain |
 | **Tests** | ✅ 131 pass, 0 todo, 0 fail (`npm test`, ~4s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
@@ -138,7 +138,7 @@ The 20-year stress scenario is **not viable** under the same assumptions: it win
 - `series.dataGrants` contains annual flows, not cumulative balances. The annual cash-flow chart negates each value once and never differences adjacent years.
 - Chart inflows are positive and outflows are negative. The smoke harness captures the Chart.js configuration and reconciles the `Grants` dataset to the engine series. See [ADR-0042](docs/adr/0042-chart-annual-grants-as-flows.md).
 - Month-granular horizons always retain a final partial reporting period, labelled with its month count. A sub-year scenario must still render charts. See [ADR-0043](docs/adr/0043-report-final-partial-year.md).
-- Programme-summary cards use an auto-fitting grid and wrapping cells. The 22-column monthly audit table retains no-wrap cells inside a dedicated auto-height card, with a bounded two-axis scroller and sticky headings. See [ADR-0048](docs/adr/0048-fit-programme-summary-to-viewport.md) and [ADR-0051](docs/adr/0051-contain-the-monthly-audit-table-vertically.md).
+- Programme-summary cards use an auto-fitting grid and wrapping cells. The 22-column monthly audit table retains no-wrap cells inside its own auto-height card, with a bounded two-axis scroller and sticky headings. It must not inherit `chart-card` or depend on cascade order to undo chart sizing. See [ADR-0048](docs/adr/0048-fit-programme-summary-to-viewport.md), [ADR-0051](docs/adr/0051-contain-the-monthly-audit-table-vertically.md), and [ADR-0055](docs/adr/0055-decouple-the-monthly-audit-card-from-chart-sizing.md).
 
 ## Environment
 
@@ -158,4 +158,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-22 release 0.19.6 stopped presenting observed population need as forecast borrower demand. The API field is now Rural Population Without Basic Sanitation, the reach card reports Share of Unserved Rural Target Reached, and the methodology states that calculated toilets are conditional delivery potential under sufficient uptake—not an adoption forecast or proof of complete SDG 6 closure. No unsupported national uptake rate was invented. The suite has 131 passing tests, all 64 findings are closed, and all 21 golden scenarios are numerically unchanged. The next review is the current undiscounted social-value ratio, followed by evidence-based borrower uptake if programme market research becomes available. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-22 release 0.19.7 completed the Monthly Implementation Data containment fix after the user reported that the table could still extend below its background. The audit section no longer inherits the fixed-height chart component; it owns its complete card box around the bounded two-axis scrolling table. The regression now forbids restoring `chart-card`. The suite has 131 passing tests, all 64 findings are closed, and all 21 golden scenarios are numerically unchanged. The next review is the current undiscounted social-value ratio, followed by evidence-based borrower uptake if programme market research becomes available. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
