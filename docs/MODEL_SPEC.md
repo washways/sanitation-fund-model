@@ -599,6 +599,16 @@ as programme viability. The interface must not claim that rates create a demand 
 engine does not model or that any selected scenario guarantees repayment. See
 [ADR-0052](adr/0052-put-the-model-flow-and-calibration-path-on-site.md).
 
+### R-10.10 Sustainability scorecard mapping **[AS-BUILT]** (F-63)
+
+Every scorecard value is rendered from its canonical KPI field, without reconstructing or renaming
+the formula in the UI. Grant Equity Multiple is `grantEquityMultiple` formatted as `x`; Capital
+Preservation is `capitalPreservation` formatted as a percentage; OSS is `oss`; and FSS is `fss`.
+Senior repayment is reported separately as principal and percentage repaid. No recovery measure
+may mix ring-fenced grant cash with senior principal. Public labels and help text state the exact
+definitions in R-11.1. One renderer owns these mappings. See
+[ADR-0053](adr/0053-use-canonical-sustainability-scorecard-metrics.md).
+
 ---
 
 ## 11. KPI definitions
@@ -607,7 +617,7 @@ engine does not model or that any selected scenario guarantees repayment. See
 
 Every export must describe one successfully calculated scenario. Its parameter block uses the input snapshot retained with that result, never the current form state. Reported investor liability and leverage use the canonical KPI values defined below; export code must not reconstruct them with parallel formulas.
 
-All computed in `ModelModule.computeKPIs`, which must be **pure**: no DOM access, no mutation of its arguments. (Today `UI.updateKPIs` mutates the returned object — see F-14.)
+All are computed in `ModelModule.computeKPIs`, which is **pure**: no DOM access and no mutation of its arguments. The UI must not mutate the returned object; F-14 records the historical defect that did so.
 
 | KPI | Definition | Status |
 |---|---|---|
@@ -618,6 +628,7 @@ All computed in `ModelModule.computeKPIs`, which must be **pure**: no DOM access
 | `FSS` | operating revenue / (operating expenses + write-offs + investor interest) | AS-BUILT — investor interest is now real, given a non-zero cost of capital (F-01) |
 | `netAssets` | `cashEnd + portfolioOutstanding - investorLiabilityEnd`, where the liability is the one the loop tracked | AS-BUILT — includes capitalised arrears since 2026-08-20 (F-06) |
 | `grantEquityMultiple` | `netAssets / investGrant` | AS-BUILT |
+| `capitalPreservation` | `netAssets / (investGrant + investLoan)` | AS-BUILT — a whole-fund balance-sheet ratio, not investor repayment |
 | `investorRepaidPct` | `totalRepaidPrincipal / investLoan` | AS-BUILT |
 | `costPerLatrine` | `(loansDisbursed + grants + ops + writeOffs + investorInterest) / toilets` | AS-BUILT — note this counts *disbursed* loan principal, most of which returns |
 | `economicCostPerLatrine` | `(ops + writeOffs + grants + investorInterest) / toilets` — excludes recovered principal | AS-BUILT — this is the more defensible of the two |

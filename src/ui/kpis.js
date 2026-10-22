@@ -151,12 +151,9 @@ Object.assign(UI, {
             // Additional Liquidity / Sustainability Context
             setText('sum-repaid', fmtMoney(k.financials.investorRepaid || 0));
             setText('sum-repaid-pct', fmtPct(k.financials.investorRepaidPct || 0));
-            setText('sum-preserved', fmtPct(k.financials.capitalPreservedPct || 0));
-
-            setText('sum-health', fmtPct(k.financials.fundHealth || 0));
-
-            const suffRatio = (k.sustainability.selfSufficiency || 0); // Already Ratio
-            setText('sum-sufficiency', fmtPct(suffRatio));
+            setText('sum-preserved', (k.financials.grantEquityMultiple || 0).toFixed(2) + 'x');
+            setText('sum-health', fmtPct(k.value.capitalPreservation || 0));
+            setText('sum-sufficiency', fmtPct(k.sustainability.fss || 0));
 
             const runway = k.sustainability.opsRunway || 0;
             const runwayText = runway > 20 ? "Sustainable (>20y)" : fmtNum(runway) + " Years";
@@ -246,139 +243,5 @@ Object.assign(UI, {
     clearIntegrityError() {
         const banner = document.getElementById('integrityBanner');
         if (banner) banner.style.display = 'none';
-    },
-
-    // --- NEW: Programme Summary Logic ---
-    updateProgrammeSummary(stats) {
-        if (!stats) return;
-
-        const setTxt = (id, val) => {
-            const el = document.getElementById(id);
-            if (el) el.innerText = val;
-        };
-
-        const fmt = (n) => (n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
-        const fmtMoney = (n) => (n || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-        const fmtPct = (n) => ((n || 0) * 100).toFixed(1) + '%';
-
-        // 1. Reach (Split Rows)
-        setTxt('sum-toilets', fmt(stats.totalLatrines));
-
-        setTxt('sum-toilets-loan-count', fmt(stats.loanToilets));
-        setTxt('sum-toilets-loan-val', fmtMoney(stats.loanToiletsVal));
-
-        setTxt('sum-toilets-grant-count', fmt(stats.grantToilets));
-        setTxt('sum-toilets-grant-val', fmtMoney(stats.grantToiletsVal));
-
-        // Assuming 'stats' object now contains 'fundRepaid' and 'totalPrinRepayPct'
-        // And 'stats.impact' is available if needed, or these are directly on 'stats'
-        // For consistency with existing code, using 'stats' directly.
-        setTxt('sum-balance', fmtMoney(stats.fundBalance));
-        setTxt('sum-capital-repaid', fmtMoney(stats.fundRepaid)); // Assuming stats.fundRepaid exists
-        setTxt('sum-repaid-pct', fmtPct(stats.totalPrinRepayPct)); // New UI Field, assuming stats.totalPrinRepayPct exists
-        setTxt('sum-preserved', (stats.grantEquityMultiple || 0).toFixed(2) + "x");
-
-        // MISSING FIELDS RESTORED:
-        setTxt('sum-households', fmt(stats.households));
-        setTxt('sum-people', fmt(stats.people));
-        setTxt('sum-mes', fmt(stats.mes));
-
-        // 2. SDG6 Gap
-        const inputs = UI.getInputs();
-        let gapMsg = "N/A";
-        let gapClass = "";
-
-        if (inputs.popReqToilets > 0) {
-            const peopleReached = stats.people;
-            const goal = inputs.popReqToilets;
-            const pct = (peopleReached / goal) * 100;
-
-            if (pct >= 100) {
-                gapMsg = "100% (Gap Closed!)";
-                gapClass = "text-green";
-            } else {
-                gapMsg = `${pct.toFixed(1)}% Closed`;
-            }
-        }
-        setTxt('sum-sdg6', gapMsg);
-
-        // 3. Primary Constraint
-        let constraint = "Demand Met (Success)";
-        if (stats.insolvencyMonths > 0) constraint = "Capital Depleted (Insolvent)";
-        else if (inputs.popReqToilets > stats.people && stats.minCash > 0) constraint = "Supply Chain (ME Capacity)";
-        else if (inputs.popReqToilets > stats.people) constraint = "Capital Limited";
-
-        setTxt('sum-constraint', constraint);
-
-        // 4. Impact
-        setTxt('sum-dalys', fmt(stats.dalys));
-        setTxt('sum-val-dalys', fmtMoney(stats.economicValue));
-        setTxt('sum-carbon', inputs.co2PerToilet > 0 ? fmt(stats.carbon) + " tCO2e" : "Not estimated");
-        setTxt('sum-val-carbon', inputs.co2PerToilet > 0
-            ? fmtMoney(stats.carbon * (inputs.co2Value || 0))
-            : "Project factor required");
-        setTxt('sum-jobs', fmt(stats.jobs));
-
-        // 5. Sustainability Scorecard (Full Population)
-        // 5. Sustainability Scorecard (Full Population)
-        // 5. Sustainability Scorecard (Full Population)
-        setTxt('sus-oss-ratio', ((stats.ossRatio || 0) * 100).toFixed(0) + "%");
-        // FIX: Use explicit FSS and Depletion fields from Calc
-        setTxt('sus-fss-ratio', ((stats.fssRatio || 0) * 100).toFixed(1) + "%"); // Assuming ID exists? Or creating it?
-        // Note: The previous view showed 'sus-depletion' being used.
-        // It did NOT show 'sus-fss-ratio'.
-        // If the ID doesn't exist, this line is harmless (setTxt checks element).
-        // For Depletion, I will update 'sus-depletion' to use stats.depletionYear.
-        setTxt('sus-depletion', stats.depletionYear || "Sustainable");
-
-        // Recalculate accurately from inputs/stats to match Report
-        setTxt('sum-balance', fmtMoney(stats.fundBalance));
-        setTxt('sum-capital-repaid', fmtMoney(stats.principalRepaid || 0));
-
-        // Populate the NEW Rows
-        setTxt('sum-min-cash', fmtMoney(stats.minCash));
-        setTxt('sum-insolvency', stats.insolvencyMonths + " Mo");
-
-        const opsCoverage = (inputs.annualFixedOpsCost > 0)
-            ? ((stats.fundBalance || 0) / inputs.annualFixedOpsCost).toFixed(1) + " Years"
-            : "0.0 Years";
-        setTxt('sum-ops-coverage', opsCoverage);
-
-        const levRatio = (inputs.investGrant > 0)
-            ? (((stats.loanToiletsVal || 0) + (stats.grantToiletsVal || 0)) / (inputs.investGrant + (inputs.investLoan || 0)))
-            : 0;
-        setTxt('sum-leverage', levRatio.toFixed(1) + "x");
-
-        // Cost Per Latrine
-        const totalInv = (inputs.investGrant || 0) + (inputs.investLoan || 0);
-        const costPer = stats.totalLatrines > 0 ? (totalInv / stats.totalLatrines) : 0;
-        setTxt('sum-cost-per-latrine', fmtMoney(costPer));
-
-        // Effective Cost (Grant Only)
-        setTxt('sum-cost-per-latrine', fmtMoney(costPer));
-
-        // Economic Cost (New Field)
-        setTxt('sum-economic-cost', fmtMoney(stats.economicCostPerLatrine));
-
-        // Effective Cost (Grant Only)
-        setTxt('sum-effective-cost', fmtMoney(stats.effectiveCostPerLatrine));
-
-        // SROI (Use calculated value)
-        setTxt('sum-sroi', (stats.sroi || 0).toFixed(1) + "x");
-
-        // Capital Preservation Section
-        const capPreservedPct = (stats.capitalPreservedPct || 0) * 100;
-
-        setTxt('sum-health', capPreservedPct.toFixed(1) + "%");
-        setTxt('sum-sufficiency', stats.ossRatio > 1.2 ? "Excellent" : (stats.ossRatio > 1.0 ? "Good" : "Subsidized"));
-
-        // Legacy/Duplicate mappings
-        setTxt('sum-repaid', fmtMoney(stats.principalRepaid || 0));
-        setTxt('sum-repaid-pct', (((stats.principalRepaid || 0) / (inputs.investLoan || 1)) * 100).toFixed(1) + "%");
-
-        // Cost Per Latrine (use standardized Metric)
-        setTxt('sum-cost-per-latrine', fmtMoney(stats.costPerLatrine));
-
-        setTxt('sum-preserved', (stats.grantEquityMultiple || 0).toFixed(2) + "x");
     },
 });

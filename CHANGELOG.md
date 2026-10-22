@@ -11,6 +11,21 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.19.5] — 2026-10-22 — Sustainability scorecard uses canonical metrics
+
+### Fixed
+
+- **Grant Equity Multiple no longer shows a false `0.0%`.** The live renderer read a nonexistent field and used the wrong unit; the Malawi reference now displays its canonical value of about `0.18x`. ([ADR-0053](docs/adr/0053-use-canonical-sustainability-scorecard-metrics.md), F-63)
+- **Capital Preservation replaces an invented loan-recovery proxy.** It reports ending net assets divided by all initial capital. Senior repayment remains a separate exact principal and percentage measure; ring-fenced grant cash is not presented as investor recovery.
+- **OSS and FSS now have distinct, accurate labels and definitions.** OSS covers operating costs only; FSS additionally includes portfolio write-downs and investor interest. The Malawi reference displays about 165% OSS and 106% FSS.
+- **One renderer now owns the programme summary.** An unused parallel renderer with competing formulas and stale field names was removed, and the browser-path regression pins the visible values to canonical KPIs.
+
+### Golden movement
+
+None. This release corrects displayed mappings and explanations only; engine values and all 21 recorded scenarios are unchanged.
+
+---
+
 ## [0.19.4] — 2026-10-22 — Model flow and calibration are visible on site
 
 ### Changed

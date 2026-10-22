@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 62 of 62 findings resolved as of 2026-10-22. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 63 of 63 findings resolved as of 2026-10-22. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,6 +54,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
+| ✅ [F-63](#f-63--the-sustainability-scorecard-shows-the-wrong-values-and-definitions) | **High** | UI / Reporting | Grant Equity Multiple always shows 0.0%, Loan Recovery mixes ledgers, and the OSS tooltip defines a different ratio from the engine | src, run | S6 |
 | ✅ [F-62](#f-62--the-on-site-explanation-overstates-capabilities-and-hides-the-model-flow) | Medium | Docs / UX | The splash claims real-time data, rate-driven demand, double-entry accounting, and guaranteed repayment while the detailed method lacks a concise model map | src | S6 |
 | ✅ [F-61](#f-61--monthly-implementation-data-spills-below-its-card) | Low | UI | The table viewport is taller than its fixed-height card, so rows extend below the background | src, user report | S6 |
 | ✅ [F-60](#f-60--country-audit-does-not-run-the-model-with-derived-api-inputs) | Low | Tests / Data | The live audit range-checks raw observations but never calculates the resulting country scenarios | src, API audit | S6 |
@@ -1118,6 +1119,23 @@ viability. Replace the unsupported splash claims with accurate limitations. A do
 regression also requires every numeric input read by the UI to retain a complete canonical row in
 `PARAMETERS.md`. [ADR-0052](adr/0052-put-the-model-flow-and-calibration-path-on-site.md).
 Resolved in `d42a2b3`.
+
+### F-63 — The sustainability scorecard shows the wrong values and definitions
+
+**High — fixed.** The live “Grant Equity Multiple” row read
+`k.financials.capitalPreservedPct`, which does not exist, and formatted the fallback as a
+percentage. The Malawi reference therefore displayed a plausible `0.0%` instead of the canonical
+`0.18x`. “Loan Recovery Ratio” added total ending cash—including ring-fenced grant cash—to senior
+principal repaid, even though exact senior repayment was already shown. The OSS tooltip described
+revenue divided by operations, defaults, and grants while the engine divides interest plus carbon
+revenue by fixed plus variable operations only. An unused second summary renderer contained still
+more competing mappings.
+
+**Fix:** render Grant Equity Multiple, whole-fund Capital Preservation, OSS, and FSS directly from
+their canonical KPI fields; give each its actual formula and unit; and remove the unused parallel
+renderer. The browser-path regression now compares the visible Malawi values with the model output.
+[ADR-0053](adr/0053-use-canonical-sustainability-scorecard-metrics.md).
+Resolved in `[implementation commit]`.
 
 ---
 
