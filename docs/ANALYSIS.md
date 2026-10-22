@@ -1154,7 +1154,7 @@ unserved target need, and the reach ratio as Share of Unserved Rural Target Reac
 implicit full-uptake condition prominently and describe toilets as conditional delivery potential,
 not a forecast. Do not invent a national uptake rate from the pilot’s geographic targeting figure.
 [ADR-0054](adr/0054-distinguish-population-need-from-borrower-demand.md).
-Resolved in `[implementation commit]`.
+Resolved in `0bf4aa8`.
 
 ---
 
