@@ -1281,7 +1281,7 @@ by small amounts in the capacity-constrained scenario only.
 
 **Resolution:** headroom is floored. Only `capacity constrained` moved: toilets 1,394 to 1,220,
 because 174 toilets had been built by fractional enterprises. [ADR-0060](adr/0060-launch-whole-enterprises.md).
-Resolved in `PENDING-F68`.
+Resolved in `175c6c2`.
 
 ### F-69 — OSS mixes ledgers and reports 0 when there are no operating expenses
 
