@@ -67,18 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    // Sync Duration -> Fund Repayment Term
-    const durationInput = document.getElementById('wiz-duration-sidebar');
-    const repaymentInput = document.getElementById('fundRepaymentTerm');
-    if (durationInput && repaymentInput) {
-        durationInput.addEventListener('input', (e) => {
-            // Only sync on USER interaction (to avoid overwriting Scenarios on load)
-            if (e.isTrusted) {
-                repaymentInput.value = durationInput.value;
-                repaymentInput.classList.add('auto-filled');
-            }
-        });
-    }
+    // Duration and Fund Repayment Term are independent inputs (F-67, ADR-0058).
+    // They used to be copied into each other, so a fund longer than its debt could
+    // not be expressed. Do not reintroduce a sync; tests/startup.test.js checks it.
 
     // Main App Listeners
     // FIX: Pass 'true' to enable Auto-Solver only on user click
@@ -490,8 +481,9 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
         // We compute what WOULD close the gap and offer it. We do not apply it.
         results.advice = null;
         if (isAutoAdjust && inputs.investLoan > 0) {
-            const repaid = results.kpis.financials.investorRepaid || 0;
-            const shortfall = inputs.investLoan - repaid;
+            // Only principal that fell due and was missed is a shortfall; principal
+            // scheduled after the horizon is not (F-67, ADR-0058).
+            const shortfall = results.kpis.financials.seniorPrincipalPastDue || 0;
             if (shortfall > 1000) {
                 results.advice = ModelModule.suggestSolvencyFix(inputs, shortfall);
             }
@@ -552,13 +544,5 @@ window.addEventListener('load', () => {
     const popInput = document.getElementById('popReqToilets');
     if (popInput && popInput.value && !popInput.value.includes(',')) {
         popInput.value = parseInt(popInput.value).toLocaleString();
-    }
-
-    // Fix: Sync Duration and Fund Repayment (User Request)
-    const durInput = document.getElementById('wiz-duration-sidebar');
-    const repayInput = document.getElementById('fundRepaymentTerm');
-    if (durInput && repayInput) {
-        durInput.addEventListener('input', (e) => repayInput.value = e.target.value);
-        repayInput.addEventListener('input', (e) => durInput.value = e.target.value);
     }
 });

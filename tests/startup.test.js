@@ -111,6 +111,9 @@ function bootApp(fixture = FIXTURE) {
   };
 
   let domReady = null;
+  // Browser-faithful: `load` listeners run too. A no-op window stub hid a two-way
+  // duration/repayment-term binding registered on `load` from every test (F-67).
+  const windowListeners = {};
 
   const document = {
     body: el('body'),
@@ -167,7 +170,9 @@ function bootApp(fixture = FIXTURE) {
 
   const sandbox = {
     document,
-    window: { addEventListener() {} },
+    window: {
+      addEventListener(type, fn) { (windowListeners[type] = windowListeners[type] || []).push(fn); },
+    },
     console: { log() {}, warn() {}, error() {}, info() {} },
     fetch: stubFetch,
     setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
@@ -191,6 +196,7 @@ function bootApp(fixture = FIXTURE) {
    */
   async function runStartup() {
     if (domReady) domReady();
+    for (const fn of windowListeners.load || []) fn({ type: 'load' });
     for (let pass = 0; pass < 12; pass++) {
       const batch = timers.splice(0).sort((a, b) => a.ms - b.ms);
       for (const t of batch) {
@@ -434,4 +440,30 @@ test('a WHO record without its conservative lower bound is not treated as zero e
   assert.strictEqual(app.el('dalyPerPerson').value, '0');
   assert.ok(!app.el('dalyPerPerson').classList.contains('country-observation'));
   assert.match(app.el('dalyPerPerson').title, /not estimated/i);
+});
+
+describe('repayment term and horizon are independent inputs (F-67, ADR-0058)', () => {
+  test('editing the repayment term does not rewrite the simulation horizon', async () => {
+    const app = bootApp();
+    await app.runStartup();
+    const term = app.el('fundRepaymentTerm');
+    const duration = app.el('wiz-duration-sidebar');
+    const before = duration.value;
+    term.value = '7';
+    term.dispatchEvent({ type: 'input', isTrusted: true, target: term });
+    assert.strictEqual(duration.value, before, 'the horizon must not follow the debt term');
+    assert.strictEqual(app.UI.getInputs().fundRepaymentTerm, 7);
+  });
+
+  test('editing the horizon does not rewrite the repayment term', async () => {
+    const app = bootApp();
+    await app.runStartup();
+    const term = app.el('fundRepaymentTerm');
+    const duration = app.el('wiz-duration-sidebar');
+    const before = term.value;
+    duration.value = '10';
+    duration.dispatchEvent({ type: 'input', isTrusted: true, target: duration });
+    assert.strictEqual(term.value, before, 'the debt term must not follow the horizon');
+    assert.strictEqual(app.UI.getInputs().duration, 10);
+  });
 });

@@ -17,6 +17,9 @@ All notable changes to this project — anything that alters what the model prod
 
 - **Solvency is judged on the loan ledger, not the pooled balance.** The loan ledger pays debt service and operations; grant cash is ring-fenced and cannot. The viability check (V1), depletion year, months insolvent, minimum cash and ops coverage now read loan-ledger cash. A $5.0m grant with a $0.5m loan previously reported *never insolvent* and a 79.7-year runway while the loan ledger fell to -$32,588. ([ADR-0057](docs/adr/0057-judge-solvency-on-the-loan-ledger.md), F-66)
 
+- **The repayment term and the horizon are independent inputs.** Editing one no longer rewrites the other. Two listeners bound them, one of them unguarded and two-way, so a fund longer than its debt could not be modelled. No test saw it because the harness never fired the browser's `load` event; it does now. ([ADR-0058](docs/adr/0058-separate-repayment-term-from-horizon.md), F-67)
+- **Senior repayment is judged against what was due.** V2 now fails only on scheduled principal that fell due and was not paid. Principal scheduled after the horizon is shown as *not yet due* in the export, not as a default. A 5-year horizon with a 10-year term previously read "52.6% default". Only the `short horizon (1y)` scenario changes verdict.
+
 ### Golden movement
 
 - `grant capital only`: depletion `Sustainable` → `0.0`, months insolvent 0 → 60. With no loan capital, nothing can pay operations.

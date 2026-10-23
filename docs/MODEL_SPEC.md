@@ -554,7 +554,7 @@ A run is viable only if **all** hold:
 | | Criterion |
 |---|---|
 | V1 | `min(loanCash) >= 0` — the loan ledger is never overdrawn. Judged on `dataMonthlyLoanCash`, not the pooled balance, because grant cash is ring-fenced (R-5.2) and cannot pay debt service or operations. [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md), F-66, Q15. |
-| V2 | `totalRepaidPrincipal >= investLoan - $1,000` — senior debt repaid in full **by the end of the simulated horizon**, not by the end of the repayment term. With a term longer than the horizon this reports principal that is not yet due as a default. Registered as F-67; see Q16. |
+| V2 | `seniorPrincipalPastDue <= $1,000` — no scheduled senior principal fell due inside the horizon and went unpaid. Principal scheduled after the horizon is *not yet due*, not a default; wind-up (R-9.2) makes all remaining principal due. Horizon and repayment term are independent inputs. [ADR-0058](adr/0058-separate-repayment-term-from-horizon.md), F-67, Q16. |
 | V3 | `capitalisedInterest < $1,000` — no investor interest had to be rolled up when due; the warning also reports the amount still outstanding |
 | V4 | `OSS >= 1.0` — operations cover themselves. OSS is the **whole-horizon cumulative** ratio defined in R-11.1, not a steady-state or trailing-window figure, and its numerator includes carbon revenue that accrues to the grant ledger. When operating expenses are zero the ratio is reported as 0 and V4 fails. Registered as F-69; see Q17. |
 
@@ -655,7 +655,9 @@ All are computed in `ModelModule.computeKPIs`, which is **pure**: no DOM access 
 | `netAssets` | `cashEnd + portfolioOutstanding - investorLiabilityEnd`, where the liability is the one the loop tracked | AS-BUILT — includes capitalised arrears since 2026-08-20 (F-06) |
 | `grantEquityMultiple` | `netAssets / investGrant` | AS-BUILT |
 | `capitalPreservation` | `netAssets / (investGrant + investLoan)` | AS-BUILT — a whole-fund balance-sheet ratio, not investor repayment |
-| `investorRepaidPct` | `totalRepaidPrincipal / investLoan` | AS-BUILT |
+| `investorRepaidPct` | `totalRepaidPrincipal / investLoan` | AS-BUILT — a share of the whole loan, including principal not yet due |
+| `seniorPrincipalPastDue` | scheduled principal that fell due within the horizon and was not paid (`accruedInvestorPrin`, capped at unrepaid principal) | AS-BUILT — [ADR-0058](adr/0058-separate-repayment-term-from-horizon.md); drives V2 |
+| `seniorPrincipalNotYetDue` | `investLoan - totalRepaidPrincipal - seniorPrincipalPastDue` | AS-BUILT — [ADR-0058](adr/0058-separate-repayment-term-from-horizon.md) |
 | `costPerLatrine` | `(loansDisbursed + grants + ops + writeOffs + investorInterest) / toilets` | AS-BUILT — note this counts *disbursed* loan principal, most of which returns |
 | `economicCostPerLatrine` | `(ops + writeOffs + grants + investorInterest) / toilets` — excludes recovered principal | AS-BUILT — this is the more defensible of the two |
 | `effectiveCostPerLatrine` | `investGrant / toilets` — subsidy intensity of the whole programme | AS-BUILT |
@@ -721,7 +723,7 @@ These must hold for **every** run. They are the contract that makes the model au
 
 ## 13. Modelling decisions
 
-Q1–Q15 are decided. **Q16–Q18 are `[OPEN]`**, raised by the 2026-10-22 robustness review
+Q1–Q16 are decided. **Q17–Q18 are `[OPEN]`**, raised by the 2026-10-22 robustness review
 ([ANALYSIS.md §4B](ANALYSIS.md)); they must not be resolved in code without the model owner's
 decision and an ADR first. New questions are recorded here the same way.
 
@@ -742,7 +744,7 @@ decision and an ADR first. New questions are recorded here the same way.
 | Q13 | Should service life gate DALYs and time-saved too, not just carbon? | Yes. [ADR-0025](adr/0025-service-life-gates-all-impact.md) |
 | Q14 | Should constraint reporting derive from actual production limits and retain simultaneous causes? | Yes — partition actual foregone production into capacity and loan-capital loss, expose grant-capital recovery separately, and report secondary causes. [ADR-0044](adr/0044-report-actual-production-constraints.md) |
 | Q15 | Should the solvency verdict (V1), `depletionMonth` and `opsRunway` test the loan ledger alone rather than the pooled balance? | Yes — loan ledger only; the pooled balance is an audit series. Decided 2026-10-22. [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md) |
-| Q16 | **[OPEN]** Should a repayment term longer than the horizon be (a) rejected by validation, or (b) reported by V2 as "not yet due" rather than as a default? And should the UI stop force-binding term to horizon? | Not decided. Reviewer's recommendation: remove the unguarded two-way sync in `src/app.js` and take (b), reporting past-due scheduled principal separately from principal not yet due (F-67). |
+| Q16 | Should a repayment term longer than the horizon be rejected, or reported as "not yet due"? Should the UI stop binding term to horizon? | Report as not yet due; V2 fails only on past-due principal; the inputs are independent. Decided 2026-10-22. [ADR-0058](adr/0058-separate-repayment-term-from-horizon.md) |
 | Q17 | **[OPEN]** Should OSS exclude carbon revenue (grant ledger), return `null` when operating expenses are zero, and be measured over a trailing window rather than the whole horizon? | Not decided. Reviewer's recommendation: exclude carbon or report a loan-ledger OSS beside the current one; `null` and skip V4 at zero expenses; keep whole-horizon unless the owner wants a steady-state test (F-69). |
 | Q18 | **[OPEN]** Is the 6-month working-capital floor in `meCapitalRequirement` (`max(6, termHh)`) a sourced assumption, and should it be an input? | Not decided. It has no citation and it multiplies every enterprise loan; see [PARAMETERS.md](PARAMETERS.md#fixed-model-constants) and F-70. |
 

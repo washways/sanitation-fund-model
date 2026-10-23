@@ -62,3 +62,4 @@ For the short version of what each one decided, [CHANGELOG.md](../../CHANGELOG.m
 | [0055](0055-decouple-the-monthly-audit-card-from-chart-sizing.md) | Decouple the monthly audit card from chart sizing |
 | [0056](0056-label-the-gross-social-value-multiple-honestly.md) | Label the gross social value multiple honestly |
 | [0057](0057-judge-solvency-on-the-loan-ledger.md) | Judge solvency on the loan ledger |
+| [0058](0058-separate-repayment-term-from-horizon.md) | Separate the repayment term from the horizon |

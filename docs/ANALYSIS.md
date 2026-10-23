@@ -60,7 +60,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | [F-70](#f-70--constants-with-no-row-in-parametersmd) | Low | Docs / Assumptions | The 6-month working-capital floor, 2,080-hour year, 30-day month, 3-month reserve, 30% collections floor, $1,000 viability tolerance and solver search ranges are hard-coded with no entry in the parameter dictionary | src | S6 |
 | [F-69](#f-69--oss-mixes-ledgers-and-reports-0-when-there-are-no-operating-expenses) | Medium | Model / Reporting | OSS counts ring-fenced carbon revenue as operating income (565x in the carbon scenario), is a cumulative ratio although the spec says “steady state”, and reports 0 and fails V4 when operating expenses are zero | run | S4 |
 | [F-68](#f-68--fractional-micro-enterprises-are-launched-near-the-network-cap) | Low | Model | `space = maxTotalMEs - currentMEs` is fractional after attrition, so the loop launches 0.035 of an enterprise and books a $400 loan for it; 45 such months in the capacity-constrained golden scenario | run | S4 |
-| [F-67](#f-67--the-repayment-term-is-force-bound-to-the-horizon-and-v2-measures-the-wrong-window) | Medium | UI / Model | A second, unguarded two-way listener keeps `fundRepaymentTerm` equal to `duration`, so the browser cannot express a term that differs from the horizon; and V2 reports debt not yet due as a default (5-year horizon, 10-year term: “52.6% default”) | run | S4 |
+| ✅ [F-67](#f-67--the-repayment-term-is-force-bound-to-the-horizon-and-v2-measures-the-wrong-window) | Medium | UI / Model | A second, unguarded two-way listener keeps `fundRepaymentTerm` equal to `duration`, so the browser cannot express a term that differs from the horizon; and V2 reports debt not yet due as a default (5-year horizon, 10-year term: “52.6% default”) | run | S4 |
 | ✅ [F-65](#f-65--the-social-value-ratio-is-labelled-as-a-formal-sroi) | Medium | Reporting | `socialValue / capital` is called an SROI although it is undiscounted and applies no deadweight, attribution, displacement or drop-off | src | S6 |
 | ✅ [F-66](#f-66--a-negative-loan-ledger-is-hidden-by-ring-fenced-grant-cash) | **High** | Model / Reporting | V1, `depletionMonth` and `opsRunway` test the pooled cash balance, although the ledgers never transfer; a fund whose loan ledger is overdrawn reports “never insolvent” and an 80-year runway when grant cash is large | run | S4 |
 | ✅ [F-64](#f-64--population-need-is-presented-as-forecast-borrower-demand-and-sdg-6-closure) | **High** | Assumptions / Reporting | API sanitation need is called demand and the reach ratio is called SDG6 gap closure despite no uptake or service-level model | src, source audit | S6 |
@@ -1233,7 +1233,7 @@ exactly as predicted. [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md).
 
 ### F-67 — The repayment term is force-bound to the horizon, and V2 measures the wrong window
 
-**Medium — open.** Two defects that hide each other.
+**Medium — fixed.** Two defects that hide each other.
 
 1. `src/app.js` registers **two** listeners that copy `wiz-duration-sidebar` into
    `fundRepaymentTerm`. The first, inside `DOMContentLoaded`, is one-way and guarded by
@@ -1252,6 +1252,11 @@ convenience or drop both. Then either validate `fundRepaymentTerm <= duration` w
 message, or make V2 report the past-due shortfall (scheduled principal not paid) separately
 from principal that is simply not yet due. The second is more honest for a tool that is
 supposed to model a fund longer than its debt.
+
+**Resolution:** the owner chose (b) (Q16). Both binding listeners are removed; the startup harness
+now fires `window` `load` listeners, which is why no test had seen the second one. V2 fails only on
+`seniorPrincipalPastDue`. Only `short horizon (1y)` changes verdict; no golden value moved.
+[ADR-0058](adr/0058-separate-repayment-term-from-horizon.md). Resolved in `PENDING-F67`.
 
 ### F-68 — Fractional micro-enterprises are launched near the network cap
 

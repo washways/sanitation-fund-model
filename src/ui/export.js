@@ -180,6 +180,8 @@ Object.assign(UI, {
                 capitalPreserved: k.financials.capitalPreservedPct, // Legacy 
                 grantEquityMultiple: k.financials.grantEquityMultiple,
                 investorRepaidPct: k.financials.investorRepaidPct,
+                seniorPrincipalPastDue: k.financials.seniorPrincipalPastDue,
+                seniorPrincipalNotYetDue: k.financials.seniorPrincipalNotYetDue,
                 investorLiabilityEnd: k.sustainability.investorLiabilityEnd,
 
                 minCash: k.sustainability.minLoanCash, // loan ledger (F-66, ADR-0057)
@@ -306,6 +308,8 @@ Object.assign(UI, {
 
             lines.push(`Grant Equity Multiple,${(stats.grantEquityMultiple || 0).toFixed(2)}x`);
             lines.push(`Investor Repaid %,${((stats.investorRepaidPct || 0) * 100).toFixed(1)}%`);
+            lines.push(`Senior Principal Past Due,$${Math.round(stats.seniorPrincipalPastDue || 0).toLocaleString()}`);
+            lines.push(`Senior Principal Not Yet Due,$${Math.round(stats.seniorPrincipalNotYetDue || 0).toLocaleString()}`);
             lines.push(`Min Loan-Ledger Cash,$${Math.round(stats.minCash || 0)}`);
             lines.push(`Months Insolvent,${stats.insolvencyMonths || 0}`);
             lines.push(``);

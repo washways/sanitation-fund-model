@@ -280,6 +280,17 @@ Object.assign(ModelModule, {
                 grantEquityMultiple: grantEquityMultiple, // Replaces capitalPreserved
                 investorRepaid: totalRepaidPrincipal,
                 investorRepaidPct: inputs.investLoan > 0 ? (totalRepaidPrincipal / inputs.investLoan) : 0,
+                // F-67 / ADR-0058: split unrepaid principal into what fell due inside
+                // the horizon and was missed (wind-up accelerates everything), and what
+                // is scheduled after it. Only the first is a default (V2).
+                seniorPrincipalPastDue: Math.min(
+                    Math.max(0, s.accruedInvestorPrin || 0),
+                    Math.max(0, inputs.investLoan - totalRepaidPrincipal)
+                ),
+                seniorPrincipalNotYetDue: Math.max(
+                    0,
+                    inputs.investLoan - totalRepaidPrincipal - Math.max(0, s.accruedInvestorPrin || 0)
+                ),
                 grantsDisbursed: totalGrantsVal,
                 leverage: inputs.investGrant > 0 ? (totalLoansDisbursed / inputs.investGrant) : 0,
                 // Fund Health = (Ending Balance + Repaid Principal) / Initial Loan

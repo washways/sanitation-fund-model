@@ -188,16 +188,20 @@ Object.assign(ModelModule, {
             });
         }
 
-        // V2 — senior debt repaid in full
+        // V2 — no scheduled senior principal missed (F-67, ADR-0058). Principal that
+        // falls due after the horizon is not a default. `accruedInvestorPrin` is the
+        // scheduled principal that fell due and was not paid; wind-up accelerates the
+        // whole remaining balance into it (R-9.2).
         if (inputs.investLoan > 0) {
             const repaid = s.dataMonthlyFundPrincipal.reduce((a, b) => a + b, 0);
-            const shortfall = inputs.investLoan - repaid;
-            if (shortfall > TOL) {
+            const pastDue = Math.min(Math.max(0, s.accruedInvestorPrin || 0),
+                Math.max(0, inputs.investLoan - repaid));
+            if (pastDue > TOL) {
                 issues.push({
                     code: 'DEBT_UNREPAID',
-                    text: `Senior debt is not repaid in full: $${shortfall.toLocaleString('en-US', { maximumFractionDigits: 0 })} ` +
-                        `of $${inputs.investLoan.toLocaleString('en-US')} outstanding ` +
-                        `(${((1 - repaid / inputs.investLoan) * 100).toFixed(1)}% default).`
+                    text: `Senior debt is in default: $${pastDue.toLocaleString('en-US', { maximumFractionDigits: 0 })} ` +
+                        `of scheduled principal fell due and was not paid ` +
+                        `(${((pastDue / inputs.investLoan) * 100).toFixed(1)}% of the $${inputs.investLoan.toLocaleString('en-US')} loan).`
                 });
             }
         }
