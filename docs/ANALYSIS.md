@@ -55,7 +55,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
 | ✅ [F-73](#f-73--a-failed-country-load-leaves-stale-results-on-screen) | Low | UX / Controller | When the country fetch fails, essential fields are cleared and “no calculation was run” is shown, but the dashboard still displays the static-default run made 100 ms after load | src | S6 |
-| [F-72](#f-72--the-input-boundary-still-has-silent-fallbacks-and-two-competing-formatters) | Low | UI / Robustness | `getRaw` returns a hard-coded default for a missing element, those defaults disagree with `index.html`, and two blur formatters (`parseInt` and `parseFloat`) are bound to the same inputs | src | S6 |
+| ✅ [F-72](#f-72--the-input-boundary-still-has-silent-fallbacks-and-two-competing-formatters) | Low | UI / Robustness | `getRaw` returns a hard-coded default for a missing element, those defaults disagree with `index.html`, and two blur formatters (`parseInt` and `parseFloat`) are bound to the same inputs | src | S6 |
 | [F-71](#f-71--stale-counts-and-historical-text-in-normative-documents) | Low | Docs | Test and finding counts differ across AGENTS.md, README.md, STATUS.md and TESTING.md; MODEL_SPEC carries pre-fix history in present tense; a code comment still names the superseded 0.30 time-value default | src | S6 |
 | [F-70](#f-70--constants-with-no-row-in-parametersmd) | Low | Docs / Assumptions | The 6-month working-capital floor, 2,080-hour year, 30-day month, 3-month reserve, 30% collections floor, $1,000 viability tolerance and solver search ranges are hard-coded with no entry in the parameter dictionary | src | S6 |
 | ✅ [F-69](#f-69--oss-mixes-ledgers-and-reports-0-when-there-are-no-operating-expenses) | Medium | Model / Reporting | OSS counts ring-fenced carbon revenue as operating income (565x in the carbon scenario), is a cumulative ratio although the spec says “steady state”, and reports 0 and fails V4 when operating expenses are zero | run | S4 |
@@ -1356,6 +1356,15 @@ agree today only because every such field holds an integer.
 
 **Proposed fix:** make `getRaw` return `NaN` for a missing element so `validateInputs` reports
 it; delete the fallback defaults; keep one formatter.
+
+**Resolution:** done as proposed. `getRaw` returns `NaN` for a missing control and every
+per-field default is gone, so a dropped id is rejected by name. The `parseInt` formatter is
+deleted; `UI.setupFormatting` is the only blur formatter. In the browser the `parseInt` one ran
+first, so `1234.5` in a capital field became `1,234`. The country fill now groups digits with
+`en-US` explicitly, because `getRaw` strips commas only and a browser in a `.`-grouping locale
+would otherwise have written a value the reader could not parse. The startup harness had hidden
+the second formatter by matching only the exact selector string `.formatted-number`; it now
+resolves comma-separated selectors. Two tests in `tests/startup.test.js`; no golden movement.
 
 ### F-73 — A failed country load leaves stale results on screen
 

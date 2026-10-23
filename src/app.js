@@ -218,7 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const el = document.getElementById(id);
                 if (el && val !== null && val !== undefined && !isNaN(val)) {
                     if (id === 'popReqToilets') {
-                        el.value = parseInt(val).toLocaleString();
+                        // en-US grouping: getRaw strips commas only (F-72).
+                        el.value = parseInt(val).toLocaleString('en-US');
                     } else {
                         el.value = val;
                     }
@@ -526,20 +527,8 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
         }
     }
 }
-// Format Number Inputs on Blur
-document.querySelectorAll('.formatted-number, #popReqToilets').forEach(input => {
-    input.addEventListener('blur', (e) => {
-        const val = e.target.value.replace(/,/g, '');
-        if (!isNaN(val) && val !== '') {
-            e.target.value = parseInt(val).toLocaleString();
-        }
-    });
-    // Initial format if value exists
-    if (input.value) {
-        const val = input.value.replace(/,/g, '');
-        if (!isNaN(val)) input.value = parseInt(val).toLocaleString();
-    }
-});
+// Number formatting on blur lives in UI.setupFormatting only. A second, parseInt-based
+// formatter used to run first on the same fields and truncate decimals (F-72).
 
 
 window.runCalculation = runCalculation;
@@ -548,10 +537,4 @@ window.runCalculation = runCalculation;
 window.addEventListener('load', () => {
     const grantInput = document.getElementById('wiz-invest-grant-sidebar');
     if (grantInput) grantInput.classList.remove('auto-filled');
-
-    // Ensure commas are applied if data loaded
-    const popInput = document.getElementById('popReqToilets');
-    if (popInput && popInput.value && !popInput.value.includes(',')) {
-        popInput.value = parseInt(popInput.value).toLocaleString();
-    }
 });
