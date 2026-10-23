@@ -249,4 +249,44 @@ Object.assign(UI, {
         const banner = document.getElementById('integrityBanner');
         if (banner) banner.style.display = 'none';
     },
+
+    /**
+     * Withdraw every rendered result (F-73). Used whenever no valid calculation backs
+     * the form: a failed or incomplete country load, or invalid inputs. Nulling
+     * lastResults alone blocked the export but left the dashboard, charts and verdict
+     * banners showing the previous scenario's numbers.
+     */
+    clearResults(reason) {
+        UI.lastResults = null;
+        const tab = document.getElementById('modelTab');
+        if (tab) tab.classList.add('no-results');
+        const notice = document.getElementById('noResultsNotice');
+        if (notice) {
+            notice.innerText = `No results are shown. ${reason}`;
+            notice.hidden = false;
+        }
+        if (typeof chartInstances === 'object') {
+            for (const key of Object.keys(chartInstances)) {
+                if (chartInstances[key]) chartInstances[key].destroy();
+                delete chartInstances[key];
+            }
+        }
+        const tbody = document.getElementById('monthlyDataBody');
+        if (tbody) tbody.innerHTML = '';
+        for (const id of ['viabilityBanner', 'adviceBanner', 'integrityBanner']) {
+            const banner = document.getElementById(id);
+            if (banner) banner.style.display = 'none';
+        }
+    },
+
+    /** Undo clearResults once a valid calculation has rendered. */
+    showResults() {
+        const tab = document.getElementById('modelTab');
+        if (tab) tab.classList.remove('no-results');
+        const notice = document.getElementById('noResultsNotice');
+        if (notice) {
+            notice.innerText = '';
+            notice.hidden = true;
+        }
+    },
 });

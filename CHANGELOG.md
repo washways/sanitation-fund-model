@@ -11,6 +11,14 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.21.0] — 2026-10-23 — The last robustness findings closed
+
+### Fixed
+
+- **A failed country load no longer leaves old results on screen.** If the World Bank data is missing or unreachable, the dashboard, charts, monthly table, verdict banners and export are withdrawn, and a notice says why. Before, the screen kept the static-default run while the form said "no calculation was run". An invalid recalculation now clears the dashboard too, not just the export. Overlapping loads no longer leave the button reading "Loading...". No golden movement. ([F-73](docs/ANALYSIS.md#f-73--a-failed-country-load-leaves-stale-results-on-screen))
+
+---
+
 ## [0.20.0] — 2026-10-23 — Verdicts read the right ledger, the right window and whole enterprises
 
 ### Changed

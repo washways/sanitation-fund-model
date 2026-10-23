@@ -107,7 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const country = countryObj.code;
-        const originalText = btn.innerText;
+        // Capture the idle label once. Capturing it per click made an overlapping
+        // second request "restore" the label to "Loading..." (F-73).
+        if (!btn.dataset.idleLabel) btn.dataset.idleLabel = btn.innerText;
         btn.innerText = "Loading...";
 
 
@@ -137,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // A slower earlier request must never overwrite a country selected later.
         if (requestId !== countryLoadSequence) return;
-        btn.innerText = originalText;
+        btn.innerText = btn.dataset.idleLabel;
         // The pending-load prompt is satisfied; clear it.
         btn.classList.remove('needs-attention');
         const cHelp = document.getElementById('country-help');
@@ -401,11 +403,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 wbDiv.innerHTML += `<div class="tag highlight" style="margin-top:4px;">` +
                     `<strong>Country data incomplete:</strong> ${missing.join(', ')}. ` +
                     `No calculation was run; enter cited values in the blank fields and recalculate.</div>`;
+                // The 100 ms static-default run must not stay on screen under a form
+                // that no longer matches it (F-73).
+                UI.clearResults(`Country data is incomplete (${missing.join(', ')}). ` +
+                    'Enter cited values in the blank fields, then recalculate.');
                 return;
             }
 
             // Finally, Run Calculation (Enable Auto-Solver)
             runCalculation(true);
+        } else {
+            UI.clearResults('Country data could not be loaded. Check the connection and click Load again.');
         }
 
     });
@@ -494,6 +502,7 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
         }
 
         // Update UI
+        if (UI.showResults) UI.showResults();
         if (UI.showAdvice) UI.showAdvice(results.advice);
         if (UI.updateKPIs) {
             UI.updateKPIs(results);
@@ -507,7 +516,7 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
     } catch (e) {
         // A failed recalculation is no result. Do not leave a previous scenario
         // exportable under the user's newly entered assumptions (F-46).
-        UI.lastResults = null;
+        UI.clearResults('The last recalculation failed; correct the inputs and recalculate.');
         console.error("Model Runtime Error:", e);
         if (e && e.code === 'INVALID_INPUTS' && Array.isArray(e.validationErrors)) {
             alert("Please correct these inputs before running the model:\n\n- " +

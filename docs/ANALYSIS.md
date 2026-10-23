@@ -54,7 +54,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
-| [F-73](#f-73--a-failed-country-load-leaves-stale-results-on-screen) | Low | UX / Controller | When the country fetch fails, essential fields are cleared and “no calculation was run” is shown, but the dashboard still displays the static-default run made 100 ms after load | src | S6 |
+| ✅ [F-73](#f-73--a-failed-country-load-leaves-stale-results-on-screen) | Low | UX / Controller | When the country fetch fails, essential fields are cleared and “no calculation was run” is shown, but the dashboard still displays the static-default run made 100 ms after load | src | S6 |
 | [F-72](#f-72--the-input-boundary-still-has-silent-fallbacks-and-two-competing-formatters) | Low | UI / Robustness | `getRaw` returns a hard-coded default for a missing element, those defaults disagree with `index.html`, and two blur formatters (`parseInt` and `parseFloat`) are bound to the same inputs | src | S6 |
 | [F-71](#f-71--stale-counts-and-historical-text-in-normative-documents) | Low | Docs | Test and finding counts differ across AGENTS.md, README.md, STATUS.md and TESTING.md; MODEL_SPEC carries pre-fix history in present tense; a code comment still names the superseded 0.30 time-value default | src | S6 |
 | [F-70](#f-70--constants-with-no-row-in-parametersmd) | Low | Docs / Assumptions | The 6-month working-capital floor, 2,080-hour year, 30-day month, 3-month reserve, 30% collections floor, $1,000 viability tolerance and solver search ranges are hard-coded with no entry in the parameter dictionary | src | S6 |
@@ -1370,6 +1370,14 @@ button text, leaving it at “Loading…”.
 **Proposed fix:** on a failed or incomplete load, clear `UI.lastResults` and the rendered result
 (the same path `runCalculation` already takes on invalid input), or render an explicit
 “results reflect static defaults” banner; restore the button text before the early return.
+
+**Resolution:** the owner chose to clear the results. A new `UI.clearResults` withdraws the
+export snapshot, destroys the charts, empties the monthly table, hides the verdict and advice
+banners, and shows a notice saying why the dashboard is empty. It runs on an incomplete load,
+on a load that returns nothing, and on an invalid recalculation, which previously blocked only
+the export (F-46). A valid calculation restores the dashboard. The button now captures its idle
+label once, so an overlapping request can no longer restore it to “Loading…”. Four tests in
+`tests/startup.test.js`; no golden movement.
 
 ---
 

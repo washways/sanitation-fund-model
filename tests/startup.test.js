@@ -418,6 +418,51 @@ test('missing essential country observations clear stale fields and stop auto-ca
     'the user should be told that the country scenario is incomplete');
 });
 
+describe('a failed or incomplete country load leaves no stale results (F-73)', () => {
+  const failedFixture = () => {
+    const fixture = structuredClone(FIXTURE);
+    // Every World Bank request fails, as it would offline or when the API is blocked.
+    for (const key of Object.keys(fixture.indicators)) delete fixture.indicators[key];
+    return fixture;
+  };
+
+  test('the static-default run is withdrawn when the country load fails', async () => {
+    const app = bootApp(failedFixture());
+    await app.runStartup();
+    assert.strictEqual(app.UI.lastResults, null,
+      'no result may remain exportable after the load said no calculation was run');
+    assert.ok(app.el('modelTab').classList.contains('no-results'),
+      'the dashboard must be marked as holding no results');
+    assert.match(app.el('noResultsNotice').innerText, /No results/i,
+      'the user must be told why the dashboard is empty');
+  });
+
+  test('a successful calculation restores the dashboard', async () => {
+    const app = bootApp();
+    await app.runStartup();
+    assert.ok(app.UI.lastResults, 'control: the Malawi load produces results');
+    assert.ok(!app.el('modelTab').classList.contains('no-results'));
+  });
+
+  test('an invalid recalculation also clears the dashboard, not only the export', async () => {
+    const app = bootApp();
+    await app.runStartup();
+    app.el('popReqToilets').value = '';
+    app.runCalculation();
+    assert.strictEqual(app.UI.lastResults, null);
+    assert.ok(app.el('modelTab').classList.contains('no-results'));
+  });
+
+  test('overlapping loads restore the button label, not "Loading..."', async () => {
+    const app = bootApp();
+    await app.runStartup();
+    const btn = app.el('fetchDataBtn');
+    btn.innerText = 'Load Country Data';
+    await Promise.all([btn.click(), btn.click()]);
+    assert.strictEqual(btn.innerText, 'Load Country Data');
+  });
+});
+
 test('missing WHO health evidence resets the optional DALY estimate to zero', async () => {
   const fixture = structuredClone(FIXTURE);
   delete fixture.who;
