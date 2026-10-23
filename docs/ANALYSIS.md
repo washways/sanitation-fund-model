@@ -1302,7 +1302,7 @@ trailing window. Expect `oss`/`fss` to move in the two carbon scenarios only.
 **Resolution:** the owner chose to exclude carbon, return `null` at zero cost and keep the
 whole-horizon basis (Q17). The scorecard also stopped replacing OSS with "Insolvent (0%)". Only
 the two carbon scenarios moved (565.47x and 370.39x to 1.61x), as predicted.
-[ADR-0059](adr/0059-oss-counts-only-loan-ledger-income.md). Resolved in `PENDING-F69`.
+[ADR-0059](adr/0059-oss-counts-only-loan-ledger-income.md). Resolved in `f7dbf08`.
 
 ### F-70 — Constants with no row in PARAMETERS.md
 
