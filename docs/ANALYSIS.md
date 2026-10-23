@@ -1185,7 +1185,7 @@ each surface that it is not a formal SROI and list the omitted adjustments, add
 `grossSocialValueMultiple` as the canonical KPI field and keep `sroi` as an identical legacy
 alias so sensitivity specifications keep working. No generic adjustment percentages were
 invented. [ADR-0056](adr/0056-label-the-gross-social-value-multiple-honestly.md). Numeric
-results and all 21 golden scenarios unchanged.
+results and all 21 golden scenarios unchanged. Resolved in `2380dd4`.
 
 ---
 
