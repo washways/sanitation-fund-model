@@ -223,8 +223,9 @@ Object.assign(ModelModule, {
         }
 
         // V4 — operations cover themselves
+        // null means no operating cost, so the ratio is undefined (F-69, ADR-0059).
         const oss = kpis && kpis.sustainability ? kpis.sustainability.oss : null;
-        if (oss !== null && oss < 1.0) {
+        if (oss !== null && oss !== undefined && oss < 1.0) {
             issues.push({
                 code: 'OSS_BELOW_1',
                 text: `Operating self-sufficiency is ${(oss * 100).toFixed(0)}% — revenue does not cover operating costs, ` +

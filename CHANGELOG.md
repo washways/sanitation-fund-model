@@ -20,8 +20,12 @@ All notable changes to this project — anything that alters what the model prod
 - **The repayment term and the horizon are independent inputs.** Editing one no longer rewrites the other. Two listeners bound them, one of them unguarded and two-way, so a fund longer than its debt could not be modelled. No test saw it because the harness never fired the browser's `load` event; it does now. ([ADR-0058](docs/adr/0058-separate-repayment-term-from-horizon.md), F-67)
 - **Senior repayment is judged against what was due.** V2 now fails only on scheduled principal that fell due and was not paid. Principal scheduled after the horizon is shown as *not yet due* in the export, not as a default. A 5-year horizon with a 10-year term previously read "52.6% default". Only the `short horizon (1y)` scenario changes verdict.
 
+- **OSS counts only income that can pay operations.** It is now loan interest divided by operating cost. Carbon revenue goes to the ring-fenced grant ledger and is excluded; it remains in FSS. With no operating cost OSS shows *n/a* and the operating check is skipped, instead of reporting 0% and failing. The scorecard no longer replaces OSS with "Insolvent (0%)". ([ADR-0059](docs/adr/0059-oss-counts-only-loan-ledger-income.md), F-69)
+- **The findings register now lists F-49 to F-52.** They were fixed in October but never had rows, so the register under-counted; `tools/verify-findings.js` now counts from the documents instead of printing a fixed sentence.
+
 ### Golden movement
 
+- `carbon enabled`: OSS 565.47 → 1.61. `carbon, short crediting life`: 370.39 → 1.61. No verdict changed.
 - `grant capital only`: depletion `Sustainable` → `0.0`, months insolvent 0 → 60. With no loan capital, nothing can pay operations.
 - `demand constrained`: `Sustainable` → `4.5`, 0 → 6. `capacity constrained`: `Sustainable` → `4.4`, 0 → 7. `high ME attrition`: `Sustainable` → `4.9`, 0 → 1.
 - `high defaults (40%)`: depletion 4.3 → 3.2, months insolvent 8 → 22.

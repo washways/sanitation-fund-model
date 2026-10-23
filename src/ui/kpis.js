@@ -110,18 +110,23 @@ Object.assign(UI, {
             };
 
             // OSS Display
-            const oss = (k.sustainability.oss || 0) * 100;
+            // F-69 / ADR-0059: render the ratio itself. null means there is no
+            // operating cost, so the ratio is undefined. Insolvency is reported by its
+            // own rows and banner; it must not overwrite OSS with a fake 0% (R-10.3).
+            const ossValue = k.sustainability.oss;
             const ossEl = document.getElementById('sus-oss-ratio');
             if (ossEl) {
-                if (isInsolvent) {
-                    ossEl.innerText = "Insolvent (0%)";
-                    ossEl.style.color = "#ef4444";
-                    ossEl.title = "Fund runs out of cash. OSS is invalid.";
+                if (ossValue === null || ossValue === undefined) {
+                    ossEl.innerText = "n/a (no operating cost)";
+                    ossEl.style.color = "inherit";
                 } else {
+                    const oss = ossValue * 100;
                     ossEl.innerText = oss.toFixed(1) + '%';
                     ossEl.style.color = oss >= 100 ? '#22c55e' : '#ef4444';
-                    ossEl.title = "";
                 }
+                ossEl.title = isInsolvent
+                    ? "The loan ledger was overdrawn during the run; see Months Insolvent."
+                    : "";
             }
 
             setText('sus-depletion', k.sustainability.depletionYear || "Sustainable");

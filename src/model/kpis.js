@@ -79,18 +79,18 @@ Object.assign(ModelModule, {
         // OSS = Operating Revenue / Operating Expenses
         // Operating Revenue = Interest + Fees (if separate) + Carbon
         // Operating Expenses = FixedOps + VariableOps (Mgmt+ME)
-        const operatingRevenue = totalRevenueInt + totalCarbonRevenue;
-        // Check if Fees are in Revenue?
-        // Fees are deducted from LoanFund (Expense).
-        // Interest is added to LoanFund (Revenue).
-        // So yes.
+        // F-69 / ADR-0059: OSS counts only income that can pay operations. Operations
+        // are paid from the loan ledger; carbon accrues to the ring-fenced grant
+        // ledger and never can, so it is excluded. With no operating cost the ratio
+        // is undefined (null), not 0%, and V4 is skipped.
         const operatingExpenses = totalOps;
-        const ossRatio = operatingExpenses > 0 ? (operatingRevenue / operatingExpenses) : 0;
+        const ossRatio = operatingExpenses > 0 ? (totalRevenueInt / operatingExpenses) : null;
 
-        // FSS = Total Revenue / Total Expenses (Including Finance & Default)
-        // Total Expenses = Ops + Defaults + FundInterest
+        // FSS = whole-fund revenue (interest + carbon) / (ops + write-downs + investor
+        // interest). Carbon stays here: FSS is a whole-fund cost-coverage ratio.
+        const fssRevenue = totalRevenueInt + totalCarbonRevenue;
         const totalExpenses = operatingExpenses + totalDefaults + totalFundInterest;
-        const fssRatio = totalExpenses > 0 ? (operatingRevenue / totalExpenses) : 0;
+        const fssRatio = totalExpenses > 0 ? (fssRevenue / totalExpenses) : 0;
 
 
         // Depletion — judged on the LOAN ledger (F-66, ADR-0057). It pays debt

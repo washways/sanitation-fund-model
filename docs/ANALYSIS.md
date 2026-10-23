@@ -58,7 +58,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | [F-72](#f-72--the-input-boundary-still-has-silent-fallbacks-and-two-competing-formatters) | Low | UI / Robustness | `getRaw` returns a hard-coded default for a missing element, those defaults disagree with `index.html`, and two blur formatters (`parseInt` and `parseFloat`) are bound to the same inputs | src | S6 |
 | [F-71](#f-71--stale-counts-and-historical-text-in-normative-documents) | Low | Docs | Test and finding counts differ across AGENTS.md, README.md, STATUS.md and TESTING.md; MODEL_SPEC carries pre-fix history in present tense; a code comment still names the superseded 0.30 time-value default | src | S6 |
 | [F-70](#f-70--constants-with-no-row-in-parametersmd) | Low | Docs / Assumptions | The 6-month working-capital floor, 2,080-hour year, 30-day month, 3-month reserve, 30% collections floor, $1,000 viability tolerance and solver search ranges are hard-coded with no entry in the parameter dictionary | src | S6 |
-| [F-69](#f-69--oss-mixes-ledgers-and-reports-0-when-there-are-no-operating-expenses) | Medium | Model / Reporting | OSS counts ring-fenced carbon revenue as operating income (565x in the carbon scenario), is a cumulative ratio although the spec says “steady state”, and reports 0 and fails V4 when operating expenses are zero | run | S4 |
+| ✅ [F-69](#f-69--oss-mixes-ledgers-and-reports-0-when-there-are-no-operating-expenses) | Medium | Model / Reporting | OSS counts ring-fenced carbon revenue as operating income (565x in the carbon scenario), is a cumulative ratio although the spec says “steady state”, and reports 0 and fails V4 when operating expenses are zero | run | S4 |
 | [F-68](#f-68--fractional-micro-enterprises-are-launched-near-the-network-cap) | Low | Model | `space = maxTotalMEs - currentMEs` is fractional after attrition, so the loop launches 0.035 of an enterprise and books a $400 loan for it; 45 such months in the capacity-constrained golden scenario | run | S4 |
 | ✅ [F-67](#f-67--the-repayment-term-is-force-bound-to-the-horizon-and-v2-measures-the-wrong-window) | Medium | UI / Model | A second, unguarded two-way listener keeps `fundRepaymentTerm` equal to `duration`, so the browser cannot express a term that differs from the horizon; and V2 reports debt not yet due as a default (5-year horizon, 10-year term: “52.6% default”) | run | S4 |
 | ✅ [F-65](#f-65--the-social-value-ratio-is-labelled-as-a-formal-sroi) | Medium | Reporting | `socialValue / capital` is called an SROI although it is undiscounted and applies no deadweight, attribution, displacement or drop-off | src | S6 |
@@ -75,6 +75,10 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | ✅ [F-55](#f-55--programme-summary-tables-overflow-the-page) | Medium | UI | Summary cards are fixed to three columns while all cells are forced not to wrap | src | S6 |
 | ✅ [F-54](#f-54--month-zero-launches-half-the-national-enterprise-network) | **High** | Assumptions | Month zero cash-maximises the startup cohort, creating $25.8k of ME interest in month one | run | S3 |
 | ✅ [F-53](#f-53--country-derived-input-highlighting-contradicts-its-own-source-state) | Medium | UI | API provenance disappears immediately on some fields and remains falsely on edited values | run | S6 |
+| ✅ [F-52](#f-52--valid-partial-year-horizons-disappear-from-annual-views) | **High** | Reporting | Annual aggregates were recorded only at month 12, so a valid 6-month run rendered no charts and an 18-month run dropped months 13–18 | run | S6 |
+| ✅ [F-51](#f-51--the-annual-chart-turns-grant-spending-into-fictitious-grant-income) | **High** | Charts | The annual cash-flow chart differenced annual grant flows as if cumulative, showing $292k of fictitious grant income | run | S6 |
+| ✅ [F-50](#f-50--an-explicit-zero-enterprise-capacity-input-restores-the-default) | **Critical** | Model | `mePerDistrict || 20` turned an explicit zero into the default | run | S6 |
+| ✅ [F-49](#f-49--monthly-implementation-columns-are-shifted-and-me-launches-are-overstated) | **High** | Reporting | Monthly table rows had 25 cells under 24 headers, shifting every value from ME loans onward | run | S6 |
 | ✅ [F-48](#f-48--the-visible-advisor-bypasses-model-tested-advice) | **High** | Advice | The visible advisor calls legacy rules that repeat recommendations already proved unsafe | src | S6 |
 | ✅ [F-47](#f-47--exports-can-describe-a-different-scenario-and-liability) | **High** | Export | Exports reread live inputs and the copied report misstates senior liability and leverage | src, run | S6 |
 | ✅ [F-46](#f-46--invalid-inputs-enter-the-loop-and-can-look-plausible) | **Critical** | Inputs | Invalid or blank inputs can create NaN, Infinity, crashes, or plausible-looking output | run | S6 |
@@ -1277,7 +1281,7 @@ by small amounts in the capacity-constrained scenario only.
 
 ### F-69 — OSS mixes ledgers and reports 0 when there are no operating expenses
 
-**Medium — open.** Three related problems with the operating self-sufficiency ratio.
+**Medium — fixed.** Three related problems with the operating self-sufficiency ratio.
 
 - **Ledger mixing.** `operatingRevenue = interest + carbon`. Carbon revenue accrues to the
   grant ledger (R-8.1) and can never pay operating costs, which come out of the loan ledger
@@ -1294,6 +1298,11 @@ by small amounts in the capacity-constrained scenario only.
 **Proposed fix (needs an ADR, Q17):** exclude carbon from OSS or report a loan-ledger OSS
 beside it; return `null` when expenses are zero and skip V4; decide whether V4 should use a
 trailing window. Expect `oss`/`fss` to move in the two carbon scenarios only.
+
+**Resolution:** the owner chose to exclude carbon, return `null` at zero cost and keep the
+whole-horizon basis (Q17). The scorecard also stopped replacing OSS with "Insolvent (0%)". Only
+the two carbon scenarios moved (565.47x and 370.39x to 1.61x), as predicted.
+[ADR-0059](adr/0059-oss-counts-only-loan-ledger-income.md). Resolved in `PENDING-F69`.
 
 ### F-70 — Constants with no row in PARAMETERS.md
 

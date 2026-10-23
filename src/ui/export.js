@@ -300,7 +300,7 @@ Object.assign(UI, {
             lines.push(`Jobs Supported at Horizon,${stats.jobs}`);
             lines.push(``);
             lines.push(`Sustainability Scorecard`);
-            lines.push(`OSS Ratio,${((stats.ossRatio || 0) * 100).toFixed(1)}%`);
+            lines.push(`OSS Ratio,${stats.ossRatio === null || stats.ossRatio === undefined ? 'n/a (no operating cost)' : (stats.ossRatio * 100).toFixed(1) + '%'}`);
             lines.push(`FSS Ratio (Total),${((stats.fssRatio || 0) * 100).toFixed(1)}%`);
             lines.push(`Loan-Ledger Depletion Year,${stats.depletionYear}`);
             lines.push(`Break-even Interest,${stats.breakEvenRate}`);

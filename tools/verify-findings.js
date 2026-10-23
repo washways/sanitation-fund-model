@@ -641,7 +641,17 @@ console.log('='.repeat(80));
 console.log(`${fixed} fixed, ${present} still present`);
 console.log('='.repeat(80));
 console.log('');
-console.log('Findings register: 64 of 64 resolved.');
-console.log('Open modelling questions: none. R-7.6/Q14 was resolved by ADR-0044.');
+// Counted from the documents, not hard-coded, so this line cannot go stale (F-71).
+{
+  const register = fs.readFileSync(path.join(ROOT, 'docs', 'ANALYSIS.md'), 'utf8');
+  const spec = fs.readFileSync(path.join(ROOT, 'docs', 'MODEL_SPEC.md'), 'utf8');
+  const rows = register.split(/\r?\n/).filter(line => /^\| (✅ )?\[F-\d+\]/.test(line));
+  const resolved = rows.filter(line => line.startsWith('| ✅')).length;
+  const openQuestions = spec.split(/\r?\n/)
+    .filter(line => /^\| Q\d+ \| \*\*\[OPEN\]\*\*/.test(line))
+    .map(line => line.match(/^\| (Q\d+)/)[1]);
+  console.log(`Findings register: ${resolved} of ${rows.length} resolved.`);
+  console.log(`Open modelling questions: ${openQuestions.length ? openQuestions.join(', ') : 'none'}.`);
+}
 console.log('');
 console.log('  Not verified anywhere: nobody has opened the page in a real browser.');

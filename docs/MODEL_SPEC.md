@@ -556,7 +556,7 @@ A run is viable only if **all** hold:
 | V1 | `min(loanCash) >= 0` — the loan ledger is never overdrawn. Judged on `dataMonthlyLoanCash`, not the pooled balance, because grant cash is ring-fenced (R-5.2) and cannot pay debt service or operations. [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md), F-66, Q15. |
 | V2 | `seniorPrincipalPastDue <= $1,000` — no scheduled senior principal fell due inside the horizon and went unpaid. Principal scheduled after the horizon is *not yet due*, not a default; wind-up (R-9.2) makes all remaining principal due. Horizon and repayment term are independent inputs. [ADR-0058](adr/0058-separate-repayment-term-from-horizon.md), F-67, Q16. |
 | V3 | `capitalisedInterest < $1,000` — no investor interest had to be rolled up when due; the warning also reports the amount still outstanding |
-| V4 | `OSS >= 1.0` — operations cover themselves. OSS is the **whole-horizon cumulative** ratio defined in R-11.1, not a steady-state or trailing-window figure, and its numerator includes carbon revenue that accrues to the grant ledger. When operating expenses are zero the ratio is reported as 0 and V4 fails. Registered as F-69; see Q17. |
+| V4 | `OSS >= 1.0` — loan interest covers operating cost. OSS is the **whole-horizon cumulative** ratio defined in R-11.1, not a steady-state figure. When operating cost is zero OSS is `null` and V4 is not applied. [ADR-0059](adr/0059-oss-counts-only-loan-ledger-income.md), F-69, Q17. |
 
 ### R-10.3 Reporting rules **[AS-BUILT]**
 1. Both verdicts render **on screen**. The console is not a reporting channel.
@@ -650,8 +650,8 @@ All are computed in `ModelModule.computeKPIs`, which is **pure**: no DOM access 
 | `toilets` | `dataToiletsMonthlyLoan[last] + dataToiletsMonthlyGrant[last]` | AS-BUILT |
 | `people` | `toilets * avgHHSize` (1 toilet = 1 household) | AS-BUILT |
 | `jobs` | `floor(activeMEsAtHorizon) * jobsPerMe`; a point-in-time jobs-supported estimate, not job-years | AS-BUILT — [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md) |
-| `OSS` | operating revenue / operating expenses over the whole horizon, where revenue = loan interest + carbon and expenses = fixed + variable ops. **Excludes** write-offs and finance cost. Returns `0`, not `null`, when expenses are zero. Carbon is grant-ledger income (R-8.1) although operations are paid from the loan ledger — see F-69 / Q17. | AS-BUILT |
-| `FSS` | operating revenue / (operating expenses + write-offs + investor interest) | AS-BUILT — investor interest is now real, given a non-zero cost of capital (F-01) |
+| `OSS` | (household + enterprise loan interest) / (fixed + variable ops) over the whole horizon, or `null` when ops are zero. **Excludes** carbon (grant-ledger income that cannot pay operations), write-offs and finance cost | AS-BUILT — [ADR-0059](adr/0059-oss-counts-only-loan-ledger-income.md) |
+| `FSS` | (loan interest + carbon) / (operating expenses + write-offs + investor interest) — carbon stays in this whole-fund ratio | AS-BUILT — investor interest is now real, given a non-zero cost of capital (F-01) |
 | `netAssets` | `cashEnd + portfolioOutstanding - investorLiabilityEnd`, where the liability is the one the loop tracked | AS-BUILT — includes capitalised arrears since 2026-08-20 (F-06) |
 | `grantEquityMultiple` | `netAssets / investGrant` | AS-BUILT |
 | `capitalPreservation` | `netAssets / (investGrant + investLoan)` | AS-BUILT — a whole-fund balance-sheet ratio, not investor repayment |
@@ -723,7 +723,7 @@ These must hold for **every** run. They are the contract that makes the model au
 
 ## 13. Modelling decisions
 
-Q1–Q16 are decided. **Q17–Q18 are `[OPEN]`**, raised by the 2026-10-22 robustness review
+Q1–Q17 are decided. **Q18 is `[OPEN]`**, raised by the 2026-10-22 robustness review
 ([ANALYSIS.md §4B](ANALYSIS.md)); they must not be resolved in code without the model owner's
 decision and an ADR first. New questions are recorded here the same way.
 
@@ -745,7 +745,7 @@ decision and an ADR first. New questions are recorded here the same way.
 | Q14 | Should constraint reporting derive from actual production limits and retain simultaneous causes? | Yes — partition actual foregone production into capacity and loan-capital loss, expose grant-capital recovery separately, and report secondary causes. [ADR-0044](adr/0044-report-actual-production-constraints.md) |
 | Q15 | Should the solvency verdict (V1), `depletionMonth` and `opsRunway` test the loan ledger alone rather than the pooled balance? | Yes — loan ledger only; the pooled balance is an audit series. Decided 2026-10-22. [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md) |
 | Q16 | Should a repayment term longer than the horizon be rejected, or reported as "not yet due"? Should the UI stop binding term to horizon? | Report as not yet due; V2 fails only on past-due principal; the inputs are independent. Decided 2026-10-22. [ADR-0058](adr/0058-separate-repayment-term-from-horizon.md) |
-| Q17 | **[OPEN]** Should OSS exclude carbon revenue (grant ledger), return `null` when operating expenses are zero, and be measured over a trailing window rather than the whole horizon? | Not decided. Reviewer's recommendation: exclude carbon or report a loan-ledger OSS beside the current one; `null` and skip V4 at zero expenses; keep whole-horizon unless the owner wants a steady-state test (F-69). |
+| Q17 | Should OSS exclude carbon, return `null` at zero operating cost, and use a trailing window? | Exclude carbon; `null` and skip V4 at zero cost; keep whole-horizon. Decided 2026-10-22. [ADR-0059](adr/0059-oss-counts-only-loan-ledger-income.md) |
 | Q18 | **[OPEN]** Is the 6-month working-capital floor in `meCapitalRequirement` (`max(6, termHh)`) a sourced assumption, and should it be an input? | Not decided. It has no citation and it multiplies every enterprise loan; see [PARAMETERS.md](PARAMETERS.md#fixed-model-constants) and F-70. |
 
 ---
