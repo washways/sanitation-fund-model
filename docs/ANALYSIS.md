@@ -1256,7 +1256,7 @@ supposed to model a fund longer than its debt.
 **Resolution:** the owner chose (b) (Q16). Both binding listeners are removed; the startup harness
 now fires `window` `load` listeners, which is why no test had seen the second one. V2 fails only on
 `seniorPrincipalPastDue`. Only `short horizon (1y)` changes verdict; no golden value moved.
-[ADR-0058](adr/0058-separate-repayment-term-from-horizon.md). Resolved in `PENDING-F67`.
+[ADR-0058](adr/0058-separate-repayment-term-from-horizon.md). Resolved in `9cd896e`.
 
 ### F-68 — Fractional micro-enterprises are launched near the network cap
 
