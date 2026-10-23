@@ -11,7 +11,7 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
-## [0.20.0] — 2026-10-23 — Verdicts read the right ledger and the right window
+## [0.20.0] — 2026-10-23 — Verdicts read the right ledger, the right window and whole enterprises
 
 ### Changed
 
@@ -23,8 +23,11 @@ All notable changes to this project — anything that alters what the model prod
 - **OSS counts only income that can pay operations.** It is now loan interest divided by operating cost. Carbon revenue goes to the ring-fenced grant ledger and is excluded; it remains in FSS. With no operating cost OSS shows *n/a* and the operating check is skipped, instead of reporting 0% and failing. The scorecard no longer replaces OSS with "Insolvent (0%)". ([ADR-0059](docs/adr/0059-oss-counts-only-loan-ledger-income.md), F-69)
 - **The findings register now lists F-49 to F-52.** They were fixed in October but never had rows, so the register under-counted; `tools/verify-findings.js` now counts from the documents instead of printing a fixed sentence.
 
+- **Enterprises are launched in whole units.** A network at its cap used to relaunch fractions of an enterprise each month after attrition, with a matching fraction of a loan. ([ADR-0060](docs/adr/0060-launch-whole-enterprises.md), F-68)
+
 ### Golden movement
 
+- `capacity constrained`: toilets 1,394 → 1,220 (−12.5%), ME loans $52,727 → $45,600, net assets $472,753 → $471,115. The 174 removed toilets had been built by fractional enterprises. No other scenario moved.
 - `carbon enabled`: OSS 565.47 → 1.61. `carbon, short crediting life`: 370.39 → 1.61. No verdict changed.
 - `grant capital only`: depletion `Sustainable` → `0.0`, months insolvent 0 → 60. With no loan capital, nothing can pay operations.
 - `demand constrained`: `Sustainable` → `4.5`, 0 → 6. `capacity constrained`: `Sustainable` → `4.4`, 0 → 7. `high ME attrition`: `Sustainable` → `4.9`, 0 → 1.

@@ -59,7 +59,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | [F-71](#f-71--stale-counts-and-historical-text-in-normative-documents) | Low | Docs | Test and finding counts differ across AGENTS.md, README.md, STATUS.md and TESTING.md; MODEL_SPEC carries pre-fix history in present tense; a code comment still names the superseded 0.30 time-value default | src | S6 |
 | [F-70](#f-70--constants-with-no-row-in-parametersmd) | Low | Docs / Assumptions | The 6-month working-capital floor, 2,080-hour year, 30-day month, 3-month reserve, 30% collections floor, $1,000 viability tolerance and solver search ranges are hard-coded with no entry in the parameter dictionary | src | S6 |
 | ✅ [F-69](#f-69--oss-mixes-ledgers-and-reports-0-when-there-are-no-operating-expenses) | Medium | Model / Reporting | OSS counts ring-fenced carbon revenue as operating income (565x in the carbon scenario), is a cumulative ratio although the spec says “steady state”, and reports 0 and fails V4 when operating expenses are zero | run | S4 |
-| [F-68](#f-68--fractional-micro-enterprises-are-launched-near-the-network-cap) | Low | Model | `space = maxTotalMEs - currentMEs` is fractional after attrition, so the loop launches 0.035 of an enterprise and books a $400 loan for it; 45 such months in the capacity-constrained golden scenario | run | S4 |
+| ✅ [F-68](#f-68--fractional-micro-enterprises-are-launched-near-the-network-cap) | Low | Model | `space = maxTotalMEs - currentMEs` is fractional after attrition, so the loop launches 0.035 of an enterprise and books a $400 loan for it; 45 such months in the capacity-constrained golden scenario | run | S4 |
 | ✅ [F-67](#f-67--the-repayment-term-is-force-bound-to-the-horizon-and-v2-measures-the-wrong-window) | Medium | UI / Model | A second, unguarded two-way listener keeps `fundRepaymentTerm` equal to `duration`, so the browser cannot express a term that differs from the horizon; and V2 reports debt not yet due as a default (5-year horizon, 10-year term: “52.6% default”) | run | S4 |
 | ✅ [F-65](#f-65--the-social-value-ratio-is-labelled-as-a-formal-sroi) | Medium | Reporting | `socialValue / capital` is called an SROI although it is undiscounted and applies no deadweight, attribution, displacement or drop-off | src | S6 |
 | ✅ [F-66](#f-66--a-negative-loan-ledger-is-hidden-by-ring-fenced-grant-cash) | **High** | Model / Reporting | V1, `depletionMonth` and `opsRunway` test the pooled cash balance, although the ledgers never transfer; a fund whose loan ledger is overdrawn reports “never insolvent” and an 80-year runway when grant cash is large | run | S4 |
@@ -1264,7 +1264,7 @@ now fires `window` `load` listeners, which is why no test had seen the second on
 
 ### F-68 — Fractional micro-enterprises are launched near the network cap
 
-**Low — open.** R-2.5 says micro-enterprises are integers, and ADR-0040 made `New MEs` a count
+**Low — fixed.** R-2.5 says micro-enterprises are integers, and ADR-0040 made `New MEs` a count
 column. In R-6.2 the headroom is `space = maxTotalMEs - currentMEs`, and `currentMEs` is
 continuous after attrition (R-6.3). Once the network is at its cap, attrition removes 0.035 of an
 enterprise each month and the expansion step launches 0.035 of one back, booking a loan of about
@@ -1278,6 +1278,10 @@ the cap.
 **Proposed fix (needs an ADR):** floor `space` before taking the minimum, so a network at its
 cap stays there until a whole enterprise has left. Expect `totalLoansMe` and `mesEnd` to move
 by small amounts in the capacity-constrained scenario only.
+
+**Resolution:** headroom is floored. Only `capacity constrained` moved: toilets 1,394 to 1,220,
+because 174 toilets had been built by fractional enterprises. [ADR-0060](adr/0060-launch-whole-enterprises.md).
+Resolved in `PENDING-F68`.
 
 ### F-69 — OSS mixes ledgers and reports 0 when there are no operating expenses
 

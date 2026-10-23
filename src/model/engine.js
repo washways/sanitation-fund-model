@@ -678,7 +678,10 @@ const ModelModule = {
                 if (expansionBudget > meSetup) {
                     const potentialNew = Math.min(Math.floor(expansionBudget / meSetup), Math.ceil(currentMEs * inputs.meMaxMonthlyGrowthRate));
                     // Check against Max Cap
-                    const space = maxTotalMEs - currentMEs;
+                    // Whole enterprises only (R-2.5, F-68, ADR-0060). currentMEs is
+                    // continuous after attrition; unfloored headroom relaunched
+                    // fractions of an enterprise every month at the cap.
+                    const space = Math.floor(maxTotalMEs - currentMEs);
                     newMes = Math.min(potentialNew, space);
 
                     if (newMes > 0) {

@@ -64,3 +64,4 @@ For the short version of what each one decided, [CHANGELOG.md](../../CHANGELOG.m
 | [0057](0057-judge-solvency-on-the-loan-ledger.md) | Judge solvency on the loan ledger |
 | [0058](0058-separate-repayment-term-from-horizon.md) | Separate the repayment term from the horizon |
 | [0059](0059-oss-counts-only-loan-ledger-income.md) | OSS counts only loan-ledger income |
+| [0060](0060-launch-whole-enterprises.md) | Launch micro-enterprises in whole units |

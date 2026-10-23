@@ -276,10 +276,10 @@ later through a percentage of zero. Replace 15% with the programme's recruitment
 expansionBudget = lendable * meExpansionBudgetShare
 newMEs = min(floor(expansionBudget / meCapitalRequirement),
              ceil(currentMEs * meMaxMonthlyGrowthRate),
-             maxTotalMEs - currentMEs)
+             floor(maxTotalMEs - currentMEs))
 ```
 
-`maxTotalMEs - currentMEs` is **not floored** before the minimum is taken, and `currentMEs` is continuous after attrition (R-6.3), so once a network reaches its cap the loop can launch a fraction of an enterprise and book a proportionally small loan for it. That contradicts R-2.5 and the count column in R-6.5; it is registered as F-68 and must not be relied on. The baseline never reaches its cap and is unaffected.
+The headroom is **floored** because `currentMEs` is continuous after attrition (R-6.3). Without the floor a network at its cap relaunched a fraction of an enterprise every month (F-68). A capped network now runs slightly below its cap until a whole enterprise's worth of capacity has left. [ADR-0060](adr/0060-launch-whole-enterprises.md).
 
 Both shares are user inputs, both defaulting to 10% — the values that were previously hardcoded, so no scenario's output moved when *that* landed. `meMaxMonthlyGrowthRate` is the dominant driver of the growth curve (10%/month compounds to about 3.1x/year); it was previously invisible to the user. The divisor was `meSetupCost` until 2026-08-21 — the same under-pricing as R-6.1, fixed in the same change.
 
