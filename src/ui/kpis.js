@@ -86,8 +86,8 @@ Object.assign(UI, {
             // --- Sustainability Scorecard ---
 
             // Liquidity / Export Stats Population
-            const sData = results.series.dataMonthlyCashBalance || [];
-            const minCash = sData.length ? Math.min(...sData) : 0;
+            // Loan ledger only (F-66, ADR-0057): grant cash cannot pay operations.
+            const minCash = k.sustainability.minLoanCash || 0;
             const insolvencyMonths = k.sustainability.monthsInsolvent;
             const isInsolvent = minCash < 0;
 

@@ -420,10 +420,14 @@
         </div>
 
         <p>A run is <strong>viable</strong> only if all four of these hold:</p>
-        <div class="formula-box">V1  min(cash balance) >= 0                    never insolvent
+        <div class="formula-box">V1  min(loan-ledger cash) >= 0               loan ledger never overdrawn
 V2  principal repaid >= senior loan - $1,000  senior debt repaid in full
 V3  capitalised interest < $1,000             never had to roll up unpaid interest
 V4  OSS >= 1.0                                operations cover themselves</div>
+        <p><strong>V1 reads the loan ledger only.</strong> The loan ledger pays investor debt service and fixed
+            operations; grant cash is ring-fenced and can never be used for either. Testing the pooled balance let
+            a large grant hide an overdrawn loan ledger, so since 2026-10-23 the depletion year, months insolvent,
+            minimum cash and ops coverage rows all describe the loan ledger (ADR-0057).</p>
 
         <div class="alert-box">
             <h3>Why this is called out so prominently</h3>

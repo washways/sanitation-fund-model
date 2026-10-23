@@ -11,6 +11,21 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.20.0] — 2026-10-23 — Verdicts read the right ledger and the right window
+
+### Changed
+
+- **Solvency is judged on the loan ledger, not the pooled balance.** The loan ledger pays debt service and operations; grant cash is ring-fenced and cannot. The viability check (V1), depletion year, months insolvent, minimum cash and ops coverage now read loan-ledger cash. A $5.0m grant with a $0.5m loan previously reported *never insolvent* and a 79.7-year runway while the loan ledger fell to -$32,588. ([ADR-0057](docs/adr/0057-judge-solvency-on-the-loan-ledger.md), F-66)
+
+### Golden movement
+
+- `grant capital only`: depletion `Sustainable` → `0.0`, months insolvent 0 → 60. With no loan capital, nothing can pay operations.
+- `demand constrained`: `Sustainable` → `4.5`, 0 → 6. `capacity constrained`: `Sustainable` → `4.4`, 0 → 7. `high ME attrition`: `Sustainable` → `4.9`, 0 → 1.
+- `high defaults (40%)`: depletion 4.3 → 3.2, months insolvent 8 → 22.
+- New fingerprint field `minLoanCash` in all 21 scenarios. No cash flow, toilet, net-asset or repayment figure moved. The Malawi baseline verdict is unchanged.
+
+---
+
 ## [0.19.8] — 2026-10-22 — The social value ratio is no longer called an SROI
 
 ### Changed

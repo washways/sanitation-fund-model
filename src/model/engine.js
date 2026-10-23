@@ -353,6 +353,9 @@ const ModelModule = {
         // --- Output Arrays ---
         const monthlyLabels = [];
         const dataMonthlyCashBalance = [];
+        // F-66 / ADR-0057: the ledger that pays debt service and operations. Every
+        // solvency verdict reads this, never the pooled balance above.
+        const dataMonthlyLoanCash = [];
         const dataMonthlyNet = [];
         const dataMonthlyRevenueHh = [];
         const dataMonthlyRevenueMe = [];
@@ -862,6 +865,7 @@ const ModelModule = {
             const netFlow = (loanInflow + carbonRev) - (outflows.fixed + outflows.varFees + outflows.investPrin + outflows.investInt + outflows.loansHh + outflows.loansMe + outflows.grants);
             dataMonthlyNet.push(netFlow);
             dataMonthlyCashBalance.push(loanCash + grantCash);
+            dataMonthlyLoanCash.push(loanCash);
 
             dataMonthlyGrantDisbursed.push(outflows.grants);
             dataMonthlyGrantCash.push(grantCash);
@@ -935,6 +939,7 @@ const ModelModule = {
             monthlyLabels,
             labels,
             dataMonthlyCashBalance,
+            dataMonthlyLoanCash,
             dataMonthlyNet,
             dataToilets,
             dataToiletsMonthlyGrant,

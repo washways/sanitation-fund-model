@@ -93,12 +93,17 @@ Object.assign(ModelModule, {
         const fssRatio = totalExpenses > 0 ? (operatingRevenue / totalExpenses) : 0;
 
 
-        // Depletion Year
-        // Find first month where Cash < 0
+        // Depletion — judged on the LOAN ledger (F-66, ADR-0057). It pays debt
+        // service and operations; ring-fenced grant cash cannot (R-5.2), so a pooled
+        // test let a large grant hide an overdrawn loan ledger.
+        const loanCashSeries = s.dataMonthlyLoanCash
+            || s.dataMonthlyCashBalance.map((c, i) => c - (s.dataMonthlyGrantCash?.[i] || 0));
+        const loanCashEnd = loanCashSeries[last] || 0;
+        const minLoanCash = loanCashSeries.length ? Math.min(...loanCashSeries) : 0;
         let firstInsolvencyIndex = -1;
         let monthsInsolvent = 0;
-        for (let i = 0; i < s.dataMonthlyCashBalance.length; i++) {
-            if (s.dataMonthlyCashBalance[i] < 0) {
+        for (let i = 0; i < loanCashSeries.length; i++) {
+            if (loanCashSeries[i] < 0) {
                 if (firstInsolvencyIndex === -1) firstInsolvencyIndex = i;
                 monthsInsolvent++;
             }
@@ -284,8 +289,10 @@ Object.assign(ModelModule, {
                 oss: ossRatio,
                 fss: fssRatio,
                 selfSufficiency: fssRatio, // Map FSS to Self-Sufficiency for UI
-                // null means "not applicable", not "99 years" (F-28).
-                opsRunway: (inputs.annualFixedOpsCost > 0) ? (cashEnd / inputs.annualFixedOpsCost) : null,
+                // null means "not applicable", not "99 years" (F-28). Loan-ledger cash
+                // only: grant cash cannot pay operations (F-66, ADR-0057).
+                opsRunway: (inputs.annualFixedOpsCost > 0) ? (loanCashEnd / inputs.annualFixedOpsCost) : null,
+                minLoanCash: minLoanCash,
                 depletionMonth: depletionMonth,
                 isSustainable: isSustainable,
                 depletionYear: depletionYear, // display string; prefer depletionMonth

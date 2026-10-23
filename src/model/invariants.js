@@ -1,5 +1,5 @@
 /**
- * invariants.js — part of the S5 structural split (ADR-0033). Integrity (INV-1..INV-18) and viability verdicts, plus the model-tested solvency advice that depends on them (MODEL_SPEC R-10, §12).
+ * invariants.js — part of the S5 structural split (ADR-0033). Integrity (INV-1..INV-21) and viability verdicts, plus the model-tested solvency advice that depends on them (MODEL_SPEC R-10, §12).
  */
 
 Object.assign(ModelModule, {
@@ -119,7 +119,9 @@ Object.assign(ModelModule, {
         // INV-21: once operations end, available loan-ledger cash cannot remain
         // stranded while senior debt is still unpaid (ADR-0036, F-45).
         if (s.windUpMonth && s.investorLiabilityEnd > TOL) {
-            const endingLoanCash = s.dataMonthlyCashBalance[last] - s.dataMonthlyGrantCash[last];
+            const endingLoanCash = s.dataMonthlyLoanCash
+                ? s.dataMonthlyLoanCash[last]
+                : s.dataMonthlyCashBalance[last] - s.dataMonthlyGrantCash[last];
             if (endingLoanCash > TOL) {
                 v.push(`INV-21: wound-up fund retains $${endingLoanCash.toFixed(0)} of loan cash ` +
                     `while owing $${s.investorLiabilityEnd.toFixed(0)} to the senior investor`);
@@ -170,14 +172,19 @@ Object.assign(ModelModule, {
         const issues = [];
         const TOL = 1000; // $1k
 
-        // V1 — never insolvent
-        const minCash = Math.min(...s.dataMonthlyCashBalance);
+        // V1 — the loan ledger is never overdrawn (F-66, ADR-0057). It pays debt
+        // service and operations; grant cash is ring-fenced (R-5.2) and cannot cover
+        // it, so the pooled balance must not be used here.
+        const loanCash = s.dataMonthlyLoanCash
+            || s.dataMonthlyCashBalance.map((c, i) => c - (s.dataMonthlyGrantCash?.[i] || 0));
+        const minCash = Math.min(...loanCash);
         if (minCash < 0) {
             const k = kpis && kpis.sustainability ? kpis.sustainability : null;
             const when = k && k.depletionMonth ? `from month ${k.depletionMonth}` : '';
             issues.push({
                 code: 'INSOLVENT',
-                text: `The fund runs out of cash ${when}, reaching -$${Math.abs(minCash).toLocaleString('en-US', { maximumFractionDigits: 0 })} at its worst.`
+                text: `The loan ledger runs out of cash ${when}, reaching -$${Math.abs(minCash).toLocaleString('en-US', { maximumFractionDigits: 0 })} at its worst. ` +
+                    `Grant cash is ring-fenced and cannot pay debt service or operations.`
             });
         }
 

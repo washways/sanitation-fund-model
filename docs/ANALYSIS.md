@@ -62,7 +62,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | [F-68](#f-68--fractional-micro-enterprises-are-launched-near-the-network-cap) | Low | Model | `space = maxTotalMEs - currentMEs` is fractional after attrition, so the loop launches 0.035 of an enterprise and books a $400 loan for it; 45 such months in the capacity-constrained golden scenario | run | S4 |
 | [F-67](#f-67--the-repayment-term-is-force-bound-to-the-horizon-and-v2-measures-the-wrong-window) | Medium | UI / Model | A second, unguarded two-way listener keeps `fundRepaymentTerm` equal to `duration`, so the browser cannot express a term that differs from the horizon; and V2 reports debt not yet due as a default (5-year horizon, 10-year term: “52.6% default”) | run | S4 |
 | ✅ [F-65](#f-65--the-social-value-ratio-is-labelled-as-a-formal-sroi) | Medium | Reporting | `socialValue / capital` is called an SROI although it is undiscounted and applies no deadweight, attribution, displacement or drop-off | src | S6 |
-| [F-66](#f-66--a-negative-loan-ledger-is-hidden-by-ring-fenced-grant-cash) | **High** | Model / Reporting | V1, `depletionMonth` and `opsRunway` test the pooled cash balance, although the ledgers never transfer; a fund whose loan ledger is overdrawn reports “never insolvent” and an 80-year runway when grant cash is large | run | S4 |
+| ✅ [F-66](#f-66--a-negative-loan-ledger-is-hidden-by-ring-fenced-grant-cash) | **High** | Model / Reporting | V1, `depletionMonth` and `opsRunway` test the pooled cash balance, although the ledgers never transfer; a fund whose loan ledger is overdrawn reports “never insolvent” and an 80-year runway when grant cash is large | run | S4 |
 | ✅ [F-64](#f-64--population-need-is-presented-as-forecast-borrower-demand-and-sdg-6-closure) | **High** | Assumptions / Reporting | API sanitation need is called demand and the reach ratio is called SDG6 gap closure despite no uptake or service-level model | src, source audit | S6 |
 | ✅ [F-63](#f-63--the-sustainability-scorecard-shows-the-wrong-values-and-definitions) | **High** | UI / Reporting | Grant Equity Multiple always shows 0.0%, Loan Recovery mixes ledgers, and the OSS tooltip defines a different ratio from the engine | src, run | S6 |
 | ✅ [F-62](#f-62--the-on-site-explanation-overstates-capabilities-and-hides-the-model-flow) | Medium | Docs / UX | The splash claims real-time data, rate-driven demand, double-entry accounting, and guaranteed repayment while the detailed method lacks a concise model map | src | S6 |
@@ -1200,7 +1200,7 @@ reserves for the social-value label.
 
 ### F-66 — A negative loan ledger is hidden by ring-fenced grant cash
 
-**High — open.** R-5.2 says the grant and loan ledgers never transfer, and ADR-0022 confirmed
+**High — fixed.** R-5.2 says the grant and loan ledgers never transfer, and ADR-0022 confirmed
 it. But the solvency verdict does not honour that rule: V1 tests `min(dataMonthlyCashBalance)`,
 which is the **sum** of the two ledgers; `depletionMonth` scans the same pooled series; and
 `opsRunway` divides pooled ending cash by fixed operating cost even though only the loan ledger
@@ -1226,6 +1226,10 @@ other about what “solvent” means. The scorecard renders `opsRunway` above 20
 series, and divide `opsRunway` by loan-ledger cash. Expect `depletionYear` and
 `monthsInsolvent` to move in the grant-heavy golden scenarios and nowhere else. Keep the pooled
 balance as an audit series; do not use it for any verdict.
+
+**Resolution:** the owner chose the loan ledger (Q15). V1, `depletionMonth`, `monthsInsolvent`
+and `opsRunway` now read `dataMonthlyLoanCash`; `minLoanCash` is new. Five golden scenarios moved
+exactly as predicted. [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md). Resolved in `PENDING-F66`.
 
 ### F-67 — The repayment term is force-bound to the horizon, and V2 measures the wrong window
 

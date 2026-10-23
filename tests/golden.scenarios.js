@@ -96,6 +96,7 @@ function summarise({ series: s, kpis: k }) {
     // End state
     cashEnd: r2(f.cashEnd),
     minCash: r2(Math.min(...s.dataMonthlyCashBalance)),
+    minLoanCash: r2(su.minLoanCash),
     portfolioHhEnd: r2(s.dataMonthlyPortfolioHh[last]),
     portfolioMeEnd: r2(s.dataMonthlyPortfolioMe[last]),
     netAssets: r2(f.netAssets),

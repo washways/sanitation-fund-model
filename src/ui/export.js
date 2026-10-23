@@ -182,7 +182,7 @@ Object.assign(UI, {
                 investorRepaidPct: k.financials.investorRepaidPct,
                 investorLiabilityEnd: k.sustainability.investorLiabilityEnd,
 
-                minCash: Math.min(...UI.lastResults.series.dataMonthlyCashBalance),
+                minCash: k.sustainability.minLoanCash, // loan ledger (F-66, ADR-0057)
                 insolvencyMonths: k.sustainability.monthsInsolvent,
 
                 fundBalance: k.financials.cashEnd,
@@ -300,13 +300,13 @@ Object.assign(UI, {
             lines.push(`Sustainability Scorecard`);
             lines.push(`OSS Ratio,${((stats.ossRatio || 0) * 100).toFixed(1)}%`);
             lines.push(`FSS Ratio (Total),${((stats.fssRatio || 0) * 100).toFixed(1)}%`);
-            lines.push(`Depletion Year,${stats.depletionYear}`);
+            lines.push(`Loan-Ledger Depletion Year,${stats.depletionYear}`);
             lines.push(`Break-even Interest,${stats.breakEvenRate}`);
             lines.push(`Max Sustainable Grant,${stats.maxGrantPct}`);
 
             lines.push(`Grant Equity Multiple,${(stats.grantEquityMultiple || 0).toFixed(2)}x`);
             lines.push(`Investor Repaid %,${((stats.investorRepaidPct || 0) * 100).toFixed(1)}%`);
-            lines.push(`Min Cash Balance,$${stats.minCash || 0}`);
+            lines.push(`Min Loan-Ledger Cash,$${Math.round(stats.minCash || 0)}`);
             lines.push(`Months Insolvent,${stats.insolvencyMonths || 0}`);
             lines.push(``);
 
