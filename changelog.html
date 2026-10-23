@@ -29,9 +29,22 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.19.8 — 22 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.20.0 — 23 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.20.0 — Verdicts read the right ledger, the right window and whole enterprises</h2>
+        <ul>
+            <li>Solvency is now judged on the loan ledger, which pays debt service and operations. Grant cash is ring-fenced and can no longer hide an overdrawn loan ledger. Depletion year, months insolvent, minimum cash and ops coverage all describe the loan ledger.</li>
+            <li>Five test scenarios that previously looked “never insolvent” now correctly show insolvency: grant capital only, demand constrained, capacity constrained, high enterprise attrition, and an earlier date under high defaults. The Malawi reference run is unchanged and still viable.</li>
+            <li>The repayment term and the simulation horizon are now independent. Changing one no longer rewrites the other.</li>
+            <li>Senior debt is judged against what was due. Principal scheduled after the horizon is shown as “not yet due”, not as a default.</li>
+            <li>Operating self-sufficiency (OSS) now counts only loan interest. Carbon revenue goes to the grant ledger and cannot pay operations, so it is excluded; it remains in FSS. With no operating cost OSS shows “n/a” instead of 0%.</li>
+            <li>Micro-enterprises are now launched in whole units. A capped network no longer relaunches fractions of an enterprise each month.</li>
+            <li>Resolves F-66, F-67, F-68 and F-69. Decisions are recorded in ADR-0057 to ADR-0060.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.19.8 — The social value ratio is no longer called an SROI</h2>
         <ul>
             <li>The scorecard row formerly labelled “SROI Ratio” is now “Gross Social Value Multiple”.</li>

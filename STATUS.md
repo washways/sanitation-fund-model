@@ -6,14 +6,14 @@
 
 | | |
 |---|---|
-| **Release** | 0.19.8 — social value ratio relabelled as a gross multiple; robustness review registered |
+| **Release** | 0.20.0 — verdicts read the loan ledger and past-due principal; OSS excludes carbon; whole-enterprise launches |
 | **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance, responsive results, model transparency, scorecard integrity, and need-versus-demand terminology complete; caching/scenario comparison and remaining S6 work remain |
-| **Tests** | ✅ 134 pass, 0 todo, 0 fail (`npm test`, ~4s) |
+| **Tests** | ✅ 150 pass, 0 todo, 0 fail (`npm test`, ~5s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations and complete a full integrity-clean run; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
-| **Findings register** | 65 of 73 resolved — F-66 to F-73 registered 2026-10-22, open |
-| **Open modelling questions** | Q15–Q18 open (solvency basis, repayment window, OSS definition, working-capital floor); Q1–Q14 decided |
+| **Findings register** | 69 of 73 resolved — F-70 to F-73 open (all Low); `node tools/verify-findings.js` counts this from the documents |
+| **Open modelling questions** | Q18 open (the unsourced 6-month working-capital floor); Q1–Q17 decided |
 
 ## What remains unresolved
 
@@ -23,7 +23,7 @@
 | Real-browser chart/advisor click-through | Headless tests cover startup, calculation, export, and wiring, but not visual chart interaction. | Add a browser smoke pass during S6 accessibility/mobile work. |
 | Borrower adoption and eligible market | The observed unserved rural population is a maximum target; the model assumes enough uptake to use delivery capacity and does not forecast willingness, affordability, eligibility, or product choice. | Use programme market research to bound uptake before treating toilets as a forecast; do not infer a national rate from the API. |
 | Formal SROI method | The displayed Gross Social Value Multiple is honestly labelled (F-65) but still has no deadweight, attribution, displacement or discounting. | Add a full appraisal method only with an explicit standard and sourced programme assumptions. |
-| Robustness review findings F-66 to F-73 (2026-10-22) | The solvency verdict tests pooled cash although the ledgers never transfer (F-66, High); the browser force-binds repayment term to horizon and V2 counts debt not yet due as default (F-67); OSS mixes ledgers and misreports zero-expense runs (F-69); plus four Low items. Details in [docs/ANALYSIS.md §4B](docs/ANALYSIS.md). | Resolve Q15–Q18 in MODEL_SPEC §13 with the model owner, then take F-66 first: it changes a verdict users see. |
+| Remaining robustness findings F-70 to F-73 | Undocumented constants including the 6-month working-capital floor (F-70, Q18); stale history in docs and code comments (F-71); silent `getRaw` fallbacks and two formatters (F-72); a failed country load leaves stale results on screen (F-73). All Low. Details in [docs/ANALYSIS.md §4B](docs/ANALYSIS.md). | Get a source or a decision for Q18; then F-73 and F-72, which are UI robustness fixes with no golden movement. |
 
 ## Malawi reference run
 
@@ -107,6 +107,8 @@ The 20-year stress scenario is **not viable** under the same assumptions: it win
 - Paying old interest reduces both outstanding interest arrears and the senior liability; cumulative capitalisation and later cures remain separately auditable.
 - In the wind-up month, remaining original principal accelerates and positive loan-ledger cash is paid before the ledger freezes. Grant cash remains ring-fenced.
 - INV-20 reconciles the liability; INV-21 prevents stranded terminal loan cash. See [ADR-0036](docs/adr/0036-complete-investor-debt-waterfall.md).
+- Horizon and repayment term are independent inputs. V2 fails only on `seniorPrincipalPastDue`; principal scheduled after the horizon is `seniorPrincipalNotYetDue`. See [ADR-0058](docs/adr/0058-separate-repayment-term-from-horizon.md).
+- Solvency (V1, depletion, months insolvent, ops runway) reads `dataMonthlyLoanCash` only; pooled cash is an audit series. See [ADR-0057](docs/adr/0057-judge-solvency-on-the-loan-ledger.md).
 
 ## Input contract
 
@@ -159,4 +161,4 @@ Run the app with `python -m http.server 8080` or `npm run serve`. `file://` work
 
 ## Latest activity
 
-On 2026-10-22 release 0.19.8 relabelled the social value ratio as a Gross Social Value Multiple with an explicit "not a formal SROI" disclosure on every surface (F-65, ADR-0056), with no numeric change. The same day a robustness review registered F-66 to F-73 and open questions Q15–Q18. The owner has since decided Q15 (loan-ledger solvency), Q16 (unbind term from horizon; report past-due principal only) and Q17 (OSS excludes carbon, `null` at zero expenses); those are being implemented next, each with its own ADR and golden re-record. Q18 (the 6-month working-capital floor) stays a documented constant for now. The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
+On 2026-10-23 release 0.20.0 implemented the owner's decisions on Q15–Q17 and fixed F-68. Solvency verdicts read the new `dataMonthlyLoanCash` series (ADR-0057); horizon and repayment term are independent and V2 fails only on past-due principal (ADR-0058); OSS is loan interest over operating cost and `null` without operating cost (ADR-0059); enterprise launches are whole (ADR-0060). Each golden move matched its ADR's prediction exactly. The startup harness now fires `window` `load` listeners, which exposed the hidden two-way term/horizon binding. The Malawi reference run is unchanged and viable. The day before, release 0.19.8 relabelled the social value ratio as a Gross Social Value Multiple (F-65). The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.
