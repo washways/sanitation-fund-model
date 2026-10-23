@@ -11,6 +11,49 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.20.0] — 2026-10-23 — Verdicts read the right ledger, the right window and whole enterprises
+
+### Changed
+
+- **Solvency is judged on the loan ledger, not the pooled balance.** The loan ledger pays debt service and operations; grant cash is ring-fenced and cannot. The viability check (V1), depletion year, months insolvent, minimum cash and ops coverage now read loan-ledger cash. A $5.0m grant with a $0.5m loan previously reported *never insolvent* and a 79.7-year runway while the loan ledger fell to -$32,588. ([ADR-0057](docs/adr/0057-judge-solvency-on-the-loan-ledger.md), F-66)
+
+- **The repayment term and the horizon are independent inputs.** Editing one no longer rewrites the other. Two listeners bound them, one of them unguarded and two-way, so a fund longer than its debt could not be modelled. No test saw it because the harness never fired the browser's `load` event; it does now. ([ADR-0058](docs/adr/0058-separate-repayment-term-from-horizon.md), F-67)
+- **Senior repayment is judged against what was due.** V2 now fails only on scheduled principal that fell due and was not paid. Principal scheduled after the horizon is shown as *not yet due* in the export, not as a default. A 5-year horizon with a 10-year term previously read "52.6% default". Only the `short horizon (1y)` scenario changes verdict.
+
+- **OSS counts only income that can pay operations.** It is now loan interest divided by operating cost. Carbon revenue goes to the ring-fenced grant ledger and is excluded; it remains in FSS. With no operating cost OSS shows *n/a* and the operating check is skipped, instead of reporting 0% and failing. The scorecard no longer replaces OSS with "Insolvent (0%)". ([ADR-0059](docs/adr/0059-oss-counts-only-loan-ledger-income.md), F-69)
+- **The findings register now lists F-49 to F-52.** They were fixed in October but never had rows, so the register under-counted; `tools/verify-findings.js` now counts from the documents instead of printing a fixed sentence.
+
+- **Enterprises are launched in whole units.** A network at its cap used to relaunch fractions of an enterprise each month after attrition, with a matching fraction of a loan. ([ADR-0060](docs/adr/0060-launch-whole-enterprises.md), F-68)
+
+### Golden movement
+
+- `capacity constrained`: toilets 1,394 → 1,220 (−12.5%), ME loans $52,727 → $45,600, net assets $472,753 → $471,115. The 174 removed toilets had been built by fractional enterprises. No other scenario moved.
+- `carbon enabled`: OSS 565.47 → 1.61. `carbon, short crediting life`: 370.39 → 1.61. No verdict changed.
+- `grant capital only`: depletion `Sustainable` → `0.0`, months insolvent 0 → 60. With no loan capital, nothing can pay operations.
+- `demand constrained`: `Sustainable` → `4.5`, 0 → 6. `capacity constrained`: `Sustainable` → `4.4`, 0 → 7. `high ME attrition`: `Sustainable` → `4.9`, 0 → 1.
+- `high defaults (40%)`: depletion 4.3 → 3.2, months insolvent 8 → 22.
+- New fingerprint field `minLoanCash` in all 21 scenarios. No cash flow, toilet, net-asset or repayment figure moved. The Malawi baseline verdict is unchanged.
+
+---
+
+## [0.19.8] — 2026-10-22 — The social value ratio is no longer called an SROI
+
+### Changed
+
+- **"SROI Ratio" is now "Gross Social Value Multiple."** The ratio sums monetised DALYs, time saved and carbon over the run without discounting and applies no deadweight, attribution, displacement or drop-off, so it does not meet the Social Value International or Green Book definition of SROI. The dashboard tooltip, the clipboard report, the CSV export and the methodology now say so and list the missing adjustments. ([ADR-0056](docs/adr/0056-label-the-gross-social-value-multiple-honestly.md), F-65)
+- **`grossSocialValueMultiple` is the canonical KPI field.** The `sroi` field and the `sroi` sensitivity metric remain as identical legacy aliases so existing sensitivity specification files keep working.
+- **No generic adjustment percentages were invented.** A formal SROI remains unavailable until the programme supplies a counterfactual, attribution, displacement, time profile, discount rate and valuation basis.
+
+### Documentation
+
+- A robustness and logic review registered findings F-66 to F-73 in [docs/ANALYSIS.md §4B](docs/ANALYSIS.md) and open questions Q15–Q18 in [docs/MODEL_SPEC.md §13](docs/MODEL_SPEC.md). Three spec rules were corrected to describe the code as built. [docs/PARAMETERS.md](docs/PARAMETERS.md) gained a table of fixed model constants. Hard-coded test and finding counts were removed from AGENTS.md, README.md and TESTING.md.
+
+### Golden movement
+
+None. Labels and documentation only; the Malawi reference remains 2.73x and all 21 recorded scenarios are unchanged.
+
+---
+
 ## [0.19.7] — 2026-10-22 — Monthly audit card is independent of chart sizing
 
 ### Fixed

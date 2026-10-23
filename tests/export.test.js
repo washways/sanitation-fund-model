@@ -137,6 +137,17 @@ describe('CSV export (F-36)', () => {
       'CSV parameter block should show the real grant capital, not $undefined');
   });
 
+  test('the exported value ratio is labelled as gross rather than formal SROI (F-65)', () => {
+    const app = makeApp();
+    app.runCalculation(true);
+    app.UI.downloadCSV();
+
+    const href = app.createdLinks[0].attrs.href;
+    const csv = decodeURIComponent(href.replace('data:text/csv;charset=utf-8,', ''));
+    assert.ok(csv.includes('Gross Social Value Multiple,'));
+    assert.ok(!csv.includes('SROI Ratio,'));
+  });
+
   test('exports retain the input snapshot that produced the stored result (F-47)', () => {
     const app = makeApp();
     app.runCalculation(true);

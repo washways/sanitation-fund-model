@@ -184,14 +184,14 @@
                 </div>
                 <div class="input-group">
                     <label>Duration (Years)
-                        <span class="info-icon" title="Project timeline.">i</span>
+                        <span class="info-icon" title="Simulation horizon. Independent of the fund repayment term: a horizon shorter than the term reports principal scheduled after it as not yet due, not as a default.">i</span>
                     </label>
                     <input type="number" id="wiz-duration-sidebar" value="5">
                 </div>
                 <div class="input-group">
                     <label>Fund Repayment (Years)
                         <span class="info-icon"
-                            title="Term to repay the initial loan capital to investors. Set > 0 to enable debt service.">i</span>
+                            title="Term to repay the initial loan capital to investors, from month 1. Independent of the simulation horizon; it is not changed when the horizon changes. Set > 0 to enable debt service.">i</span>
                     </label>
                     <input type="number" id="fundRepaymentTerm" value="5">
                 </div>
@@ -680,14 +680,14 @@
                                         <tr>
                                             <td><strong>OSS Ratio</strong>
                                                 <span class="info-icon"
-                                                    title="Operational Self-Sufficiency: loan interest plus carbon revenue divided by fixed and variable operating costs. Write-downs and investor interest are excluded; see FSS for full financial cost coverage.">i</span>
+                                                    title="Operational Self-Sufficiency: household and enterprise loan interest divided by fixed and variable operating costs, over the whole run. Carbon revenue is excluded because it goes to the ring-fenced grant ledger and cannot pay operations. Write-downs and investor interest are excluded; see FSS for full financial cost coverage. Shows n/a when there is no operating cost.">i</span>
                                             </td>
                                             <td id="sus-oss-ratio" class="font-bold">--</td>
                                         </tr>
                                         <tr>
                                             <td>Depletion Year
                                                 <span class="info-icon"
-                                                    title="Estimated year the fund hits $0 capital.">i</span>
+                                                    title="Year the loan ledger first goes below zero. Grant cash is ring-fenced and cannot pay debt service or operations, so it is excluded.">i</span>
                                             </td>
                                             <td id="sus-depletion">--</td>
                                         </tr>
@@ -735,16 +735,16 @@
                                             <td></td>
                                         </tr>
                                         <tr>
-                                            <td>Min Cash Balance
+                                            <td>Min Loan-Ledger Cash
                                                 <span class="info-icon"
-                                                    title="Lowest cash point during the simulation.">i</span>
+                                                    title="Lowest loan-ledger balance during the run. This ledger pays debt service and operations; grant cash is excluded because it is ring-fenced.">i</span>
                                             </td>
                                             <td id="sum-min-cash">--</td>
                                         </tr>
                                         <tr>
                                             <td>Months Insolvent
                                                 <span class="info-icon"
-                                                    title="Number of months where cash balance was negative.">i</span>
+                                                    title="Months in which the loan ledger was overdrawn. Grant cash is excluded because it cannot pay debt service or operations.">i</span>
                                             </td>
                                             <td id="sum-insolvency">--</td>
                                         </tr>
@@ -773,7 +773,7 @@
                                         <tr>
                                             <td>Ops Coverage
                                                 <span class="info-icon"
-                                                    title="Years of operation covering fixed costs with remaining capital.">i</span>
+                                                    title="Ending loan-ledger cash divided by annual fixed operating cost. Grant cash is excluded because it cannot pay operations.">i</span>
                                             </td>
                                             <td id="sum-ops-coverage">--</td>
                                         </tr>
@@ -785,8 +785,9 @@
                                             <td id="sum-leverage">--</td>
                                         </tr>
                                         <tr>
-                                            <td>SROI Ratio
-                                                <span class="info-icon" title="Social Return on Investment.">i</span>
+                                            <td>Gross Social Value Multiple
+                                                <span class="info-icon"
+                                                    title="Undiscounted, unadjusted monetised DALYs, time saved, and carbon divided by initial grant plus loan capital. Not a formal SROI: no deadweight, attribution, displacement, or benefit discounting.">i</span>
                                             </td>
                                             <td id="sum-sroi">--</td>
                                         </tr>

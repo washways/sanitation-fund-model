@@ -19,6 +19,7 @@ Object.assign(UI, {
         const inputs = this.lastResults.inputs;
         if (!inputs) throw new Error('Calculated input snapshot is unavailable. Re-run the model.');
         const s = this.lastResults.series;
+        const k = this.lastResults.kpis || {};
         const paramRows = [
             `Parameter,Value`,
             `Country,${inputs.country}`,
@@ -34,7 +35,9 @@ Object.assign(UI, {
             `GrantSupportPct,${inputs.grantSupportPct}`,
             `BadDebtBuffer,5x Expected Loss`,
             `CostPerLatrine,$${(document.getElementById('sum-cost-per-latrine')?.innerText || '0').replace('$', '')}`,
-            `EconomicCostPerLatrine,$${(s && s.economicCostPerLatrine ? s.economicCostPerLatrine.toFixed(2) : '0')}`
+            `EconomicCostPerLatrine,$${(s && s.economicCostPerLatrine ? s.economicCostPerLatrine.toFixed(2) : '0')}`,
+            // ADR-0056: undiscounted, unadjusted gross multiple — not a formal SROI.
+            `Gross Social Value Multiple,${(k.value?.grossSocialValueMultiple || 0).toFixed(2)}x (undiscounted gross; not a formal SROI)`
         ];
 
         // Header
@@ -177,9 +180,11 @@ Object.assign(UI, {
                 capitalPreserved: k.financials.capitalPreservedPct, // Legacy 
                 grantEquityMultiple: k.financials.grantEquityMultiple,
                 investorRepaidPct: k.financials.investorRepaidPct,
+                seniorPrincipalPastDue: k.financials.seniorPrincipalPastDue,
+                seniorPrincipalNotYetDue: k.financials.seniorPrincipalNotYetDue,
                 investorLiabilityEnd: k.sustainability.investorLiabilityEnd,
 
-                minCash: Math.min(...UI.lastResults.series.dataMonthlyCashBalance),
+                minCash: k.sustainability.minLoanCash, // loan ledger (F-66, ADR-0057)
                 insolvencyMonths: k.sustainability.monthsInsolvent,
 
                 fundBalance: k.financials.cashEnd,
@@ -191,7 +196,7 @@ Object.assign(UI, {
                 effectiveCostPerLatrine: k.sustainability.effectiveCostPerLatrine,
                 economicCostPerLatrine: k.value.economicCostPerLatrine,
                 leverageRatio: k.financials.leverage,
-                sroi: k.value.sroi
+                grossSocialValueMultiple: k.value.grossSocialValueMultiple
             };
 
             // --- 1. Parameters (Vertical List) ---
@@ -295,15 +300,17 @@ Object.assign(UI, {
             lines.push(`Jobs Supported at Horizon,${stats.jobs}`);
             lines.push(``);
             lines.push(`Sustainability Scorecard`);
-            lines.push(`OSS Ratio,${((stats.ossRatio || 0) * 100).toFixed(1)}%`);
+            lines.push(`OSS Ratio,${stats.ossRatio === null || stats.ossRatio === undefined ? 'n/a (no operating cost)' : (stats.ossRatio * 100).toFixed(1) + '%'}`);
             lines.push(`FSS Ratio (Total),${((stats.fssRatio || 0) * 100).toFixed(1)}%`);
-            lines.push(`Depletion Year,${stats.depletionYear}`);
+            lines.push(`Loan-Ledger Depletion Year,${stats.depletionYear}`);
             lines.push(`Break-even Interest,${stats.breakEvenRate}`);
             lines.push(`Max Sustainable Grant,${stats.maxGrantPct}`);
 
             lines.push(`Grant Equity Multiple,${(stats.grantEquityMultiple || 0).toFixed(2)}x`);
             lines.push(`Investor Repaid %,${((stats.investorRepaidPct || 0) * 100).toFixed(1)}%`);
-            lines.push(`Min Cash Balance,$${stats.minCash || 0}`);
+            lines.push(`Senior Principal Past Due,$${Math.round(stats.seniorPrincipalPastDue || 0).toLocaleString()}`);
+            lines.push(`Senior Principal Not Yet Due,$${Math.round(stats.seniorPrincipalNotYetDue || 0).toLocaleString()}`);
+            lines.push(`Min Loan-Ledger Cash,$${Math.round(stats.minCash || 0)}`);
             lines.push(`Months Insolvent,${stats.insolvencyMonths || 0}`);
             lines.push(``);
 
@@ -324,7 +331,7 @@ Object.assign(UI, {
             lines.push(`Economic Cost / Latrine,$${(stats.economicCostPerLatrine || 0).toFixed(2)}`);
             lines.push(`Effective Cost / Latrine,$${(stats.effectiveCostPerLatrine || 0).toFixed(2)}`);
             lines.push(`Leverage Ratio,${(stats.leverageRatio || 0).toFixed(1)}x`);
-            lines.push(`SROI Ratio,${(stats.sroi || 0).toFixed(1)}x`);
+            lines.push(`Gross Social Value Multiple,${(stats.grossSocialValueMultiple || 0).toFixed(1)}x`);
 
             // Copy
             const blob = new Blob([lines.join("\n")], { type: 'text/csv;charset=utf-8;' });

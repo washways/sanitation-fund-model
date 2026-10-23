@@ -420,10 +420,14 @@
         </div>
 
         <p>A run is <strong>viable</strong> only if all four of these hold:</p>
-        <div class="formula-box">V1  min(cash balance) >= 0                    never insolvent
-V2  principal repaid >= senior loan - $1,000  senior debt repaid in full
+        <div class="formula-box">V1  min(loan-ledger cash) >= 0               loan ledger never overdrawn
+V2  past-due principal <= $1,000             no scheduled principal missed
 V3  capitalised interest < $1,000             never had to roll up unpaid interest
 V4  OSS >= 1.0                                operations cover themselves</div>
+        <p><strong>V1 reads the loan ledger only.</strong> The loan ledger pays investor debt service and fixed
+            operations; grant cash is ring-fenced and can never be used for either. Testing the pooled balance let
+            a large grant hide an overdrawn loan ledger, so since 2026-10-23 the depletion year, months insolvent,
+            minimum cash and ops coverage rows all describe the loan ledger (ADR-0057).</p>
 
         <div class="alert-box">
             <h3>Why this is called out so prominently</h3>
@@ -442,7 +446,7 @@ V4  OSS >= 1.0                                operations cover themselves</div>
         <div class="table-scroll">
             <table class="param-table">
                 <tr><th>Measure</th><th>Definition</th><th>What it says</th></tr>
-                <tr><td><strong>OSS</strong></td><td>Loan interest + carbon revenue / fixed + variable operations</td><td>Whether operating revenue covers operating costs; excludes write-downs and investor interest.</td></tr>
+                <tr><td><strong>OSS</strong></td><td>Loan interest / fixed + variable operations</td><td>Whether loan income covers operating costs over the run. Excludes carbon revenue, which goes to the ring-fenced grant ledger and cannot pay operations, and excludes write-downs and investor interest. Shown as n/a when there is no operating cost.</td></tr>
                 <tr><td><strong>FSS</strong></td><td>Loan interest + carbon revenue / operations + write-downs + investor interest</td><td>Whether revenue covers the full financial cost set modelled here.</td></tr>
                 <tr><td><strong>Capital Preservation</strong></td><td>Ending net assets / initial grant and loan capital</td><td>How much whole-fund balance-sheet value remains.</td></tr>
                 <tr><td><strong>Grant Equity Multiple</strong></td><td>Ending net assets / initial grant capital</td><td>Ending value relative to the grant contribution; shown as a multiple, not a percentage.</td></tr>
@@ -797,8 +801,8 @@ lendable  == 0      gate shut, no capital to redeploy</div>
 
         <div class="alert-box">
             <p><strong>Physical health impact is not automatically monetised.</strong> Value per DALY remains zero by
-                default, so the derived DALY count does not change SROI unless a supported programme valuation is
-                supplied separately.</p>
+                default, so the derived DALY count does not change the gross social value multiple unless a
+                supported programme valuation is supplied separately.</p>
         </div>
 
         <h3>Time saved</h3>
@@ -843,7 +847,7 @@ revenue[m] = tonnes[m] × valuePerTonne × fundShare</div>
         <p>The Malawi reference uses an explicit, editable assumption of three jobs per active enterprise: one
             owner/operator and two full-time-equivalent workers. The chart and end-of-project headline use the same
             formula. This is a point-in-time estimate of <strong>jobs supported</strong>, not jobs created or job-years,
-            and it has no invented monetary value in SROI.</p>
+            and it has no invented monetary value in the gross social value multiple.</p>
 
         <div class="alert-box red">
             <h3>Carbon was previously understated by roughly 250,000&times;</h3>
@@ -858,24 +862,47 @@ revenue[m] = tonnes[m] × valuePerTonne × fundShare</div>
             </p>
         </div>
 
-        <h3>Social return</h3>
+        <h3>Gross social value multiple</h3>
         <div class="formula-box">socialValue = (DALYs × valuePerDALY)
             + (hoursSaved × hourValue)
             + (carbonTonnes × valuePerTonne)
 
-SROI                = socialValue / capitalInvested
-capitalPreservation = netAssets   / capitalInvested</div>
+grossSocialValueMultiple = socialValue / capitalInvested
+capitalPreservation      = netAssets   / capitalInvested</div>
 
-        <p><strong>SROI measures social value only.</strong> Financial performance is reported beside it, never folded
-            in. Previously the DALY term was computed, displayed prominently on the impact card, and then silently
+        <p><strong>The multiple measures social value only.</strong> Financial performance is reported beside it, never
+            folded in. Previously the DALY term was computed, displayed prominently on the impact card, and then silently
             excluded from the ratio &mdash; so the screen contradicted itself &mdash; while ending cash sat inside a
             <em>social</em> numerator, letting a fund that hoarded capital and built nothing score well.
         </p>
 
+        <div class="alert-box red">
+            <h3>This is not a formal SROI</h3>
+            <p>The ratio is an <strong>undiscounted, unadjusted gross multiple</strong>: monetised DALYs, time saved
+                and carbon summed over the run, divided by initial grant plus loan capital. A formal Social Return on
+                Investment, as defined by Social Value International or the UK Green Book, additionally requires:</p>
+            <ul>
+                <li><strong>Deadweight</strong> &mdash; the outcomes that would have happened anyway, without the
+                    programme. Not estimated.</li>
+                <li><strong>Attribution</strong> &mdash; the share of each outcome due to other actors. Not estimated.</li>
+                <li><strong>Displacement</strong> &mdash; outcomes that merely moved from elsewhere. Not estimated.</li>
+                <li><strong>Drop-off and discounting</strong> &mdash; benefits that fade over time and a social
+                    discount rate to bring future value to the present. The only time profile applied is the toilet
+                    service life; no discount rate is used anywhere in this model (see Section 2).</li>
+            </ul>
+            <p>None of these adjustments has been invented with a generic percentage, because a cross-country constant
+                without programme evidence would be false precision. Until a programme supplies a defined
+                counterfactual, attribution, displacement, time profile, discount rate and valuation basis, this
+                multiple must not be published or cited as an SROI. The machine-readable field keeps the legacy name
+                <code>sroi</code> only as a compatibility alias; the canonical field is
+                <code>grossSocialValueMultiple</code>.</p>
+        </div>
+
         <div class="alert-box">
-            <p><strong>SROI figures are not comparable to anything produced before 2026-08-20.</strong> Three
-                independent changes moved it: the hours-saved formula was corrected, DALYs were brought in, cash was
-                taken out, and the hourly value was re-derived.</p>
+            <p><strong>These figures are not comparable to anything produced before 2026-08-20.</strong> Three
+                independent changes moved them: the hours-saved formula was corrected, DALYs were brought in, cash was
+                taken out, and the hourly value was re-derived. The label changed from &ldquo;SROI Ratio&rdquo; to
+                &ldquo;Gross Social Value Multiple&rdquo; on 2026-10-22; the arithmetic did not.</p>
         </div>
 
         <div class="alert-box green">
@@ -1092,8 +1119,8 @@ capitalPreservation = netAssets   / capitalInvested</div>
                 <tr>
                     <td>Value per DALY</td>
                     <td>USD</td>
-                    <td>Included in SROI when supplied; defaults to zero so the model makes no unsupported health-value
-                        claim.</td>
+                    <td>Included in the gross social value multiple when supplied; defaults to zero so the model makes
+                        no unsupported health-value claim.</td>
                 </tr>
                 <tr>
                     <td>Toilet Service Life</td>

@@ -86,8 +86,8 @@ Object.assign(UI, {
             // --- Sustainability Scorecard ---
 
             // Liquidity / Export Stats Population
-            const sData = results.series.dataMonthlyCashBalance || [];
-            const minCash = sData.length ? Math.min(...sData) : 0;
+            // Loan ledger only (F-66, ADR-0057): grant cash cannot pay operations.
+            const minCash = k.sustainability.minLoanCash || 0;
             const insolvencyMonths = k.sustainability.monthsInsolvent;
             const isInsolvent = minCash < 0;
 
@@ -110,18 +110,23 @@ Object.assign(UI, {
             };
 
             // OSS Display
-            const oss = (k.sustainability.oss || 0) * 100;
+            // F-69 / ADR-0059: render the ratio itself. null means there is no
+            // operating cost, so the ratio is undefined. Insolvency is reported by its
+            // own rows and banner; it must not overwrite OSS with a fake 0% (R-10.3).
+            const ossValue = k.sustainability.oss;
             const ossEl = document.getElementById('sus-oss-ratio');
             if (ossEl) {
-                if (isInsolvent) {
-                    ossEl.innerText = "Insolvent (0%)";
-                    ossEl.style.color = "#ef4444";
-                    ossEl.title = "Fund runs out of cash. OSS is invalid.";
+                if (ossValue === null || ossValue === undefined) {
+                    ossEl.innerText = "n/a (no operating cost)";
+                    ossEl.style.color = "inherit";
                 } else {
+                    const oss = ossValue * 100;
                     ossEl.innerText = oss.toFixed(1) + '%';
                     ossEl.style.color = oss >= 100 ? '#22c55e' : '#ef4444';
-                    ossEl.title = "";
                 }
+                ossEl.title = isInsolvent
+                    ? "The loan ledger was overdrawn during the run; see Months Insolvent."
+                    : "";
             }
 
             setText('sus-depletion', k.sustainability.depletionYear || "Sustainable");
@@ -166,7 +171,7 @@ Object.assign(UI, {
 
             // Legacy/Other
             setText('sum-leverage', fmtNum(k.financials.leverage || 0) + 'x');
-            setText('sum-sroi', fmtNum(k.value.sroi || 0) + 'x');
+            setText('sum-sroi', fmtNum(k.value.grossSocialValueMultiple || 0) + 'x');
 
         } catch (e) {
             console.error("ERROR IN UPDATEKPIS:", e);

@@ -53,3 +53,13 @@ test('country sanitation need is not presented as forecast borrower demand (F-64
   assert.match(METHODOLOGY, /willing and able to borrow/i);
   assert.match(METHODOLOGY, /does not model[^.]*uptake/i);
 });
+
+test('gross social value is not presented as a formal SROI (F-65)', () => {
+  assert.match(INDEX, /Gross Social Value Multiple/);
+  assert.doesNotMatch(INDEX, /SROI Ratio/);
+  assert.match(METHODOLOGY, /not a formal SROI/i);
+  for (const phrase of ['undiscounted', 'deadweight', 'attribution', 'displacement']) {
+    assert.ok(METHODOLOGY.toLowerCase().includes(phrase),
+      `methodology must disclose the missing ${phrase} treatment`);
+  }
+});

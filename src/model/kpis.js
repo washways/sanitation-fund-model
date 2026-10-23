@@ -79,26 +79,31 @@ Object.assign(ModelModule, {
         // OSS = Operating Revenue / Operating Expenses
         // Operating Revenue = Interest + Fees (if separate) + Carbon
         // Operating Expenses = FixedOps + VariableOps (Mgmt+ME)
-        const operatingRevenue = totalRevenueInt + totalCarbonRevenue;
-        // Check if Fees are in Revenue?
-        // Fees are deducted from LoanFund (Expense).
-        // Interest is added to LoanFund (Revenue).
-        // So yes.
+        // F-69 / ADR-0059: OSS counts only income that can pay operations. Operations
+        // are paid from the loan ledger; carbon accrues to the ring-fenced grant
+        // ledger and never can, so it is excluded. With no operating cost the ratio
+        // is undefined (null), not 0%, and V4 is skipped.
         const operatingExpenses = totalOps;
-        const ossRatio = operatingExpenses > 0 ? (operatingRevenue / operatingExpenses) : 0;
+        const ossRatio = operatingExpenses > 0 ? (totalRevenueInt / operatingExpenses) : null;
 
-        // FSS = Total Revenue / Total Expenses (Including Finance & Default)
-        // Total Expenses = Ops + Defaults + FundInterest
+        // FSS = whole-fund revenue (interest + carbon) / (ops + write-downs + investor
+        // interest). Carbon stays here: FSS is a whole-fund cost-coverage ratio.
+        const fssRevenue = totalRevenueInt + totalCarbonRevenue;
         const totalExpenses = operatingExpenses + totalDefaults + totalFundInterest;
-        const fssRatio = totalExpenses > 0 ? (operatingRevenue / totalExpenses) : 0;
+        const fssRatio = totalExpenses > 0 ? (fssRevenue / totalExpenses) : 0;
 
 
-        // Depletion Year
-        // Find first month where Cash < 0
+        // Depletion — judged on the LOAN ledger (F-66, ADR-0057). It pays debt
+        // service and operations; ring-fenced grant cash cannot (R-5.2), so a pooled
+        // test let a large grant hide an overdrawn loan ledger.
+        const loanCashSeries = s.dataMonthlyLoanCash
+            || s.dataMonthlyCashBalance.map((c, i) => c - (s.dataMonthlyGrantCash?.[i] || 0));
+        const loanCashEnd = loanCashSeries[last] || 0;
+        const minLoanCash = loanCashSeries.length ? Math.min(...loanCashSeries) : 0;
         let firstInsolvencyIndex = -1;
         let monthsInsolvent = 0;
-        for (let i = 0; i < s.dataMonthlyCashBalance.length; i++) {
-            if (s.dataMonthlyCashBalance[i] < 0) {
+        for (let i = 0; i < loanCashSeries.length; i++) {
+            if (loanCashSeries[i] < 0) {
                 if (firstInsolvencyIndex === -1) firstInsolvencyIndex = i;
                 monthsInsolvent++;
             }
@@ -180,7 +185,9 @@ Object.assign(ModelModule, {
             + (totalCarbon * (inputs.co2Value || 0));
 
         const initialInv = inputs.investGrant + inputs.investLoan;
-        const sroi = initialInv > 0 ? (totalSocialValue / initialInv) : 0;
+        // ADR-0056: this is an undiscounted, unadjusted gross multiple, not formal
+        // SROI. `sroi` remains below only as a backwards-compatible machine alias.
+        const grossSocialValueMultiple = initialInv > 0 ? (totalSocialValue / initialInv) : 0;
         // The financial counterpart, reported alongside rather than folded in.
         const capitalPreservation = initialInv > 0 ? (netAssetsEnd / initialInv) : 0;
 
@@ -273,6 +280,17 @@ Object.assign(ModelModule, {
                 grantEquityMultiple: grantEquityMultiple, // Replaces capitalPreserved
                 investorRepaid: totalRepaidPrincipal,
                 investorRepaidPct: inputs.investLoan > 0 ? (totalRepaidPrincipal / inputs.investLoan) : 0,
+                // F-67 / ADR-0058: split unrepaid principal into what fell due inside
+                // the horizon and was missed (wind-up accelerates everything), and what
+                // is scheduled after it. Only the first is a default (V2).
+                seniorPrincipalPastDue: Math.min(
+                    Math.max(0, s.accruedInvestorPrin || 0),
+                    Math.max(0, inputs.investLoan - totalRepaidPrincipal)
+                ),
+                seniorPrincipalNotYetDue: Math.max(
+                    0,
+                    inputs.investLoan - totalRepaidPrincipal - Math.max(0, s.accruedInvestorPrin || 0)
+                ),
                 grantsDisbursed: totalGrantsVal,
                 leverage: inputs.investGrant > 0 ? (totalLoansDisbursed / inputs.investGrant) : 0,
                 // Fund Health = (Ending Balance + Repaid Principal) / Initial Loan
@@ -282,8 +300,10 @@ Object.assign(ModelModule, {
                 oss: ossRatio,
                 fss: fssRatio,
                 selfSufficiency: fssRatio, // Map FSS to Self-Sufficiency for UI
-                // null means "not applicable", not "99 years" (F-28).
-                opsRunway: (inputs.annualFixedOpsCost > 0) ? (cashEnd / inputs.annualFixedOpsCost) : null,
+                // null means "not applicable", not "99 years" (F-28). Loan-ledger cash
+                // only: grant cash cannot pay operations (F-66, ADR-0057).
+                opsRunway: (inputs.annualFixedOpsCost > 0) ? (loanCashEnd / inputs.annualFixedOpsCost) : null,
+                minLoanCash: minLoanCash,
                 depletionMonth: depletionMonth,
                 isSustainable: isSustainable,
                 depletionYear: depletionYear, // display string; prefer depletionMonth
@@ -308,7 +328,8 @@ Object.assign(ModelModule, {
                 subsidyPerLatrine,
                 economicCostPerLatrine,
                 depletionYear,
-                sroi: sroi
+                grossSocialValueMultiple,
+                sroi: grossSocialValueMultiple // Legacy alias; do not use in new UI/export code.
             }
         };
     },

@@ -17,9 +17,9 @@ must be replaced with the programme's implementation plan.
 
 ## Status
 
-Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **127 automated tests and 21 characterisation scenarios.** Known limitations are listed in [STATUS.md](STATUS.md) and the on-site [changelog](changelog.html).
+Pre-1.0, actively maintained. The model core is pure and deterministic — the same inputs always give the same answer, and every run checks its own ledger against a set of invariants before reporting a result. **Automated tests and 21 characterisation scenarios guard every behaviour change** ([STATUS.md](STATUS.md) carries the live test count). Known limitations are listed in [STATUS.md](STATUS.md) and the on-site [changelog](changelog.html).
 
-**What's genuinely unresolved:** all 61 registered findings and all 14 modelling questions are resolved. Scenario comparison, solver caching, and real-browser chart/advisor checks remain roadmap work. Evidence-bounded sensitivity is available through the deterministic JSON CLI. See [STATUS.md](STATUS.md).
+**What's genuinely unresolved:** the findings register in [docs/ANALYSIS.md](docs/ANALYSIS.md) and the open questions in [docs/MODEL_SPEC.md §13](docs/MODEL_SPEC.md) are the authoritative lists; [STATUS.md](STATUS.md) summarises them. Scenario comparison, solver caching, and real-browser chart/advisor checks remain roadmap work. Evidence-bounded sensitivity is available through the deterministic JSON CLI. See [STATUS.md](STATUS.md).
 
 **If you have output from before 2026-08-21, re-run it.** Several corrections that session moved real numbers (see the changelog); a result generated earlier is not comparable to one generated now.
 
@@ -125,7 +125,7 @@ methodology.html     user-facing methodology note
 server.js             dev static server
 eslint.config.js      3 rules: no-dupe-keys, no-undef, no-unused-vars
 
-tests/                18 test files, 131 tests, 21 recorded golden scenarios
+tests/                18 test files, 21 recorded golden scenarios (live test count in STATUS.md)
 vendor/                pinned Chart.js, for offline use
 tools/                 headless model loader, app-source file list, audit verification
 docs/                  spec, parameters, architecture, testing, roadmap, ADRs, audit

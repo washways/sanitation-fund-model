@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 64 of 64 findings resolved as of 2026-10-22. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 64 of 64 original findings resolved as of 2026-10-22. A robustness review the same day registered eight further findings (F-66 to F-73, §4B), all open. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,6 +54,15 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
+| [F-73](#f-73--a-failed-country-load-leaves-stale-results-on-screen) | Low | UX / Controller | When the country fetch fails, essential fields are cleared and “no calculation was run” is shown, but the dashboard still displays the static-default run made 100 ms after load | src | S6 |
+| [F-72](#f-72--the-input-boundary-still-has-silent-fallbacks-and-two-competing-formatters) | Low | UI / Robustness | `getRaw` returns a hard-coded default for a missing element, those defaults disagree with `index.html`, and two blur formatters (`parseInt` and `parseFloat`) are bound to the same inputs | src | S6 |
+| [F-71](#f-71--stale-counts-and-historical-text-in-normative-documents) | Low | Docs | Test and finding counts differ across AGENTS.md, README.md, STATUS.md and TESTING.md; MODEL_SPEC carries pre-fix history in present tense; a code comment still names the superseded 0.30 time-value default | src | S6 |
+| [F-70](#f-70--constants-with-no-row-in-parametersmd) | Low | Docs / Assumptions | The 6-month working-capital floor, 2,080-hour year, 30-day month, 3-month reserve, 30% collections floor, $1,000 viability tolerance and solver search ranges are hard-coded with no entry in the parameter dictionary | src | S6 |
+| ✅ [F-69](#f-69--oss-mixes-ledgers-and-reports-0-when-there-are-no-operating-expenses) | Medium | Model / Reporting | OSS counts ring-fenced carbon revenue as operating income (565x in the carbon scenario), is a cumulative ratio although the spec says “steady state”, and reports 0 and fails V4 when operating expenses are zero | run | S4 |
+| ✅ [F-68](#f-68--fractional-micro-enterprises-are-launched-near-the-network-cap) | Low | Model | `space = maxTotalMEs - currentMEs` is fractional after attrition, so the loop launches 0.035 of an enterprise and books a $400 loan for it; 45 such months in the capacity-constrained golden scenario | run | S4 |
+| ✅ [F-67](#f-67--the-repayment-term-is-force-bound-to-the-horizon-and-v2-measures-the-wrong-window) | Medium | UI / Model | A second, unguarded two-way listener keeps `fundRepaymentTerm` equal to `duration`, so the browser cannot express a term that differs from the horizon; and V2 reports debt not yet due as a default (5-year horizon, 10-year term: “52.6% default”) | run | S4 |
+| ✅ [F-65](#f-65--the-social-value-ratio-is-labelled-as-a-formal-sroi) | Medium | Reporting | `socialValue / capital` is called an SROI although it is undiscounted and applies no deadweight, attribution, displacement or drop-off | src | S6 |
+| ✅ [F-66](#f-66--a-negative-loan-ledger-is-hidden-by-ring-fenced-grant-cash) | **High** | Model / Reporting | V1, `depletionMonth` and `opsRunway` test the pooled cash balance, although the ledgers never transfer; a fund whose loan ledger is overdrawn reports “never insolvent” and an 80-year runway when grant cash is large | run | S4 |
 | ✅ [F-64](#f-64--population-need-is-presented-as-forecast-borrower-demand-and-sdg-6-closure) | **High** | Assumptions / Reporting | API sanitation need is called demand and the reach ratio is called SDG6 gap closure despite no uptake or service-level model | src, source audit | S6 |
 | ✅ [F-63](#f-63--the-sustainability-scorecard-shows-the-wrong-values-and-definitions) | **High** | UI / Reporting | Grant Equity Multiple always shows 0.0%, Loan Recovery mixes ledgers, and the OSS tooltip defines a different ratio from the engine | src, run | S6 |
 | ✅ [F-62](#f-62--the-on-site-explanation-overstates-capabilities-and-hides-the-model-flow) | Medium | Docs / UX | The splash claims real-time data, rate-driven demand, double-entry accounting, and guaranteed repayment while the detailed method lacks a concise model map | src | S6 |
@@ -66,6 +75,10 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | ✅ [F-55](#f-55--programme-summary-tables-overflow-the-page) | Medium | UI | Summary cards are fixed to three columns while all cells are forced not to wrap | src | S6 |
 | ✅ [F-54](#f-54--month-zero-launches-half-the-national-enterprise-network) | **High** | Assumptions | Month zero cash-maximises the startup cohort, creating $25.8k of ME interest in month one | run | S3 |
 | ✅ [F-53](#f-53--country-derived-input-highlighting-contradicts-its-own-source-state) | Medium | UI | API provenance disappears immediately on some fields and remains falsely on edited values | run | S6 |
+| ✅ [F-52](#f-52--valid-partial-year-horizons-disappear-from-annual-views) | **High** | Reporting | Annual aggregates were recorded only at month 12, so a valid 6-month run rendered no charts and an 18-month run dropped months 13–18 | run | S6 |
+| ✅ [F-51](#f-51--the-annual-chart-turns-grant-spending-into-fictitious-grant-income) | **High** | Charts | The annual cash-flow chart differenced annual grant flows as if cumulative, showing $292k of fictitious grant income | run | S6 |
+| ✅ [F-50](#f-50--an-explicit-zero-enterprise-capacity-input-restores-the-default) | **Critical** | Model | `mePerDistrict || 20` turned an explicit zero into the default | run | S6 |
+| ✅ [F-49](#f-49--monthly-implementation-columns-are-shifted-and-me-launches-are-overstated) | **High** | Reporting | Monthly table rows had 25 cells under 24 headers, shifting every value from ME loans onward | run | S6 |
 | ✅ [F-48](#f-48--the-visible-advisor-bypasses-model-tested-advice) | **High** | Advice | The visible advisor calls legacy rules that repeat recommendations already proved unsafe | src | S6 |
 | ✅ [F-47](#f-47--exports-can-describe-a-different-scenario-and-liability) | **High** | Export | Exports reread live inputs and the copied report misstates senior liability and leverage | src, run | S6 |
 | ✅ [F-46](#f-46--invalid-inputs-enter-the-loop-and-can-look-plausible) | **Critical** | Inputs | Invalid or blank inputs can create NaN, Infinity, crashes, or plausible-looking output | run | S6 |
@@ -1160,6 +1173,203 @@ implicit full-uptake condition prominently and describe toilets as conditional d
 not a forecast. Do not invent a national uptake rate from the pilot’s geographic targeting figure.
 [ADR-0054](adr/0054-distinguish-population-need-from-borrower-demand.md).
 Resolved in `0bf4aa8`.
+
+### F-65 — The social value ratio is labelled as a formal SROI
+
+**Medium — fixed.** The dashboard row, the clipboard report and the methodology called
+`socialValue / (investGrant + investLoan)` an "SROI Ratio". The numerator sums monetised DALYs,
+time saved and carbon over the run with no discounting (ADR-0003 rules discounting out of the
+whole model), and the ratio applies no deadweight, attribution, displacement or drop-off. Social
+Value International's SROI standard and the UK Green Book require all of those. The 2.73 Malawi
+figure is a useful gross multiple, but the label claimed a method that was never applied, and a
+headline label is what funders repeat.
+
+**Fix:** rename the public metric *Gross Social Value Multiple* everywhere it appears, state on
+each surface that it is not a formal SROI and list the omitted adjustments, add
+`grossSocialValueMultiple` as the canonical KPI field and keep `sroi` as an identical legacy
+alias so sensitivity specifications keep working. No generic adjustment percentages were
+invented. [ADR-0056](adr/0056-label-the-gross-social-value-multiple-honestly.md). Numeric
+results and all 21 golden scenarios unchanged. Resolved in `2380dd4`.
+
+---
+
+## 4B. Robustness and logic review — 2026-10-22
+
+A read-through of `src/model/` against `MODEL_SPEC.md`, with each suspected gap reproduced
+headlessly against `tools/baseline-inputs.js`. Figures below come from `ModelModule.calculate()`
+with `verify: false`, followed by `checkViability()`. None of these findings is fixed; each
+needs an ADR because every one of them changes either a verdict a user sees or a golden
+fingerprint. They are numbered after F-65, which [ADR-0056](adr/0056-label-the-gross-social-value-multiple-honestly.md)
+reserves for the social-value label.
+
+### F-66 — A negative loan ledger is hidden by ring-fenced grant cash
+
+**High — fixed.** R-5.2 says the grant and loan ledgers never transfer, and ADR-0022 confirmed
+it. But the solvency verdict does not honour that rule: V1 tests `min(dataMonthlyCashBalance)`,
+which is the **sum** of the two ledgers; `depletionMonth` scans the same pooled series; and
+`opsRunway` divides pooled ending cash by fixed operating cost even though only the loan ledger
+pays operations. A fund whose loan ledger is overdrawn therefore reports *never insolvent*
+whenever the grant ledger is large enough to mask it.
+
+Measured:
+
+| Scenario | Minimum pooled cash | Minimum loan ledger | V1 verdict | `opsRunway` |
+|---|---:|---:|---|---:|
+| Grant $5.0m, loan $0.5m | +$4,784,189 | **-$32,588** | never insolvent | 79.7 years |
+| Grant $3.0m, loan $1.0m | +$2,564,991 | **-$11,354** | never insolvent | 42.7 years |
+| `grant capital only` (golden) | +$994,986 | **-$5,014** | never insolvent | 16.6 years |
+
+The loan ledger is the one that pays debt service and operations (R-5.1); a negative balance
+there is real insolvency that the grant ledger is forbidden from curing. The in-loop gate
+(R-5.4) already tests the loan ledger alone, so the engine and the verdict disagree with each
+other about what “solvent” means. The scorecard renders `opsRunway` above 20 years as
+“Sustainable (>20y)”, which turns the pooled figure into a viability claim.
+
+**Proposed fix (needs an ADR, Q15 in MODEL_SPEC §13):** define V1 on the loan ledger
+(`cash - grantCash`, which INV-21 already derives), report `depletionMonth` from the same
+series, and divide `opsRunway` by loan-ledger cash. Expect `depletionYear` and
+`monthsInsolvent` to move in the grant-heavy golden scenarios and nowhere else. Keep the pooled
+balance as an audit series; do not use it for any verdict.
+
+**Resolution:** the owner chose the loan ledger (Q15). V1, `depletionMonth`, `monthsInsolvent`
+and `opsRunway` now read `dataMonthlyLoanCash`; `minLoanCash` is new. Five golden scenarios moved
+exactly as predicted. [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md). Resolved in `c868e84`.
+
+### F-67 — The repayment term is force-bound to the horizon, and V2 measures the wrong window
+
+**Medium — fixed.** Two defects that hide each other.
+
+1. `src/app.js` registers **two** listeners that copy `wiz-duration-sidebar` into
+   `fundRepaymentTerm`. The first, inside `DOMContentLoaded`, is one-way and guarded by
+   `event.isTrusted`, with a comment explaining the guard exists so that loading a scenario does not
+   overwrite the term. The second, inside `window.addEventListener('load')`, is **two-way and
+   unguarded**. The result is that the browser cannot express a repayment term that differs from
+   the simulation horizon: typing 7 into the term field rewrites the horizon to 7. The parameter
+   dictionary and the engine treat the two as independent inputs; the UI silently does not.
+2. V2 (R-10.2) measures `totalRepaidPrincipal` at the end of the **horizon**, while the spec
+   says “repaid in full within its term”. Measured with a 5-year horizon and a 10-year term, the
+   verdict is `DEBT_UNREPAID … (52.6% default)` although nothing is past due. The forced sync in
+   (1) is the only reason users have not seen this.
+
+**Proposed fix (needs an ADR, Q16):** delete the unguarded listener; keep the guarded one-way
+convenience or drop both. Then either validate `fundRepaymentTerm <= duration` with an explicit
+message, or make V2 report the past-due shortfall (scheduled principal not paid) separately
+from principal that is simply not yet due. The second is more honest for a tool that is
+supposed to model a fund longer than its debt.
+
+**Resolution:** the owner chose (b) (Q16). Both binding listeners are removed; the startup harness
+now fires `window` `load` listeners, which is why no test had seen the second one. V2 fails only on
+`seniorPrincipalPastDue`. Only `short horizon (1y)` changes verdict; no golden value moved.
+[ADR-0058](adr/0058-separate-repayment-term-from-horizon.md). Resolved in `9cd896e`.
+
+### F-68 — Fractional micro-enterprises are launched near the network cap
+
+**Low — fixed.** R-2.5 says micro-enterprises are integers, and ADR-0040 made `New MEs` a count
+column. In R-6.2 the headroom is `space = maxTotalMEs - currentMEs`, and `currentMEs` is
+continuous after attrition (R-6.3). Once the network is at its cap, attrition removes 0.035 of an
+enterprise each month and the expansion step launches 0.035 of one back, booking a loan of about
+$400 for it.
+
+Measured on the `capacity constrained` golden scenario (4-enterprise cap): 45 of 60 months
+record a non-integer launch, starting with 0.087 in month 4. The `small net` probe (15-enterprise
+cap over 10 years) shows 38 such months. The baseline is unaffected because it never reaches
+the cap.
+
+**Proposed fix (needs an ADR):** floor `space` before taking the minimum, so a network at its
+cap stays there until a whole enterprise has left. Expect `totalLoansMe` and `mesEnd` to move
+by small amounts in the capacity-constrained scenario only.
+
+**Resolution:** headroom is floored. Only `capacity constrained` moved: toilets 1,394 to 1,220,
+because 174 toilets had been built by fractional enterprises. [ADR-0060](adr/0060-launch-whole-enterprises.md).
+Resolved in `175c6c2`.
+
+### F-69 — OSS mixes ledgers and reports 0 when there are no operating expenses
+
+**Medium — fixed.** Three related problems with the operating self-sufficiency ratio.
+
+- **Ledger mixing.** `operatingRevenue = interest + carbon`. Carbon revenue accrues to the
+  grant ledger (R-8.1) and can never pay operating costs, which come out of the loan ledger
+  (R-5.3). With the `carbon enabled` golden inputs OSS reports **565x**; the loan ledger is
+  unchanged. V4 then passes on income the operations never see.
+- **Horizon, not steady state.** R-10.2 says “OSS ≥ 1.0 at steady state”. The code divides
+  whole-run totals. A fund that is loss-making in its last two years can pass V4 on early-year
+  interest. The spec wording has been corrected to describe the code (AS-BUILT); whether a
+  trailing-window OSS is wanted is Q17.
+- **Zero-expense edge.** With `annualFixedOpsCost = 0` and all fee rates zero, `ossRatio`
+  returns 0 (the `operatingExpenses > 0` guard) and V4 fails with “Operating self-sufficiency is
+  0%”. The ratio is undefined, not zero; `opsRunway` already uses `null` for the same situation.
+
+**Proposed fix (needs an ADR, Q17):** exclude carbon from OSS or report a loan-ledger OSS
+beside it; return `null` when expenses are zero and skip V4; decide whether V4 should use a
+trailing window. Expect `oss`/`fss` to move in the two carbon scenarios only.
+
+**Resolution:** the owner chose to exclude carbon, return `null` at zero cost and keep the
+whole-horizon basis (Q17). The scorecard also stopped replacing OSS with "Insolvent (0%)". Only
+the two carbon scenarios moved (565.47x and 370.39x to 1.61x), as predicted.
+[ADR-0059](adr/0059-oss-counts-only-loan-ledger-income.md). Resolved in `f7dbf08`.
+
+### F-70 — Constants with no row in PARAMETERS.md
+
+**Low — open.** Rule 5 says every number is an input, an indicator, or a documented assumption.
+These are none of the three:
+
+| Constant | Where | Meaning |
+|---|---|---|
+| `max(6, termHh)` months | `meCapitalRequirement` | Working-capital floor per enterprise. Drives `startupCost`, every ME loan, and the affordability cap. The 6 has no stated source. |
+| `2080` hours | `computeKPIs` | Working year used to turn annual income into an hourly value. |
+| `30` days | engine, R-8.2 | Days per month for time saved (a 360-day year). |
+| `3` months, `0.3` | engine, R-5.3/R-5.4 | Reserve depth and collections floor. In the spec but not in the dictionary. |
+| `$1,000` | `checkViability` | Tolerance for V2 and V3. |
+| `$1.00` | `checkIntegrity` | Per-month drift tolerance (R-2.6). |
+| `0–150%`, 12 grid steps, 10 bisections | `solveBreakEven` | Search range and resolution. |
+| `0.30, 0.40, 0.50, 0.60, 0.75`; `3, 4` months | `suggestSolvencyFix` | Candidate grids the advisor tests. |
+| `5` | `runCalculation` | Recursion depth guard left over from the removed auto-adjuster. |
+
+**Fix:** [PARAMETERS.md](PARAMETERS.md) now has a *Fixed model constants* table recording each
+one and its status. Whether the 6-month floor should become an input is a modelling decision
+(Q18); the rest are tolerances and search settings that only need to be visible.
+
+### F-71 — Stale counts and historical text in normative documents
+
+**Low — partly addressed.** Test and finding counts had drifted: AGENTS.md said 102 tests in 11
+suites, README.md said 127 tests and 61 findings, STATUS.md and TESTING.md said 131, and
+`npm test` reports 134 across 18 files. Hard-coded counts are now replaced by pointers to
+STATUS.md so only one file carries a number. Still open:
+
+- `MODEL_SPEC.md` describes pre-fix states in the present tense (R-2.3 “it is violated today”,
+  R-10 “Not reported at all”) and R-3.5 still says `outflows.defaults` “should be renamed to
+  `writeOffs` in Stage 3”, which never happened. The affected rules now say so explicitly.
+- `src/model/kpis.js` carries a long comment defending a 0.30 time-value default that
+  ADR-0034 superseded with 0.50; `src/ui/inputs.js` still uses 30 as the dead fallback.
+- `src/model/invariants.js`'s header says “INV-1..INV-18”; the file implements INV-1 to INV-21.
+
+### F-72 — The input boundary still has silent fallbacks and two competing formatters
+
+**Low — open.** AGENTS.md §4 says a missing DOM id must fail loudly. `tests/wiring.test.js`
+enforces that in CI, but in the browser `getRaw` still returns its hard-coded default when
+`getElementById` is null, and those defaults disagree with `index.html` (`grantSupportPct` 20
+vs 10, `termMe` 24 vs 12, `dalyValue` 500 vs 0, `co2PerToilet` 0.2 vs 0, `timeValueFactor` 30
+vs 50). A future markup edit that drops an id would therefore run with a number nobody chose.
+Separately, two blur handlers format the same `.formatted-number` inputs: `setupFormatting`
+uses `parseFloat`, the module-level code at the bottom of `src/app.js` uses `parseInt`. They
+agree today only because every such field holds an integer.
+
+**Proposed fix:** make `getRaw` return `NaN` for a missing element so `validateInputs` reports
+it; delete the fallback defaults; keep one formatter.
+
+### F-73 — A failed country load leaves stale results on screen
+
+**Low — open.** `UI.init` runs the static-default scenario 100 ms after load; the controller
+clicks *Load Country Data* at 500 ms. If the World Bank request fails (offline, blocked, rate
+limited), every indicator is `null`, the three essential fields are cleared, and the strip says
+“No calculation was run; enter cited values”. The dashboard, charts and export snapshot still
+show the 100 ms static-default run, so the screen and the form disagree and nothing marks the
+visible numbers as static defaults. The stale-request guard also returns before restoring the
+button text, leaving it at “Loading…”.
+
+**Proposed fix:** on a failed or incomplete load, clear `UI.lastResults` and the rendered result
+(the same path `runCalculation` already takes on invalid input), or render an explicit
+“results reflect static defaults” banner; restore the button text before the early return.
 
 ---
 

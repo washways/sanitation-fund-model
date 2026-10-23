@@ -1,7 +1,7 @@
 # Model Specification
 
 **Status:** Normative. This document, not the code (`src/model/`), is the source of truth for the financial mathematics.
-**Version:** 1.1 (2026-10-20) — includes the post-S5 assumptions and country-data audit.
+**Version:** 1.2 (2026-10-22) — adds the open questions Q15–Q18 from the robustness review ([ANALYSIS.md §4B](ANALYSIS.md)) and corrects three rules whose wording no longer matched the code.
 
 ---
 
@@ -132,7 +132,7 @@ This is a *fractional continuous write-down*, not a discrete "x% of loans fail".
 **Label the UI field accordingly** — "Annual portfolio write-down rate", not "Default rate". `tests/writedown.test.js` (`T-DEF-1`) pins realised loss to disbursed principal at several terms so the crossover stays visible instead of silently drifting.
 
 ### R-3.5 Defaults are not cash **[AS-BUILT]**
-Write-offs reduce cohort balances and are reported in `dataMonthlyDefaults*`, but they are **never** a cash outflow. They must not appear in `netFlow`. (The variable lives in the `outflows` object for reporting convenience only — this naming is misleading and should be renamed to `writeOffs` in Stage 3.)
+Write-offs reduce cohort balances and are reported in `dataMonthlyDefaults*`, but they are **never** a cash outflow. They must not appear in `netFlow`. The variable still lives in the `outflows` object under the name `defaultsHh` / `defaultsMe` for reporting convenience only; the rename to `writeOffs` planned for Stage 3 was never done and is tracked under F-71. Read the name as "write-down", not "cash out".
 
 ---
 
@@ -211,7 +211,9 @@ The two never transfer to each other. `dataMonthlyCashBalance[i]` is their **sum
 
 ### R-5.3 Operating costs **[AS-BUILT]**
 Fixed: `(annualFixedOpsCost / 12) * inflationFactor[m]`, paid from `loanCash`.
-During winding-down or insolvency (`loanCash < 0`) this drops to **30%** — the "collections floor", representing a skeleton team that still recovers loans.
+While the loan ledger is overdrawn (`loanCash < 0` after debt service) this drops to **30%** — the "collections floor", representing a skeleton team that still recovers loans. After wind-up (R-9.2) it is zero.
+
+The code also tests an `isWindingDown` flag (`m > activeMonths`) for the same cut, but `activeMonths` always equals the full horizon, so that branch is unreachable: the floor is triggered only by an overdrawn loan ledger. Treat "winding-down" in older text as meaning that.
 
 Variable ("fees"): `disbursedValue * variableRate`, where
 
@@ -274,8 +276,10 @@ later through a percentage of zero. Replace 15% with the programme's recruitment
 expansionBudget = lendable * meExpansionBudgetShare
 newMEs = min(floor(expansionBudget / meCapitalRequirement),
              ceil(currentMEs * meMaxMonthlyGrowthRate),
-             maxTotalMEs - currentMEs)
+             floor(maxTotalMEs - currentMEs))
 ```
+
+The headroom is **floored** because `currentMEs` is continuous after attrition (R-6.3). Without the floor a network at its cap relaunched a fraction of an enterprise every month (F-68). A capped network now runs slightly below its cap until a whole enterprise's worth of capacity has left. [ADR-0060](adr/0060-launch-whole-enterprises.md).
 
 Both shares are user inputs, both defaulting to 10% — the values that were previously hardcoded, so no scenario's output moved when *that* landed. `meMaxMonthlyGrowthRate` is the dominant driver of the growth curve (10%/month compounds to about 3.1x/year); it was previously invisible to the user. The divisor was `meSetupCost` until 2026-08-21 — the same under-pricing as R-6.1, fixed in the same change.
 
@@ -445,13 +449,14 @@ dalyPerPerson                = WHO sanitation-attributable diarrhoeal DALYs lowe
 
 The WHO record must be `WSH_30_SAN`, both sexes and all ages; the World Bank denominator must use `SP.POP.TOTL` and `SH.STA.BASS.ZS` for the WHO year. The lower uncertainty bound is used deliberately. This is a population-level burden proxy, not a programme effect. `dalyImpactRealisation` is therefore a separate editable share, defaulting to **21%** from the Wolf et al. 2022 point estimate for basic sanitation without sewer connection versus unimproved or limited sanitation (RR 0.79; 95% CI 0.61–1.03, moderate certainty). The assumption is applied proportionally to DALYs across all ages and should be replaced with programme evidence when available. Malawi 2019 resolves to `0.0096719` burden DALY per exposed person-year and about 2,139 physical DALYs averted in the default five-year run. If any API component is absent or invalid, the burden input resets to zero and is shown as not estimated; another country's value is never retained. `dalyValue` remains zero by default, so this physical estimate does not change SROI unless the user separately supplies a supported valuation. See [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md).
 
-### R-8.4 Social value and SROI **[AS-BUILT]** (was F-08; Q1 resolved 2026-08-20, Q2 accepted 2026-08-21)
+### R-8.4 Social value and the gross social value multiple **[AS-BUILT]** (was F-08; Q1 resolved 2026-08-20, Q2 accepted 2026-08-21; relabelled 2026-10-22, [ADR-0056](adr/0056-label-the-gross-social-value-multiple-honestly.md), F-65)
 ```
-socialValue = DALYs x dalyValue + hoursSaved x hourValue + carbonTonnes x co2Value
-SROI        = socialValue / capitalInvested
+socialValue              = DALYs x dalyValue + hoursSaved x hourValue + carbonTonnes x co2Value
+grossSocialValueMultiple = socialValue / capitalInvested        // kpis.value.grossSocialValueMultiple
+                                                                 // kpis.value.sroi is an identical legacy alias
 ```
 
-SROI is **social value only**. DALY value is included; ending cash is not. Financial performance is reported alongside as `capitalPreservation = netAssets / capitalInvested`, never folded in. See [ADR-0011](adr/0011-sroi-is-social-value-only.md).
+The multiple is **social value only**. DALY value is included; ending cash is not. It is **not a formal SROI** (R-10.12): no discounting, deadweight, attribution, displacement or drop-off is applied, and none may be invented. Financial performance is reported alongside as `capitalPreservation = netAssets / capitalInvested`, never folded in. See [ADR-0011](adr/0011-sroi-is-social-value-only.md).
 
 Previously the DALY term was computed, displayed prominently, and then silently excluded — so the screen contradicted itself — while ending cash sat in a *social* numerator, letting a fund that hoards capital and builds nothing score well.
 
@@ -548,10 +553,10 @@ A run is viable only if **all** hold:
 
 | | Criterion |
 |---|---|
-| V1 | `min(cashBalance) >= 0` — never insolvent |
-| V2 | `totalRepaidPrincipal >= investLoan - $1,000` — senior debt repaid in full |
+| V1 | `min(loanCash) >= 0` — the loan ledger is never overdrawn. Judged on `dataMonthlyLoanCash`, not the pooled balance, because grant cash is ring-fenced (R-5.2) and cannot pay debt service or operations. [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md), F-66, Q15. |
+| V2 | `seniorPrincipalPastDue <= $1,000` — no scheduled senior principal fell due inside the horizon and went unpaid. Principal scheduled after the horizon is *not yet due*, not a default; wind-up (R-9.2) makes all remaining principal due. Horizon and repayment term are independent inputs. [ADR-0058](adr/0058-separate-repayment-term-from-horizon.md), F-67, Q16. |
 | V3 | `capitalisedInterest < $1,000` — no investor interest had to be rolled up when due; the warning also reports the amount still outstanding |
-| V4 | `OSS >= 1.0` at steady state — operations cover themselves |
+| V4 | `OSS >= 1.0` — loan interest covers operating cost. OSS is the **whole-horizon cumulative** ratio defined in R-11.1, not a steady-state figure. When operating cost is zero OSS is `null` and V4 is not applied. [ADR-0059](adr/0059-oss-counts-only-loan-ledger-income.md), F-69, Q17. |
 
 ### R-10.3 Reporting rules **[AS-BUILT]**
 1. Both verdicts render **on screen**. The console is not a reporting channel.
@@ -620,6 +625,16 @@ coverage data does not measure willingness to borrow, affordability, eligibility
 or monthly adoption. No uptake percentage is inferred without programme evidence. See
 [ADR-0054](adr/0054-distinguish-population-need-from-borrower-demand.md).
 
+### R-10.12 The social value ratio is labelled as a gross multiple, not an SROI **[AS-BUILT]** (F-65)
+
+The public label for `socialValue / capitalInvested` is **Gross Social Value Multiple**. Every
+place it appears (dashboard, export, methodology) states that it is undiscounted and unadjusted
+and is not a formal SROI, and names the missing adjustments: deadweight, attribution,
+displacement, drop-off and discounting. No generic percentage may be invented for any of them.
+`kpis.value.grossSocialValueMultiple` is canonical; `kpis.value.sroi` and the `sroi` sensitivity
+metric remain as identical legacy aliases for existing specification files. See
+[ADR-0056](adr/0056-label-the-gross-social-value-multiple-honestly.md).
+
 ---
 
 ## 11. KPI definitions
@@ -635,17 +650,20 @@ All are computed in `ModelModule.computeKPIs`, which is **pure**: no DOM access 
 | `toilets` | `dataToiletsMonthlyLoan[last] + dataToiletsMonthlyGrant[last]` | AS-BUILT |
 | `people` | `toilets * avgHHSize` (1 toilet = 1 household) | AS-BUILT |
 | `jobs` | `floor(activeMEsAtHorizon) * jobsPerMe`; a point-in-time jobs-supported estimate, not job-years | AS-BUILT — [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md) |
-| `OSS` | operating revenue / operating expenses, where revenue = loan interest + carbon and expenses = fixed + variable ops. **Excludes** write-offs and finance cost. | AS-BUILT |
-| `FSS` | operating revenue / (operating expenses + write-offs + investor interest) | AS-BUILT — investor interest is now real, given a non-zero cost of capital (F-01) |
+| `OSS` | (household + enterprise loan interest) / (fixed + variable ops) over the whole horizon, or `null` when ops are zero. **Excludes** carbon (grant-ledger income that cannot pay operations), write-offs and finance cost | AS-BUILT — [ADR-0059](adr/0059-oss-counts-only-loan-ledger-income.md) |
+| `FSS` | (loan interest + carbon) / (operating expenses + write-offs + investor interest) — carbon stays in this whole-fund ratio | AS-BUILT — investor interest is now real, given a non-zero cost of capital (F-01) |
 | `netAssets` | `cashEnd + portfolioOutstanding - investorLiabilityEnd`, where the liability is the one the loop tracked | AS-BUILT — includes capitalised arrears since 2026-08-20 (F-06) |
 | `grantEquityMultiple` | `netAssets / investGrant` | AS-BUILT |
 | `capitalPreservation` | `netAssets / (investGrant + investLoan)` | AS-BUILT — a whole-fund balance-sheet ratio, not investor repayment |
-| `investorRepaidPct` | `totalRepaidPrincipal / investLoan` | AS-BUILT |
+| `investorRepaidPct` | `totalRepaidPrincipal / investLoan` | AS-BUILT — a share of the whole loan, including principal not yet due |
+| `seniorPrincipalPastDue` | scheduled principal that fell due within the horizon and was not paid (`accruedInvestorPrin`, capped at unrepaid principal) | AS-BUILT — [ADR-0058](adr/0058-separate-repayment-term-from-horizon.md); drives V2 |
+| `seniorPrincipalNotYetDue` | `investLoan - totalRepaidPrincipal - seniorPrincipalPastDue` | AS-BUILT — [ADR-0058](adr/0058-separate-repayment-term-from-horizon.md) |
 | `costPerLatrine` | `(loansDisbursed + grants + ops + writeOffs + investorInterest) / toilets` | AS-BUILT — note this counts *disbursed* loan principal, most of which returns |
 | `economicCostPerLatrine` | `(ops + writeOffs + grants + investorInterest) / toilets` — excludes recovered principal | AS-BUILT — this is the more defensible of the two |
 | `effectiveCostPerLatrine` | `investGrant / toilets` — subsidy intensity of the whole programme | AS-BUILT |
-| `depletionMonth` | first month with negative total cash, or `null` | AS-BUILT — numeric; `isSustainable` carries the boolean. `depletionYear` is retained as a display string only |
-| `opsRunway` | `cashEnd / annualFixedOpsCost`, or `null` | AS-BUILT — the `99` sentinel is gone |
+| `depletionMonth` | first month with negative **loan-ledger** cash, or `null`; `monthsInsolvent` counts the same months | AS-BUILT — numeric; `isSustainable` carries the boolean. `depletionYear` is retained as a display string only. Loan ledger since [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md) |
+| `opsRunway` | ending **loan-ledger** cash / `annualFixedOpsCost`, or `null` | AS-BUILT — the `99` sentinel is gone. Grant cash excluded since [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md) |
+| `minLoanCash` | `min(dataMonthlyLoanCash)` | AS-BUILT — [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md) |
 | `dominantConstraint` | user-facing primary and secondary production constraints; see R-7.6 | AS-BUILT |
 | `constraintAnalysis` | machine-readable primary, ranked secondary causes, and foregone-output totals; see R-7.6 | AS-BUILT |
 
@@ -705,9 +723,9 @@ These must hold for **every** run. They are the contract that makes the model au
 
 ## 13. Modelling decisions
 
-No modelling questions remain open. New questions must be recorded here and marked
-`[OPEN]`; they must not be resolved in code without the model owner's decision and an
-ADR first.
+Q1–Q17 are decided. **Q18 is `[OPEN]`**, raised by the 2026-10-22 robustness review
+([ANALYSIS.md §4B](ANALYSIS.md)); they must not be resolved in code without the model owner's
+decision and an ADR first. New questions are recorded here the same way.
 
 | # | Question | Decision |
 |---|---|---|
@@ -725,6 +743,10 @@ ADR first.
 | Q12 | What's a reasonable default cost of capital? | 2%, concessional. [ADR-0013](adr/0013-viable-default-scenario.md) |
 | Q13 | Should service life gate DALYs and time-saved too, not just carbon? | Yes. [ADR-0025](adr/0025-service-life-gates-all-impact.md) |
 | Q14 | Should constraint reporting derive from actual production limits and retain simultaneous causes? | Yes — partition actual foregone production into capacity and loan-capital loss, expose grant-capital recovery separately, and report secondary causes. [ADR-0044](adr/0044-report-actual-production-constraints.md) |
+| Q15 | Should the solvency verdict (V1), `depletionMonth` and `opsRunway` test the loan ledger alone rather than the pooled balance? | Yes — loan ledger only; the pooled balance is an audit series. Decided 2026-10-22. [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md) |
+| Q16 | Should a repayment term longer than the horizon be rejected, or reported as "not yet due"? Should the UI stop binding term to horizon? | Report as not yet due; V2 fails only on past-due principal; the inputs are independent. Decided 2026-10-22. [ADR-0058](adr/0058-separate-repayment-term-from-horizon.md) |
+| Q17 | Should OSS exclude carbon, return `null` at zero operating cost, and use a trailing window? | Exclude carbon; `null` and skip V4 at zero cost; keep whole-horizon. Decided 2026-10-22. [ADR-0059](adr/0059-oss-counts-only-loan-ledger-income.md) |
+| Q18 | **[OPEN]** Is the 6-month working-capital floor in `meCapitalRequirement` (`max(6, termHh)`) a sourced assumption, and should it be an input? | Not decided. It has no citation and it multiplies every enterprise loan; see [PARAMETERS.md](PARAMETERS.md#fixed-model-constants) and F-70. |
 
 ---
 

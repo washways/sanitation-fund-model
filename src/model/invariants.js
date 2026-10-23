@@ -1,5 +1,5 @@
 /**
- * invariants.js — part of the S5 structural split (ADR-0033). Integrity (INV-1..INV-18) and viability verdicts, plus the model-tested solvency advice that depends on them (MODEL_SPEC R-10, §12).
+ * invariants.js — part of the S5 structural split (ADR-0033). Integrity (INV-1..INV-21) and viability verdicts, plus the model-tested solvency advice that depends on them (MODEL_SPEC R-10, §12).
  */
 
 Object.assign(ModelModule, {
@@ -119,7 +119,9 @@ Object.assign(ModelModule, {
         // INV-21: once operations end, available loan-ledger cash cannot remain
         // stranded while senior debt is still unpaid (ADR-0036, F-45).
         if (s.windUpMonth && s.investorLiabilityEnd > TOL) {
-            const endingLoanCash = s.dataMonthlyCashBalance[last] - s.dataMonthlyGrantCash[last];
+            const endingLoanCash = s.dataMonthlyLoanCash
+                ? s.dataMonthlyLoanCash[last]
+                : s.dataMonthlyCashBalance[last] - s.dataMonthlyGrantCash[last];
             if (endingLoanCash > TOL) {
                 v.push(`INV-21: wound-up fund retains $${endingLoanCash.toFixed(0)} of loan cash ` +
                     `while owing $${s.investorLiabilityEnd.toFixed(0)} to the senior investor`);
@@ -170,27 +172,36 @@ Object.assign(ModelModule, {
         const issues = [];
         const TOL = 1000; // $1k
 
-        // V1 — never insolvent
-        const minCash = Math.min(...s.dataMonthlyCashBalance);
+        // V1 — the loan ledger is never overdrawn (F-66, ADR-0057). It pays debt
+        // service and operations; grant cash is ring-fenced (R-5.2) and cannot cover
+        // it, so the pooled balance must not be used here.
+        const loanCash = s.dataMonthlyLoanCash
+            || s.dataMonthlyCashBalance.map((c, i) => c - (s.dataMonthlyGrantCash?.[i] || 0));
+        const minCash = Math.min(...loanCash);
         if (minCash < 0) {
             const k = kpis && kpis.sustainability ? kpis.sustainability : null;
             const when = k && k.depletionMonth ? `from month ${k.depletionMonth}` : '';
             issues.push({
                 code: 'INSOLVENT',
-                text: `The fund runs out of cash ${when}, reaching -$${Math.abs(minCash).toLocaleString('en-US', { maximumFractionDigits: 0 })} at its worst.`
+                text: `The loan ledger runs out of cash ${when}, reaching -$${Math.abs(minCash).toLocaleString('en-US', { maximumFractionDigits: 0 })} at its worst. ` +
+                    `Grant cash is ring-fenced and cannot pay debt service or operations.`
             });
         }
 
-        // V2 — senior debt repaid in full
+        // V2 — no scheduled senior principal missed (F-67, ADR-0058). Principal that
+        // falls due after the horizon is not a default. `accruedInvestorPrin` is the
+        // scheduled principal that fell due and was not paid; wind-up accelerates the
+        // whole remaining balance into it (R-9.2).
         if (inputs.investLoan > 0) {
             const repaid = s.dataMonthlyFundPrincipal.reduce((a, b) => a + b, 0);
-            const shortfall = inputs.investLoan - repaid;
-            if (shortfall > TOL) {
+            const pastDue = Math.min(Math.max(0, s.accruedInvestorPrin || 0),
+                Math.max(0, inputs.investLoan - repaid));
+            if (pastDue > TOL) {
                 issues.push({
                     code: 'DEBT_UNREPAID',
-                    text: `Senior debt is not repaid in full: $${shortfall.toLocaleString('en-US', { maximumFractionDigits: 0 })} ` +
-                        `of $${inputs.investLoan.toLocaleString('en-US')} outstanding ` +
-                        `(${((1 - repaid / inputs.investLoan) * 100).toFixed(1)}% default).`
+                    text: `Senior debt is in default: $${pastDue.toLocaleString('en-US', { maximumFractionDigits: 0 })} ` +
+                        `of scheduled principal fell due and was not paid ` +
+                        `(${((pastDue / inputs.investLoan) * 100).toFixed(1)}% of the $${inputs.investLoan.toLocaleString('en-US')} loan).`
                 });
             }
         }
@@ -212,8 +223,9 @@ Object.assign(ModelModule, {
         }
 
         // V4 — operations cover themselves
+        // null means no operating cost, so the ratio is undefined (F-69, ADR-0059).
         const oss = kpis && kpis.sustainability ? kpis.sustainability.oss : null;
-        if (oss !== null && oss < 1.0) {
+        if (oss !== null && oss !== undefined && oss < 1.0) {
             issues.push({
                 code: 'OSS_BELOW_1',
                 text: `Operating self-sufficiency is ${(oss * 100).toFixed(0)}% — revenue does not cover operating costs, ` +

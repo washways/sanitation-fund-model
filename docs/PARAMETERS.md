@@ -106,6 +106,27 @@ text records whether the value is a direct observation or a derivation and names
 year(s). A real user edit removes the blue state and changes its in-page provenance to user-entered;
 programme assumptions are never given the API marker. See [ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md) and [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md).
 
+## Fixed model constants
+
+These numbers are hard-coded rather than entered. Each is listed so that Rule 5 of
+[AGENTS.md](../AGENTS.md) (“never invent a number”) can be checked against something. *Status*
+says whether the value is a documented modelling convention, a numerical tolerance, or a figure
+whose provenance is still missing (F-70).
+
+| Constant | Value | Where | Status | Meaning |
+|---|---:|---|---|---|
+| Working-capital floor | `max(6, termHh)` months | `meCapitalRequirement()`, R-6.1 | **Undocumented** — Q18 | Months of production an enterprise must be able to finance before it is paid. Multiplies `toiletsPerMeMonth × avgToiletCost`. Drives startup cost, every enterprise loan, and the affordable-network cap. |
+| Liquidity reserve | 3 months of full fixed ops + next 3 months of scheduled senior principal | engine, R-5.4 | Convention — [ADR-0027](adr/0027-debt-service-lookahead-reserve.md) | Cash the loan ledger must hold before it may lend. |
+| Collections floor | 30% of fixed ops | engine, R-5.3 | Convention — [ADR-0024](adr/0024-collections-floor-stays-abrupt.md) | Skeleton-team cost while the loan ledger is overdrawn. Stops entirely at wind-up. |
+| Working year | 2,080 hours | `computeKPIs`, R-8.6 | Convention (40 h × 52 weeks) | Converts annual income to an hourly value of time. |
+| Month length | 30 days | engine, R-8.2 | Convention (360-day year) | Hours saved per month = toilets × household size × hours/day × 30. |
+| Integrity tolerance | $1.00 per month | `checkIntegrity`, R-2.6 | Tolerance | Floating-point drift allowed in the cash identity. |
+| Viability tolerance | $1,000 | `checkViability`, R-10.2 | Tolerance | Shortfall below which V2 and V3 do not fire. |
+| Break-even search | 0%–150%, 12 grid steps, 10 bisections | `solveBreakEven`, [ADR-0032](adr/0032-grid-then-bisect-solvers.md) | Search setting | Range and resolution of the household-rate solver. |
+| Max-grant search | 0%–100%, 12 grid steps, 10 bisections | `solveMaxGrant`, [ADR-0032](adr/0032-grid-then-bisect-solvers.md) | Search setting | Range and resolution of the grant-pacing solver. |
+| Advice candidates | HH rate 30/40/50/60/75%; ops cost ×0.75/0.5/0.25; loan capital ×1.25/1.5; HH term 3 or 4 months; grant pacing ×0.5 or 0 | `suggestSolvencyFix`, [ADR-0039](adr/0039-one-model-tested-advice-path.md) | Search setting | Changes the advisor tests by rerunning the model. They are candidates, not recommendations. |
+| Pilot seed rounding | `ceil` | engine, R-6.1 | Convention — [ADR-0047](adr/0047-start-with-a-pilot-enterprise-network.md) | A positive pilot share always seeds at least one enterprise. |
+
 ## Controller-only inputs
 
 | id | Meaning |
