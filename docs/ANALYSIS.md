@@ -1229,7 +1229,7 @@ balance as an audit series; do not use it for any verdict.
 
 **Resolution:** the owner chose the loan ledger (Q15). V1, `depletionMonth`, `monthsInsolvent`
 and `opsRunway` now read `dataMonthlyLoanCash`; `minLoanCash` is new. Five golden scenarios moved
-exactly as predicted. [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md). Resolved in `PENDING-F66`.
+exactly as predicted. [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md). Resolved in `c868e84`.
 
 ### F-67 — The repayment term is force-bound to the horizon, and V2 measures the wrong window
 
