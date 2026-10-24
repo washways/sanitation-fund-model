@@ -33,7 +33,7 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | S6 partial-period reporting — 2026-10-21 | Added one canonical annual-period recorder for complete years and the final partial year; sub-year scenarios now render charts. | Duration is month-granular. Never drop months after the last 12-month boundary; label partial periods explicitly and reconcile them to monthly series. |
 | S4 constraint reporting — 2026-10-21 | Resolved R-7.6/Q14: monthly and headline constraints now derive from actual foregone production, retain mixed causes, and expose grant and loan capital separately. | `capacity + loanCapital` must reconcile demand to production. Grant-capital recovery overlaps loan-capital loss and must never be added to that partition. Viability remains a separate verdict. |
 | S4 sensitivity — 2026-10-21 | Added a pure, deterministic one-at-a-time engine and JSON CLI for up to eight evidence-bounded parameters. | Every low/high pair must bracket base, pass normal validation, and carry a source. Never add built-in generic shocks, undocumented country ranges, timestamps, network fetches, or mutation. |
-| S6 country provenance — 2026-10-21 | Gave country-derived model inputs one blue, dated source state and made real user edits clear it. | Only `popReqToilets`, `popGrowthRate`, `avgAnnualIncome`, and `dalyPerPerson` may receive `country-observation`. Programme assumptions never do; extend the startup regression if the API boundary changes. |
+| S6 country provenance — 2026-10-21 | Gave country-derived model inputs one blue, dated source state and made real user edits clear it. | Only `popReqToilets`, `popGrowthRate`, `avgAnnualIncome`, `dalyPerPerson`, `avgHHSize` and `districts` may receive `country-observation` (ADR-0062); every other numeric input is amber. Programme assumptions never do; extend the startup regression if the API boundary changes. |
 | S3 rollout realism — 2026-10-21 | Replaced the cash-maximising month-zero cohort with an explicit 15% pilot share of the target ME network. | Opening enterprises are `min(target share, affordable, network cap)`. The pilot share is a visible programme assumption, never country-derived; zero must seed no hidden cohort. |
 | S6 responsive results — 2026-10-21 | Replaced the fixed three-column programme summary and global no-wrap cells with an adaptive grid and scoped monthly-table scrolling. | Compact summary cards must wrap and fit the main panel. Only `#monthlyDataTable` may retain wide no-wrap cells inside its local scroll container. |
 | S3 impact evidence — 2026-10-21 | Made jobs per active enterprise explicit, derived a conservative sanitation-burden proxy from WHO plus matching-year World Bank exposure, applied an explicit intervention-effect assumption, and relabelled zero carbon as not estimated. | Jobs are point-in-time jobs supported, not job-years. Never treat 100% of attributable burden as averted: apply the editable `dalyImpactRealisation` factor (21% interim basic non-sewered sanitation estimate). DALY value stays zero unless separately evidenced. Carbon needs a project baseline/technology factor. |
@@ -49,7 +49,8 @@ The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) a
 ## Current Malawi reference scenario
 
 - Observed/default context: 9,244,139 rural people without basic sanitation, 2.56% population growth, $600 GNI per capita.
-- Evidence-backed programme references: 4.4 people/household, 28 districts, $100 toilet planning cost, $3,000 enterprise capital, 12-month household and enterprise terms, 0.25 hours saved/person/day, 50% time-value factor.
+- Country-loaded since ADR-0062: 4.3 people/household (DHS 2024 rural) and 28 districts (geoBoundaries ADM2).
+- Evidence-backed programme references: $100 toilet planning cost, $3,000 enterprise capital, 12-month household and enterprise terms, 0.25 hours saved/person/day, 50% time-value factor.
 - Country loading derives 0.0096719 sanitation-attributable burden DALY per exposed person-year for Malawi 2019 from the WHO lower bound and matching World Bank exposure. The separate 21% `dalyImpactRealisation` programme assumption scales this to about 2,139 DALYs averted over five years. DALY value remains 0, so SROI does not silently monetise it. CO2e/toilet remains 0 and is displayed as not estimated pending project evidence.
 - Jobs supported use an explicit three-per-active-enterprise Malawi reference (one owner/operator plus two FTE workers). This is editable and is not a country observation.
 - Financing rates, write-downs, operating costs, capacity/productivity, contingency, and grant pacing are illustrative editable assumptions — not facts about Malawi and never country-derived.
@@ -59,12 +60,14 @@ The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) a
 
 ## Country-data contract
 
-`src/data/worldbank.js` uses `mrnev=1` and retains indicator labels and years. `src/data/who.js` selects the latest both-sex/all-age record with a valid lower uncertainty bound. Together they supply only:
+`src/data/worldbank.js` uses `mrnev=1` and retains indicator labels and years. `src/data/who.js` selects the latest both-sex/all-age record with a valid lower uncertainty bound. `src/data/dhs.js` and `src/data/geoboundaries.js` were added by ADR-0062. Together they supply only:
 
 1. `popReqToilets` from rural population × the basic-sanitation gap;
 2. `popGrowthRate`;
 3. `avgAnnualIncome` from GNI per capita, with GDP per capita fallback.
 4. `dalyPerPerson`, a burden proxy from the WHO `WSH_30_SAN` lower bound divided by matching-year World Bank total population without basic sanitation. The separate `dalyImpactRealisation` assumption is never API-filled.
+5. `avgHHSize`, DHS `HC_MEMB_H_MNM` rural mean household members, latest survey (missing for 9 countries: clear and pause);
+6. `districts`, geoBoundaries ADM2 `admUnitCount`, with unit type and year on hover.
 
 CPI, commercial lending, poverty, Gini, and sanitation levels are context. Do not resurrect `countriesnow.space`, `PV.EST` heuristics, smart-rate formulas, poverty-to-grant mappings, cost tiers, or cross-country operating-cost formulas.
 
@@ -73,9 +76,9 @@ them. Local CPI must be shown beside model-currency escalation with its year and
 Annual fixed operations must request the actual programme budget; no country macro API derives it.
 These four controls use amber `programme-assumption`, never blue `country-observation`.
 
-`tools/country-runtime-audit.js` mirrors the browser's exact conversion rules and is pure enough for CI. `npm run audit:countries` uses it to run the full model against every complete current country observation set; as of 2026-10-21 all 44 pass validation and ledger integrity. `tests/robustness-audit.test.js` also holds a fixed-seed 384-case parameter grid. Do not replace either with random, network-dependent CI behavior.
+`tools/country-runtime-audit.js` mirrors the browser's exact conversion rules and is pure enough for CI. `npm run audit:countries` uses it to run the full model against every complete current country observation set; as of 2026-10-24, 35 of 44 are complete (9 lack a DHS household-size survey) and all 35 pass validation and ledger integrity. `tests/robustness-audit.test.js` also holds a fixed-seed 384-case parameter grid. Do not replace either with random, network-dependent CI behavior.
 
-After loading, all four model-driving country fields use the blue `country-observation` state and
+After loading, all six model-driving country fields use the blue `country-observation` state and
 carry a source description. Trusted user input removes that state. Do not use `auto-filled`, inline
 background colours, or the obsolete `api-field` class to represent API provenance. Missing health
 evidence resets the optional rate to zero/not estimated; never retain the previous country.

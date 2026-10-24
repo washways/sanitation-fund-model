@@ -136,9 +136,9 @@ docs/                  spec, parameters, architecture, testing, roadmap, ADRs, a
 
 World Bank Indicators API, used to calibrate dated country context: rural and total population (`SP.RUR.TOTL`, `SP.POP.TOTL`), basic and safely-managed sanitation (`SH.STA.BASS.RU.ZS`, `SH.STA.BASS.ZS`, `SH.STA.SMSS.RU.ZS`), GDP and GNI per capita, inflation (`FP.CPI.TOTL.ZG`), population growth (`SP.POP.GROW`), lending rate (`FR.INR.LEND`), Gini, and poverty headcount. WHO Global Health Observatory `WSH_30_SAN` supplies the lower estimate of diarrhoeal DALYs attributable to inadequate sanitation.
 
-Only observed target population, population growth, income, and the transparent WHO/World Bank sanitation-DALY derivation populate model fields. CPI, lending, poverty, Gini, and sanitation coverage are shown with their observation years as context. The fetch never overwrites a negotiated term, cost, capacity assumption, write-down, or policy choice; [docs/PARAMETERS.md](docs/PARAMETERS.md) records the boundary.
+Only observed target population, population growth, income, the transparent WHO/World Bank sanitation-DALY derivation, rural household size (DHS Program) and administrative-unit count (geoBoundaries) populate model fields. CPI, lending, poverty, Gini, and sanitation coverage are shown with their observation years as context. The fetch never overwrites a negotiated term, cost, capacity assumption, write-down, or policy choice; [docs/PARAMETERS.md](docs/PARAMETERS.md) records the boundary.
 
-Those four country-derived inputs are outlined in blue after loading and carry dated hover text.
+Those six country-derived inputs are outlined in blue after loading and carry dated hover text; every other input is amber, because the user supplies it.
 Editing one removes the marker, so a user-entered figure is never still presented as API-derived.
 
 ## Contributing

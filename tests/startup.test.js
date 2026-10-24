@@ -155,6 +155,14 @@ function bootApp(fixture = FIXTURE) {
         }] })
       });
     }
+    if (String(url).includes('api.dhsprogram.com/rest/dhs/data')) {
+      if (!fixture.dhs) return Promise.reject(new Error('no DHS fixture'));
+      return Promise.resolve({ json: () => Promise.resolve({ Data: fixture.dhs.records }) });
+    }
+    if (String(url).includes('geoboundaries.org/api/current/gbOpen/')) {
+      if (!fixture.geoBoundaries) return Promise.reject(new Error('no geoBoundaries fixture'));
+      return Promise.resolve({ json: () => Promise.resolve(fixture.geoBoundaries) });
+    }
     const m = String(url).match(/indicator\/([A-Z0-9.]+)\?/);
     if (m) {
       const rec = fixture.indicators[m[1]];
@@ -271,15 +279,17 @@ describe('startup — the scenario a user actually opens', () => {
   });
 
   test('country-derived inputs have consistent, truthful source highlighting', () => {
-    const observedInputs = ['popReqToilets', 'popGrowthRate', 'avgAnnualIncome', 'dalyPerPerson'];
+    const observedInputs = ['popReqToilets', 'popGrowthRate', 'avgAnnualIncome', 'dalyPerPerson',
+      'avgHHSize', 'districts'];
+    const expectedTypes = { dalyPerPerson: 'who-world-bank', avgHHSize: 'dhs', districts: 'geoboundaries' };
     for (const id of observedInputs) {
       const input = app.el(id);
       assert.ok(input.classList.contains('country-observation'),
         `${id} should be visibly marked as country-derived after the API load`);
-      const expectedType = id === 'dalyPerPerson' ? 'who-world-bank' : 'world-bank';
+      const expectedType = expectedTypes[id] || 'world-bank';
       assert.strictEqual(input.dataset.sourceType, expectedType,
         `${id} should retain machine-readable API provenance`);
-      assert.match(input.title, /World Bank|WHO/i, `${id} should explain its source on hover`);
+      assert.match(input.title, /World Bank|WHO|DHS|geoBoundaries/i, `${id} should explain its source on hover`);
     }
 
     for (const id of ['loanInterestRate_v2', 'meLoanInterestRate_v2', 'fundCostOfCapital']) {
@@ -324,7 +334,8 @@ describe('startup — the scenario a user actually opens', () => {
     assert.strictEqual(inputs.inflationRate, 0.0332,
       'local CPI must not be applied as USD cost escalation without an FX path');
     assert.strictEqual(inputs.avgToiletCost, 100, 'income must not select an invented cost tier');
-    assert.strictEqual(inputs.districts, 28, 'use the evidenced Malawi district count');
+    assert.strictEqual(inputs.districts, 28,
+      'geoBoundaries ADM2 for Malawi is the official 28 districts (ADR-0062)');
     assert.strictEqual(inputs.mePerDistrict, 20, 'country loading must not invent enterprise capacity');
     assert.strictEqual(inputs.jobsPerMe, 3, 'country loading must not invent enterprise staffing');
     assert.strictEqual(inputs.dalyImpactRealisation, 0.21,
@@ -392,7 +403,7 @@ describe('startup — the scenario a user actually opens', () => {
   });
 
   test('the Malawi reference assumptions are evidence-aligned', () => {
-    assert.strictEqual(inputs.avgHHSize, 4.4, 'IHS5 rural household size');
+    assert.strictEqual(inputs.avgHHSize, 4.3, 'DHS 2024 rural household size (ADR-0062)');
     assert.strictEqual(inputs.meSetupCost, 3000, 'UNICEF sanitation-enterprise loan size');
     assert.strictEqual(inputs.termHh, 12, 'UNICEF Malawi household sanitation-loan term ceiling');
     assert.strictEqual(inputs.termMe, 12, 'UNICEF sanitation-enterprise loan term');
@@ -402,10 +413,10 @@ describe('startup — the scenario a user actually opens', () => {
       'health impact should use the conservative WHO/World Bank country derivation');
     assert.strictEqual(inputs.dalyImpactRealisation, 0.21,
       'basic non-sewered sanitation uses the explicit 21% evidence-based point estimate');
-    assert.ok(Math.abs(result.kpis.impact.dalys - 2138.94) < 0.1,
-      `the derived burden and effect factor should produce about 2,139 physical DALYs, got ${result.kpis.impact.dalys}`);
+    assert.ok(Math.abs(result.kpis.impact.dalys - 2090.33) < 0.1,
+      `the derived burden and effect factor should produce about 2,090 physical DALYs (4.3-person DHS households, ADR-0062), got ${result.kpis.impact.dalys}`);
     assert.strictEqual(inputs.dalyValue, 0, 'unsupported health valuation must be off by default');
-    assert.ok(Math.abs(result.kpis.value.sroi - 2.73) < 0.01,
+    assert.ok(Math.abs(result.kpis.value.sroi - 2.67) < 0.01,
       'physical DALYs must not silently enter SROI while DALY valuation remains zero');
   });
 });
@@ -421,6 +432,60 @@ test('missing essential country observations clear stale fields and stop auto-ca
     'an unavailable sanitation observation must not retain Malawi or a prior country value');
   assert.match(app.el('wbIndicators').innerHTML, /No calculation was run/i,
     'the user should be told that the country scenario is incomplete');
+});
+
+describe('household size and administrative units follow the country (ADR-0062)', () => {
+  test('Malawi loads rural household size from the latest DHS survey', async () => {
+    const app = bootApp();
+    await app.runStartup();
+    assert.strictEqual(app.UI.getInputs().avgHHSize, 4.3, 'DHS 2024 rural mean household members');
+    assert.match(app.el('avgHHSize').title, /DHS.*2024/);
+    assert.ok(app.requestedUrls.some(u => u.includes('countryIds=MW') && u.includes('HC_MEMB_H_MNM')));
+  });
+
+  test('Malawi loads its district count from geoBoundaries ADM2', async () => {
+    const app = bootApp();
+    await app.runStartup();
+    assert.strictEqual(app.UI.getInputs().districts, 28);
+    assert.match(app.el('districts').title, /geoBoundaries.*district.*2020/i);
+    assert.ok(app.requestedUrls.some(u => u.includes('gbOpen/MWI/ADM2')));
+  });
+
+  test('a country without a DHS household-size survey clears the field and pauses', async () => {
+    const fixture = structuredClone(FIXTURE);
+    fixture.dhs.records = [];
+    const app = bootApp(fixture);
+    await app.runStartup();
+    assert.strictEqual(app.el('avgHHSize').value, '');
+    assert.match(app.el('wbIndicators').innerHTML, /household size/i);
+    assert.strictEqual(app.UI.lastResults, null);
+  });
+
+  test('a missing administrative-unit count clears the field and pauses', async () => {
+    const fixture = structuredClone(FIXTURE);
+    delete fixture.geoBoundaries;
+    const app = bootApp(fixture);
+    await app.runStartup();
+    assert.strictEqual(app.el('districts').value, '');
+    assert.match(app.el('wbIndicators').innerHTML, /administrative units/i);
+    assert.strictEqual(app.UI.lastResults, null);
+  });
+
+  test('every numeric input is either country-derived or a marked programme assumption', () => {
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    const country = new Set(['popReqToilets', 'popGrowthRate', 'avgAnnualIncome', 'dalyPerPerson',
+      'avgHHSize', 'districts']);
+    const unmarked = [];
+    for (const m of html.matchAll(/<input[^>]*id="([A-Za-z0-9_-]+)"[^>]*>/g)) {
+      const id = m[1];
+      if (country.has(id)) {
+        assert.ok(!/programme-assumption/.test(m[0]), `${id} is country-derived and must not be amber`);
+        continue;
+      }
+      if (!/class="[^"]*programme-assumption/.test(m[0])) unmarked.push(id);
+    }
+    assert.deepStrictEqual(unmarked, [], `inputs with no blue or amber category: ${unmarked.join(', ')}`);
+  });
 });
 
 describe('a failed or incomplete country load leaves no stale results (F-73)', () => {

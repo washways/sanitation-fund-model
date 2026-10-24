@@ -11,6 +11,22 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **Household size and administrative units now follow the selected country.** Household size comes from the DHS Program API (rural mean household members, latest survey) and the number of administrative units from geoBoundaries (second-level units, with their local name and year on hover). Both were Malawi values that stayed in place when you switched country; household size runs from 3.1 (Lesotho) to 10.4 (The Gambia), so a Senegal run roughly halved people reached. Nine countries with no DHS survey (Djibouti, Guinea-Bissau, Kiribati, Lao PDR, Solomon Islands, Somalia, South Sudan, Sudan, Tuvalu) now clear the field and pause for a cited value. ([ADR-0062](docs/adr/0062-derive-household-size-and-admin-units-from-country-data.md))
+- **Every input is now blue or amber.** About 30 inputs had no marker. Everything the user supplies, including fund size, horizon and loan terms, is now amber, and a test fails if any input has neither marker.
+
+### Golden movement
+
+- Malawi household size 4.4 → 4.3 (DHS 2024 rural) in the static defaults and after loading; districts stay 28.
+- Gross Social Value Multiple falls 2.0–2.5% in every scenario (baseline 2.73 → 2.67), because fewer people live in each toilet's household. Carbon scenarios move only 0.02%.
+- `demand constrained`: toilets 1,139 → 1,166 (+2.4%), with matching loan, grant and cost-per-latrine moves. No other toilet, cash or repayment figure moved. No verdict changed.
+- Malawi startup run: people reached 366,740 → 358,405; physical DALYs about 2,139 → 2,090; toilets, cash and verdict unchanged.
+
+---
+
 ## [0.21.0] — 2026-10-23 — The last robustness findings closed
 
 ### Added

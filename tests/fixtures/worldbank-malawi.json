@@ -1,5 +1,5 @@
 {
-  "_comment": "Recorded from the World Bank Indicators API for Malawi (MWI). Country loading uses latest non-empty observations, preserves dates, and changes observations only. Tests must never hit the network.",
+  "_comment": "Recorded from the World Bank Indicators API for Malawi (MWI). Country loading uses latest non-empty observations, preserves dates, and changes observations only. Tests must never hit the network. DHS rural household size and geoBoundaries ADM2 metadata recorded 2026-10-24.",
   "recordedAt": "2026-10-20",
   "country": "MWI",
   "indicators": {
@@ -62,5 +62,209 @@
     "high": 205092,
     "sex": "SEX_BTSX",
     "age": "AGEGROUP_YEARSALL"
+  },
+  "dhs": {
+    "indicator": "HC_MEMB_H_MNM",
+    "country": "MW",
+    "records": [
+      {
+        "SurveyYear": 1992,
+        "SurveyId": "MW1992DHS",
+        "Value": 4.5,
+        "CharacteristicCategory": "Total",
+        "CharacteristicLabel": "Total"
+      },
+      {
+        "SurveyYear": 1992,
+        "SurveyId": "MW1992DHS",
+        "Value": 4.8,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Urban"
+      },
+      {
+        "SurveyYear": 1992,
+        "SurveyId": "MW1992DHS",
+        "Value": 4.4,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Rural"
+      },
+      {
+        "SurveyYear": 2000,
+        "SurveyId": "MW2000DHS",
+        "Value": 4.4,
+        "CharacteristicCategory": "Total",
+        "CharacteristicLabel": "Total"
+      },
+      {
+        "SurveyYear": 2000,
+        "SurveyId": "MW2000DHS",
+        "Value": 4.5,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Urban"
+      },
+      {
+        "SurveyYear": 2000,
+        "SurveyId": "MW2000DHS",
+        "Value": 4.4,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Rural"
+      },
+      {
+        "SurveyYear": 2004,
+        "SurveyId": "MW2004DHS",
+        "Value": 4.4,
+        "CharacteristicCategory": "Total",
+        "CharacteristicLabel": "Total"
+      },
+      {
+        "SurveyYear": 2004,
+        "SurveyId": "MW2004DHS",
+        "Value": 4.2,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Urban"
+      },
+      {
+        "SurveyYear": 2004,
+        "SurveyId": "MW2004DHS",
+        "Value": 4.4,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Rural"
+      },
+      {
+        "SurveyYear": 2010,
+        "SurveyId": "MW2010DHS",
+        "Value": 4.6,
+        "CharacteristicCategory": "Total",
+        "CharacteristicLabel": "Total"
+      },
+      {
+        "SurveyYear": 2010,
+        "SurveyId": "MW2010DHS",
+        "Value": 4.4,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Urban"
+      },
+      {
+        "SurveyYear": 2010,
+        "SurveyId": "MW2010DHS",
+        "Value": 4.7,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Rural"
+      },
+      {
+        "SurveyYear": 2012,
+        "SurveyId": "MW2012MIS",
+        "Value": 4.2,
+        "CharacteristicCategory": "Total",
+        "CharacteristicLabel": "Total"
+      },
+      {
+        "SurveyYear": 2012,
+        "SurveyId": "MW2012MIS",
+        "Value": 4.1,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Urban"
+      },
+      {
+        "SurveyYear": 2012,
+        "SurveyId": "MW2012MIS",
+        "Value": 4.2,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Rural"
+      },
+      {
+        "SurveyYear": 2014,
+        "SurveyId": "MW2014MIS",
+        "Value": 4.1,
+        "CharacteristicCategory": "Total",
+        "CharacteristicLabel": "Total"
+      },
+      {
+        "SurveyYear": 2014,
+        "SurveyId": "MW2014MIS",
+        "Value": 4,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Urban"
+      },
+      {
+        "SurveyYear": 2014,
+        "SurveyId": "MW2014MIS",
+        "Value": 4.1,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Rural"
+      },
+      {
+        "SurveyYear": 2015,
+        "SurveyId": "MW2015DHS",
+        "Value": 4.5,
+        "CharacteristicCategory": "Total",
+        "CharacteristicLabel": "Total"
+      },
+      {
+        "SurveyYear": 2015,
+        "SurveyId": "MW2015DHS",
+        "Value": 4.3,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Urban"
+      },
+      {
+        "SurveyYear": 2015,
+        "SurveyId": "MW2015DHS",
+        "Value": 4.5,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Rural"
+      },
+      {
+        "SurveyYear": 2017,
+        "SurveyId": "MW2017MIS",
+        "Value": 4.5,
+        "CharacteristicCategory": "Total",
+        "CharacteristicLabel": "Total"
+      },
+      {
+        "SurveyYear": 2017,
+        "SurveyId": "MW2017MIS",
+        "Value": 4.2,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Urban"
+      },
+      {
+        "SurveyYear": 2017,
+        "SurveyId": "MW2017MIS",
+        "Value": 4.5,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Rural"
+      },
+      {
+        "SurveyYear": 2024,
+        "SurveyId": "MW2024DHS",
+        "Value": 4.2,
+        "CharacteristicCategory": "Total",
+        "CharacteristicLabel": "Total"
+      },
+      {
+        "SurveyYear": 2024,
+        "SurveyId": "MW2024DHS",
+        "Value": 4.1,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Urban"
+      },
+      {
+        "SurveyYear": 2024,
+        "SurveyId": "MW2024DHS",
+        "Value": 4.3,
+        "CharacteristicCategory": "Residence",
+        "CharacteristicLabel": "Rural"
+      }
+    ]
+  },
+  "geoBoundaries": {
+    "boundaryISO": "MWI",
+    "boundaryType": "ADM2",
+    "boundaryCanonical": "district",
+    "boundaryYearRepresented": "2020",
+    "boundarySource": "National Statistics Office of Malawi, OCHA ROSEA",
+    "boundaryLicense": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)",
+    "admUnitCount": "28"
   }
 }

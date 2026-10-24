@@ -29,7 +29,7 @@ Every numeric input must be finite before the simulation starts. Blank or malfor
 |---|---|---:|---|---|---|
 | `popReqToilets` | Rural Population Without Basic Sanitation | 9,244,139 | people / people | observed: `SP.RUR.TOTL × (1 − SH.STA.BASS.RU.ZS/100)` | Malawi uses 18,307,197 rural people (2025) and 49.5054% basic rural sanitation (2024). Divided by household size to form the maximum unserved target. This is need, not observed willingness, affordability, eligibility, or loan uptake. |
 | `popGrowthRate` | Annual Pop Growth | 2.56 | percent / decimal | observed: `SP.POP.GROW` | Compounds the carried unserved target monthly before current production is subtracted. |
-| `avgHHSize` | Avg Household Size | 4.4 | people / people | Malawi reference: [NSO IHS5 2019/20](https://microdata.worldbank.org/catalog/3818) | One toilet serves one household. Not auto-filled for other countries. |
+| `avgHHSize` | Avg Household Size | 4.3 | people / people | observed: DHS Program `HC_MEMB_H_MNM`, Rural, latest survey (Malawi DHS 2024) — [ADR-0062](adr/0062-derive-household-size-and-admin-units-from-country-data.md) | One toilet serves one household. Loaded for 35 of 44 countries; where the DHS has no survey the field is cleared and the run pauses. The earlier 4.4 came from NSO IHS5 2019/20. |
 | `avgToiletCost` | Avg Toilet Cost | 100 | USD / USD | Malawi reference: [UNICEF Malawi sanitation revolving funds](https://www.unicef.org/malawi/media/3886/file/Sanitation%2520Revolving%2520Funds%2520for%2520Rural%2520and%2520Peri-Urban%2520Communities%2520in%2520Malawi.pdf) | Rounded 2024-USD planning value; the cited 2020 rural VIP retail price was $83.80. Replace with a current local bill of quantities. |
 | `avgAnnualIncome` | Avg Annual Income | 600 | USD/year / USD/year | observed: `NY.GNP.PCAP.CD`, falling back to `NY.GDP.PCAP.CD` | Used only to value saved time; it is not household disposable income. |
 
@@ -37,7 +37,7 @@ Every numeric input must be finite before the simulation starts. Blank or malfor
 
 | id | Label | Default | Entered / model unit | Source | Meaning |
 |---|---|---:|---|---|---|
-| `districts` | Administrative Units | 28 | count / count | Malawi reference: official district count | With enterprises per unit, sets the network ceiling. It is not fetched because third-party administrative-unit data mixed districts and regions. |
+| `districts` | Administrative Units | 28 | count / count | observed: geoBoundaries `gbOpen/{ISO3}/ADM2` `admUnitCount` (Malawi: 28 districts, 2020, NSO Malawi via OCHA) — [ADR-0062](adr/0062-derive-household-size-and-admin-units-from-country-data.md) | With enterprises per unit, sets the network ceiling. ADM2 is not always called a district; hover text shows the unit type and year. Replace with the programme's operating units where they differ. |
 | `mePerDistrict` | Micro-enterprises / Unit | 20 | count / count | programme assumption | Capacity ceiling, not an observed country statistic. Zero is valid and disables the enterprise network and production. |
 | `initialMeNetworkShare` | Initial ME Network (% of Target) | 15 | percent / decimal | programme assumption | Share of the target network launched at month zero, capped by affordable enterprise capital. Illustrative pilot assumption; replace with the implementation plan. |
 | `jobsPerMe` | Jobs Supported / Active ME | 3 | jobs/enterprise / same | programme assumption | Interim Malawi reference: one owner/operator plus two FTE workers per active enterprise. Produces a point-in-time jobs-supported estimate, not jobs created or job-years. Replace with programme staffing evidence. |
@@ -94,15 +94,17 @@ The World Bank client requests the latest non-empty observation (`mrnev=1`) and 
 | population growth | `SP.POP.GROW` |
 | annual income proxy | `NY.GNP.PCAP.CD`, falling back to `NY.GDP.PCAP.CD` |
 | sanitation DALY factor | WHO `WSH_30_SAN` lower bound divided by `SP.POP.TOTL × (1 − SH.STA.BASS.ZS/100)` for the WHO year |
+| rural household size | DHS Program `HC_MEMB_H_MNM`, Residence = Rural, latest survey |
+| administrative units | geoBoundaries ADM2 `admUnitCount` |
 
-Safely managed sanitation, CPI inflation, commercial lending, Gini, and poverty are dated context only. Missing essential observations clear the affected field and pause automatic calculation; they never reuse the previous country’s value. Programme terms, costs, capacity, write-downs, and subsidy policy remain the user’s responsibility for every country.
+Safely managed sanitation, CPI inflation, commercial lending, Gini, and poverty are dated context only. Missing essential observations (including household size and administrative units) clear the affected field and pause automatic calculation; they never reuse the previous country’s value. Programme terms, costs, capacity, write-downs, and subsidy policy remain the user’s responsibility for every country.
 
 Household and enterprise rates, annual fixed operating cost, and model-currency cost escalation use
 an amber programme-assumption state. Country loading repeats dated commercial lending and CPI beside
 the related controls, and explains why fixed cost has no macro proxy, but does not alter any of the
 four values. See [ADR-0050](adr/0050-show-api-benchmarks-without-inventing-programme-terms.md).
 
-After a country load, the four model-driving fields share a blue outline and background. Hover
+After a country load, the six model-driving fields share a blue outline and background. Every other numeric input is amber, because the user supplies it ([ADR-0062](adr/0062-derive-household-size-and-admin-units-from-country-data.md)). Hover
 text records whether the value is a direct observation or a derivation and names the observation
 year(s). A real user edit removes the blue state and changes its in-page provenance to user-entered;
 programme assumptions are never given the API marker. See [ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md) and [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md).

@@ -11,7 +11,7 @@
 | **Tests** | ✅ 161 pass, 0 todo, 0 fail (`npm test`, ~10s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
-| **Country audit** | ✅ 44/44 selector countries have current essential observations and complete a full integrity-clean run; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
+| **Country audit** | ✅ 35/44 selector countries have every essential observation and complete a full integrity-clean run; the other 9 have no DHS household-size survey and pause for a cited value; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
 | **Findings register** | 73 of 73 resolved; `node tools/verify-findings.js` counts this from the documents |
 | **Open modelling questions** | None; Q1–Q18 decided |
 
@@ -32,16 +32,16 @@ Static defaults and the recorded post-fetch Malawi startup now agree on the mode
 | Measure | Current result |
 |---|---:|
 | Toilets built | 83,350 |
-| People reached | 366,740 (~4.0% of the target population) |
+| People reached | 358,405 (~3.9% of the target population; 4.3 people per household, DHS 2024) |
 | Micro-enterprises at horizon | 267 |
 | Ending / minimum cash | +$17,842 |
 | Net assets | +$176,782 |
 | Senior debt | Repaid in full |
 | OSS / FSS | 1.65 / 1.06 |
-| Physical DALYs averted | ~2,139 after the Malawi country load; WHO/World Bank lower-bound burden × explicit 21% health effect |
+| Physical DALYs averted | ~2,090 after the Malawi country load; WHO/World Bank lower-bound burden × explicit 21% health effect |
 | Jobs supported | 801 at horizon (267 active enterprises × explicit assumption of 3) |
 | Carbon | Not estimated — a project baseline/technology factor is required |
-| Gross Social Value Multiple | 2.73 (time value only by default; DALY value and carbon factor remain zero; not a formal SROI) |
+| Gross Social Value Multiple | 2.67 (time value only by default; DALY value and carbon factor remain zero; not a formal SROI) |
 | Production constraints | ME capacity primary; loan and grant capital secondary |
 | Verdict | Integrity OK; viability OK |
 
@@ -49,12 +49,12 @@ The 20-year stress scenario is **not viable** under the same assumptions: it win
 
 ## Assumptions and country data
 
-- Country loading writes only target population, population growth, GNI per capita (GDP fallback), and the conservative sanitation DALY derivation, using dated World Bank and WHO observations.
-- Those four fields share a blue `country-observation` state after loading; each records direct/derived provenance and observation year(s), and a real user edit removes the marker.
+- Country loading writes only target population, population growth, GNI per capita (GDP fallback), the conservative sanitation DALY derivation, rural household size (DHS Program) and the administrative-unit count (geoBoundaries ADM2), using dated observations ([ADR-0062](docs/adr/0062-derive-household-size-and-admin-units-from-country-data.md)).
+- Those six fields share a blue `country-observation` state after loading; each records direct/derived provenance and observation year(s), and a real user edit removes the marker.
 - CPI, commercial lending, poverty, Gini, and sanitation coverage are context only.
 - Household and enterprise APRs, annual fixed operations, and USD cost escalation are amber programme assumptions. Dated commercial lending and local CPI appear beside the relevant controls but never overwrite them; no macro API is used to invent an operating budget.
 - Missing essential observations clear the field and pause automatic calculation; another country's value is never retained.
-- Malawi references are documented in [docs/PARAMETERS.md](docs/PARAMETERS.md): 4.4 people/household, 28 districts, $100 toilet planning cost, $3,000 enterprise capital, 12-month loan terms, 0.25 hours saved/day, and a 50% time-value factor.
+- Malawi references are documented in [docs/PARAMETERS.md](docs/PARAMETERS.md): $100 toilet planning cost, $3,000 enterprise capital, 12-month loan terms, 0.25 hours saved/day, and a 50% time-value factor.
 - Financing, operating, write-down, capacity, contingency, and grant-pacing defaults remain illustrative programme assumptions. They must be calibrated before an investment decision.
 - Jobs supported use an editable three-per-active-enterprise Malawi reference: one owner/operator plus two FTE workers. It is not an observed country value and is not job-years.
 - The health burden factor uses the WHO `WSH_30_SAN` lower uncertainty bound divided by matching-year World Bank population without basic sanitation. An explicit 21% programme-effect assumption from the 2022 basic non-sewered sanitation meta-analysis scales that burden to DALYs averted. DALY value remains zero. Eritrea and Tuvalu currently fall back to not estimated because a required API source is unavailable.
@@ -89,7 +89,7 @@ The 20-year stress scenario is **not viable** under the same assumptions: it win
 
 ## Country-input provenance contract
 
-- `popReqToilets`, `popGrowthRate`, `avgAnnualIncome`, and `dalyPerPerson` are the only model inputs written by country loading and the only controls that receive `country-observation`.
+- `popReqToilets`, `popGrowthRate`, `avgAnnualIncome`, `dalyPerPerson`, `avgHHSize` and `districts` are the only model inputs written by country loading and the only controls that receive `country-observation`. Every other numeric input is amber `programme-assumption`; `tests/startup.test.js` fails if one has neither.
 - The target population description names its rural-population/basic-sanitation derivation; growth and income name their direct observation year.
 - Programmatic load events retain the API marker. A trusted user edit clears it and records user provenance.
 - Programme rates, costs, losses, capacity, contingency, and subsidy settings never receive the marker. See [ADR-0046](docs/adr/0046-mark-country-derived-inputs-consistently.md).

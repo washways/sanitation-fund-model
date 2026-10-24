@@ -26,7 +26,7 @@ module.exports = {
   // Market
   popReqToilets: 9244139,
   popGrowthRate: 0.0256,
-  avgHHSize: 4.4,
+  avgHHSize: 4.3, // DHS 2024 rural mean household members, Malawi (ADR-0062)
   avgToiletCost: 100,
   inflationRate: 0.0332,
 

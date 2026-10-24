@@ -29,6 +29,30 @@ async function fetchLatest(countryCode, indicator) {
   return record ? { value: Number(record.value), year: record.date } : null;
 }
 
+// Mirrors src/data/dhs.js and src/data/geoboundaries.js (ADR-0062). The model sandbox
+// has no network, so the live audit calls the APIs directly with the same rules.
+async function fetchRuralHouseholdSize(dhsCode) {
+  if (!dhsCode) return null;
+  const url = 'https://api.dhsprogram.com/rest/dhs/data' +
+    `?countryIds=${dhsCode}&indicatorIds=HC_MEMB_H_MNM&breakdown=all` +
+    '&returnFields=SurveyYear,Value,CharacteristicCategory,CharacteristicLabel&f=json';
+  const body = await (await fetch(url)).json();
+  const rural = (body?.Data || [])
+    .filter(r => r.CharacteristicCategory === 'Residence' && r.CharacteristicLabel === 'Rural'
+      && Number(r.Value) > 0)
+    .sort((a, b) => Number(b.SurveyYear) - Number(a.SurveyYear));
+  return rural.length ? { value: Number(rural[0].Value), year: rural[0].SurveyYear } : null;
+}
+
+async function fetchAdminUnits(iso3) {
+  const response = await fetch(`https://www.geoboundaries.org/api/current/gbOpen/${iso3}/ADM2/`);
+  if (!response.ok) return null;
+  const body = await response.json();
+  const count = Number(body?.admUnitCount);
+  return Number.isInteger(count) && count > 0
+    ? { value: count, year: body.boundaryYearRepresented } : null;
+}
+
 function inRange(record, min, max) {
   return !record || (Number.isFinite(record.value) && record.value >= min && record.value <= max);
 }
@@ -37,7 +61,11 @@ async function main() {
   const rows = await Promise.all(LDC_COUNTRIES.map(async country => {
     const entries = await Promise.all(Object.entries(INDICATORS).map(async ([name, code]) =>
       [name, await fetchLatest(country.code, code)]));
-    return { country, data: Object.fromEntries(entries) };
+    const [householdSize, adminUnits] = await Promise.all([
+      fetchRuralHouseholdSize(country.dhs).catch(() => null),
+      fetchAdminUnits(country.code).catch(() => null),
+    ]);
+    return { country, data: { ...Object.fromEntries(entries), householdSize, adminUnits } };
   }));
 
   const invalid = [];
@@ -56,6 +84,8 @@ async function main() {
     if (!data.basicRuralSanitation) missing.push('basic sanitation');
     if (!data.populationGrowth) missing.push('population growth');
     if (!data.gniPerCapita && !data.gdpPerCapita) missing.push('GNI/GDP');
+    if (!data.householdSize) missing.push('rural household size');
+    if (!data.adminUnits) missing.push('administrative units');
     if (missing.length) incomplete.push(`${country.name}: ${missing.join(', ')}`);
 
     try {
@@ -74,7 +104,7 @@ async function main() {
   }
 
   console.log(`Countries checked: ${rows.length}`);
-  for (const key of Object.keys(INDICATORS)) {
+  for (const key of [...Object.keys(INDICATORS), 'householdSize', 'adminUnits']) {
     const available = rows.filter(row => row.data[key]).length;
     console.log(`${key}: ${available}/${rows.length}`);
   }

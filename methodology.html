@@ -795,7 +795,7 @@ lendable  == 0      gate shut, no capital to redeploy</div>
         <p>The country rate is a <strong>burden proxy, not a 100% intervention effect</strong>. The separate Sanitation
             Health Effect input defaults to 21%, the 2022 meta-analysis point estimate for basic sanitation without
             sewer connection versus unimproved or limited sanitation (RR 0.79; 95% CI 0.61&ndash;1.03, moderate
-            certainty). Applying that explicit factor produces about 2,139 DALYs averted in the five-year Malawi
+            certainty). Applying that explicit factor produces about 2,090 DALYs averted in the five-year Malawi
             reference, rather than assuming that every unit of attributable burden disappears. Replace the factor with
             programme evidence when service quality, use, coverage, or health effects have been measured.</p>
 
@@ -1158,15 +1158,20 @@ capitalPreservation      = netAssets   / capitalInvested</div>
         <p>Country context is fetched from the <strong>World Bank Indicators API</strong>; sanitation-attributable
             diarrhoeal DALYs come from the <strong>WHO Global Health Observatory API</strong>. World Bank context uses
             the latest non-empty observation and shows its year. The DALY denominator deliberately requests population
-            and basic sanitation for the WHO numerator year.</p>
+            and basic sanitation for the WHO numerator year. Rural household size comes from the
+            <strong>DHS Program API</strong> (mean household members, rural, latest survey), and the number of
+            administrative units from the <strong>geoBoundaries API</strong> (second-level units, with their local name
+            and year).</p>
 
         <p><strong>Blue input fields are the country-data boundary.</strong> The target population is derived from
             rural population and rural basic-sanitation access; population growth and income per person are direct
-            observations; the DALY burden factor is the documented WHO/World Bank derivation above. Hovering a blue field shows its source year or years. Editing it removes the blue marker,
+            observations; the DALY burden factor is the documented WHO/World Bank derivation above; household size and
+            administrative units come from DHS and geoBoundaries. If a country has no DHS survey, household size is
+            cleared and the run pauses until you enter a cited value. Hovering a blue field shows its source year or years. Editing it removes the blue marker,
             because the resulting value is now the user's assumption. Financing, operating, delivery, loss, and
             subsidy settings are never coloured as World Bank observations.</p>
 
-        <p><strong>Amber fields remain programme assumptions.</strong> Commercial lending and local CPI are repeated
+        <p><strong>Every other input is amber: a programme assumption or scenario choice you supply.</strong> Commercial lending and local CPI are repeated
             beside the related controls with their dates because they are useful benchmarks, but they never set the
             household APR, enterprise APR, operating budget, or USD escalation rate. The value beside each amber
             field must come from the programme&rsquo;s term sheet, budget, and cost/FX forecast.</p>
