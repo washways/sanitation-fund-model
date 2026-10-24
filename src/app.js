@@ -448,11 +448,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Main Execution Wrapper (Smart Solvency Solver)
 // FIX: Default isAutoAdjust to FALSE to prevent startup loops.
-function runCalculation(isAutoAdjust = false, depth = 0) {
-    if (depth > 5) {
-        console.warn("[Solver] Max recursion depth reached. Stopping.");
-        return;
-    }
+// The recursion-depth guard left over from the removed auto-adjuster is gone (F-71):
+// nothing calls this recursively any more.
+function runCalculation(isAutoAdjust = false) {
     try {
         let inputs = UI.getInputs();
         let results = ModelModule.calculate(inputs);

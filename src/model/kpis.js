@@ -154,18 +154,14 @@ Object.assign(ModelModule, {
         // Two changes:
         //   1. Scale with `avgAnnualIncome`, which the model already collects from the
         //      World Bank GNI-per-capita indicator and previously never used (F-25).
-        //   2. Apply a valuation factor. Standard practice in WASH and transport
-        //      cost-benefit analysis is to value non-market time BELOW the market wage,
-        //      because the hour saved is household time rather than forgone paid work.
-        //      A factor of around 0.3 is the common convention; it is an input, so a
-        //      programme with its own evidence can override it.
+        //   2. Apply a valuation factor, because the hour saved is household time
+        //      rather than forgone paid work. The Malawi reference default is 50%,
+        //      following the World Bank Lilongwe appraisal (ADR-0034, superseding the
+        //      30% convention in ADR-0030). It is an input; see PARAMETERS.md.
         //
-        // NOTE FOR REVIEWERS: 0.3 is the conventional default, not a figure verified
-        // against a specific current source. Confirm it against the WHO/World Bank
-        // sanitation cost-benefit guidance your programme reports against before
-        // publishing an SROI derived from it.
-        const WORKING_HOURS_PER_YEAR = 2080; // 40h x 52 weeks
-        const timeValueFactor = inputs.timeValueFactor !== undefined ? inputs.timeValueFactor : 0.30;
+        // validateInputs requires timeValueFactor, so there is no fallback here (F-71).
+        const WORKING_HOURS_PER_YEAR = 2080; // 40h x 52 weeks; PARAMETERS.md fixed constants
+        const timeValueFactor = inputs.timeValueFactor;
         const hourValueUsd = ((inputs.avgAnnualIncome || 0) / WORKING_HOURS_PER_YEAR) * timeValueFactor;
         const totalValHours = totalHoursSaved * hourValueUsd;
 

@@ -6,14 +6,14 @@
 
 | | |
 |---|---|
-| **Release** | 0.20.0 — verdicts read the loan ledger and past-due principal; OSS excludes carbon; whole-enterprise launches |
+| **Release** | 0.21.0 — enterprise working-capital months is an input; failed loads clear stale results; no silent input fallbacks |
 | **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance, responsive results, model transparency, scorecard integrity, and need-versus-demand terminology complete; caching/scenario comparison and remaining S6 work remain |
-| **Tests** | ✅ 150 pass, 0 todo, 0 fail (`npm test`, ~5s) |
+| **Tests** | ✅ 161 pass, 0 todo, 0 fail (`npm test`, ~10s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 44/44 selector countries have current essential observations and complete a full integrity-clean run; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
-| **Findings register** | 69 of 73 resolved — F-70 to F-73 open (all Low); `node tools/verify-findings.js` counts this from the documents |
-| **Open modelling questions** | Q18 open (the unsourced 6-month working-capital floor); Q1–Q17 decided |
+| **Findings register** | 73 of 73 resolved; `node tools/verify-findings.js` counts this from the documents |
+| **Open modelling questions** | None; Q1–Q18 decided |
 
 ## What remains unresolved
 
@@ -23,7 +23,7 @@
 | Real-browser chart/advisor click-through | Headless tests cover startup, calculation, export, and wiring, but not visual chart interaction. | Add a browser smoke pass during S6 accessibility/mobile work. |
 | Borrower adoption and eligible market | The observed unserved rural population is a maximum target; the model assumes enough uptake to use delivery capacity and does not forecast willingness, affordability, eligibility, or product choice. | Use programme market research to bound uptake before treating toilets as a forecast; do not infer a national rate from the API. |
 | Formal SROI method | The displayed Gross Social Value Multiple is honestly labelled (F-65) but still has no deadweight, attribution, displacement or discounting. | Add a full appraisal method only with an explicit standard and sourced programme assumptions. |
-| Remaining robustness findings F-70 to F-73 | Undocumented constants including the 6-month working-capital floor (F-70, Q18); stale history in docs and code comments (F-71); silent `getRaw` fallbacks and two formatters (F-72); a failed country load leaves stale results on screen (F-73). All Low. Details in [docs/ANALYSIS.md §4B](docs/ANALYSIS.md). | Get a source or a decision for Q18; then F-73 and F-72, which are UI robustness fixes with no golden movement. |
+| Enterprise working-capital months | Now an input (Q18, ADR-0061), but its default of 6 is an owner planning assumption with no external source. It binds only when the household term is under 6 months. | Replace the default with programme evidence before an investment decision. |
 
 ## Malawi reference run
 
@@ -41,7 +41,7 @@ Static defaults and the recorded post-fetch Malawi startup now agree on the mode
 | Physical DALYs averted | ~2,139 after the Malawi country load; WHO/World Bank lower-bound burden × explicit 21% health effect |
 | Jobs supported | 801 at horizon (267 active enterprises × explicit assumption of 3) |
 | Carbon | Not estimated — a project baseline/technology factor is required |
-| SROI | 2.73 (time value only by default; DALY value and carbon factor remain zero) |
+| Gross Social Value Multiple | 2.73 (time value only by default; DALY value and carbon factor remain zero; not a formal SROI) |
 | Production constraints | ME capacity primary; loan and grant capital secondary |
 | Verdict | Integrity OK; viability OK |
 
@@ -76,6 +76,8 @@ The 20-year stress scenario is **not viable** under the same assumptions: it win
 - The 15% interim default starts 84 Malawi enterprises, records about $7,603 of month-one enterprise interest, and grows through the separate monthly expansion controls.
 - The former `opsReserveCap` / `Starting Capacity Throttle` is removed. It was a one-use cross-ledger holdback, not a liquidity reserve.
 - A positive share uses `ceil` to seed small networks; explicit zero starts no enterprise and cannot create hidden percentage growth. See [ADR-0047](docs/adr/0047-start-with-a-pilot-enterprise-network.md).
+- Each enterprise loan is `meSetupCost + toiletsPerMeMonth * avgToiletCost * max(meWorkingCapitalMonths, termHh)`. The working-capital default of 6 months is an unsourced owner assumption ([ADR-0061](docs/adr/0061-enterprise-working-capital-months-is-an-input.md)).
+- Launches are whole enterprises; attrition stays continuous ([ADR-0060](docs/adr/0060-launch-whole-enterprises.md)).
 
 ## Sensitivity contract
 
@@ -160,5 +162,7 @@ node tools/verify-findings.js
 Run the app with `python -m http.server 8080` or `npm run serve`. `file://` works, but browsers may block World Bank calls from local files.
 
 ## Latest activity
+
+On 2026-10-24 release 0.21.0 closed the last four robustness findings. The owner decided Q18: the unsourced 6-month working-capital floor is now the input `meWorkingCapitalMonths`, default 6 (ADR-0061). A failed or incomplete country load, or an invalid recalculation, now withdraws every rendered result through `UI.clearResults` (F-73). `getRaw` returns `NaN` for a missing control and the duplicate `parseInt` formatter is gone (F-72); the startup harness now resolves comma-separated selectors, which had hidden that formatter. Stale history in MODEL_SPEC and `kpis.js` is corrected (F-71). No golden value moved.
 
 On 2026-10-23 release 0.20.0 implemented the owner's decisions on Q15–Q17 and fixed F-68. Solvency verdicts read the new `dataMonthlyLoanCash` series (ADR-0057); horizon and repayment term are independent and V2 fails only on past-due principal (ADR-0058); OSS is loan interest over operating cost and `null` without operating cost (ADR-0059); enterprise launches are whole (ADR-0060). Each golden move matched its ADR's prediction exactly. The startup harness now fires `window` `load` listeners, which exposed the hidden two-way term/horizon binding. The Malawi reference run is unchanged and viable. The day before, release 0.19.8 relabelled the social value ratio as a Gross Social Value Multiple (F-65). The on-site [changelog](changelog.html) gives users the release history and remaining limitations as simple bullets.

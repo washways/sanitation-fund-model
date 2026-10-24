@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 64 of 64 original findings resolved as of 2026-10-22. A robustness review the same day registered eight further findings (F-66 to F-73, §4B), all open. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 64 of 64 original findings resolved as of 2026-10-22. A robustness review the same day registered eight further findings (F-66 to F-73, §4B); all were resolved by release 0.21.0 on 2026-10-24. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -56,7 +56,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 |---|---|---|---|---|---|
 | ✅ [F-73](#f-73--a-failed-country-load-leaves-stale-results-on-screen) | Low | UX / Controller | When the country fetch fails, essential fields are cleared and “no calculation was run” is shown, but the dashboard still displays the static-default run made 100 ms after load | src | S6 |
 | ✅ [F-72](#f-72--the-input-boundary-still-has-silent-fallbacks-and-two-competing-formatters) | Low | UI / Robustness | `getRaw` returns a hard-coded default for a missing element, those defaults disagree with `index.html`, and two blur formatters (`parseInt` and `parseFloat`) are bound to the same inputs | src | S6 |
-| [F-71](#f-71--stale-counts-and-historical-text-in-normative-documents) | Low | Docs | Test and finding counts differ across AGENTS.md, README.md, STATUS.md and TESTING.md; MODEL_SPEC carries pre-fix history in present tense; a code comment still names the superseded 0.30 time-value default | src | S6 |
+| ✅ [F-71](#f-71--stale-counts-and-historical-text-in-normative-documents) | Low | Docs | Test and finding counts differ across AGENTS.md, README.md, STATUS.md and TESTING.md; MODEL_SPEC carries pre-fix history in present tense; a code comment still names the superseded 0.30 time-value default | src | S6 |
 | ✅ [F-70](#f-70--constants-with-no-row-in-parametersmd) | Low | Docs / Assumptions | The 6-month working-capital floor, 2,080-hour year, 30-day month, 3-month reserve, 30% collections floor, $1,000 viability tolerance and solver search ranges are hard-coded with no entry in the parameter dictionary | src | S6 |
 | ✅ [F-69](#f-69--oss-mixes-ledgers-and-reports-0-when-there-are-no-operating-expenses) | Medium | Model / Reporting | OSS counts ring-fenced carbon revenue as operating income (565x in the carbon scenario), is a cumulative ratio although the spec says “steady state”, and reports 0 and fails V4 when operating expenses are zero | run | S4 |
 | ✅ [F-68](#f-68--fractional-micro-enterprises-are-launched-near-the-network-cap) | Low | Model | `space = maxTotalMEs - currentMEs` is fractional after attrition, so the loop launches 0.035 of an enterprise and books a $400 loan for it; 45 such months in the capacity-constrained golden scenario | run | S4 |
@@ -1350,6 +1350,13 @@ STATUS.md so only one file carries a number. Still open:
 - `src/model/kpis.js` carries a long comment defending a 0.30 time-value default that
   ADR-0034 superseded with 0.50; `src/ui/inputs.js` still uses 30 as the dead fallback.
 - `src/model/invariants.js`'s header says “INV-1..INV-18”; the file implements INV-1 to INV-21.
+
+**Resolution:** R-2.3 and §10 of MODEL_SPEC now describe the pre-fix states in the past tense
+and say when they ended. The planned `writeOffs` rename is recorded as dropped, because the names
+are internal and renaming them changes no number. The `kpis.js` comment now cites the 50% default
+and ADR-0034, and its silent 0.30 fallback is removed because validation already requires the
+input. The `inputs.js` fallback went with F-72, and the invariants header was corrected in
+0.20.0. The unused recursion-depth guard in `runCalculation` is deleted. No golden movement.
 
 ### F-72 — The input boundary still has silent fallbacks and two competing formatters
 
