@@ -1,0 +1,232 @@
+{
+ "_source": "Hutton, G. and Varughese, M. (2016). The Costs of Meeting the 2030 Sustainable Development Goal Targets on Drinking Water, Sanitation, and Hygiene. World Bank Water and Sanitation Program Technical Paper. Appendix E, Table E.1, capital cost per person by country. https://openknowledge.worldbank.org/handle/10986/23681 (CC BY 3.0 IGO).",
+ "_units": "US$ per person, 2015 prices, capital cost only. Per household = value x rural household size; escalate with US CPI (World Bank FP.CPI.TOTL, USA) from 2015.",
+ "_columns": "ruralWetPit = basic improved, rural, wet (pour-flush) pit latrine; ruralDryPit = basic improved, rural, dry pit latrine.",
+ "_extracted": "2026-10-24 from the PDF text with pypdf; Sudan checked separately from South Sudan.",
+ "_suspect": "ERI and ETH: ruralDryPit equals the row's rural piped-water value and ruralWetPit is 5-10x neighbours; likely a column shift in the source. Treat as suspect and say so on hover.",
+ "_ownerDecision": "2026-10-24: use ruralDryPit for avgToiletCost (see CLAUDE.md, Next steps). Not yet wired into the app.",
+ "costs": {
+  "AFG": {
+   "name": "Afghanistan",
+   "ruralWetPit": 20.5,
+   "ruralDryPit": 8.6
+  },
+  "AGO": {
+   "name": "Angola",
+   "ruralWetPit": 40.6,
+   "ruralDryPit": 23.0
+  },
+  "BGD": {
+   "name": "Bangladesh",
+   "ruralWetPit": 6.9,
+   "ruralDryPit": 5.7
+  },
+  "BEN": {
+   "name": "Benin",
+   "ruralWetPit": 34.5,
+   "ruralDryPit": 11.2
+  },
+  "BFA": {
+   "name": "Burkina Faso",
+   "ruralWetPit": 31.5,
+   "ruralDryPit": 10.2
+  },
+  "BDI": {
+   "name": "Burundi",
+   "ruralWetPit": 19.4,
+   "ruralDryPit": 10.5
+  },
+  "KHM": {
+   "name": "Cambodia",
+   "ruralWetPit": 22.6,
+   "ruralDryPit": 11.2
+  },
+  "CAF": {
+   "name": "Central African Republic",
+   "ruralWetPit": 11.6,
+   "ruralDryPit": 10.6
+  },
+  "TCD": {
+   "name": "Chad",
+   "ruralWetPit": 40.1,
+   "ruralDryPit": 28.4
+  },
+  "COM": {
+   "name": "Comoros",
+   "ruralWetPit": 30.0,
+   "ruralDryPit": 16.8
+  },
+  "COD": {
+   "name": "Congo, Dem. Rep.",
+   "ruralWetPit": 71.0,
+   "ruralDryPit": 10.2
+  },
+  "DJI": {
+   "name": "Djibouti",
+   "ruralWetPit": 57.8,
+   "ruralDryPit": 18.7
+  },
+  "ERI": {
+   "name": "Eritrea",
+   "ruralWetPit": 290.7,
+   "ruralDryPit": 48.5,
+   "suspect": true
+  },
+  "ETH": {
+   "name": "Ethiopia",
+   "ruralWetPit": 329.2,
+   "ruralDryPit": 54.9,
+   "suspect": true
+  },
+  "GMB": {
+   "name": "Gambia, The",
+   "ruralWetPit": 17.8,
+   "ruralDryPit": 8.1
+  },
+  "GIN": {
+   "name": "Guinea",
+   "ruralWetPit": 181.6,
+   "ruralDryPit": 102.9
+  },
+  "GNB": {
+   "name": "Guinea-Bissau",
+   "ruralWetPit": 37.8,
+   "ruralDryPit": 6.0
+  },
+  "HTI": {
+   "name": "Haiti",
+   "ruralWetPit": 32.8,
+   "ruralDryPit": 6.3
+  },
+  "KIR": {
+   "name": "Kiribati",
+   "ruralWetPit": 13.8,
+   "ruralDryPit": 5.6
+  },
+  "LAO": {
+   "name": "Lao PDR",
+   "ruralWetPit": 23.4,
+   "ruralDryPit": 5.3
+  },
+  "LSO": {
+   "name": "Lesotho",
+   "ruralWetPit": 49.8,
+   "ruralDryPit": 10.3
+  },
+  "LBR": {
+   "name": "Liberia",
+   "ruralWetPit": 26.7,
+   "ruralDryPit": 3.5
+  },
+  "MDG": {
+   "name": "Madagascar",
+   "ruralWetPit": 31.9,
+   "ruralDryPit": 15.0
+  },
+  "MWI": {
+   "name": "Malawi",
+   "ruralWetPit": 35.1,
+   "ruralDryPit": 12.9
+  },
+  "MLI": {
+   "name": "Mali",
+   "ruralWetPit": 34.4,
+   "ruralDryPit": 9.2
+  },
+  "MRT": {
+   "name": "Mauritania",
+   "ruralWetPit": 51.5,
+   "ruralDryPit": 20.6
+  },
+  "MOZ": {
+   "name": "Mozambique",
+   "ruralWetPit": 86.0,
+   "ruralDryPit": 11.3
+  },
+  "MMR": {
+   "name": "Myanmar",
+   "ruralWetPit": 32.3,
+   "ruralDryPit": 16.0
+  },
+  "NPL": {
+   "name": "Nepal",
+   "ruralWetPit": 42.6,
+   "ruralDryPit": 36.6
+  },
+  "NER": {
+   "name": "Niger",
+   "ruralWetPit": 57.4,
+   "ruralDryPit": 28.7
+  },
+  "RWA": {
+   "name": "Rwanda",
+   "ruralWetPit": 62.1,
+   "ruralDryPit": 9.1
+  },
+  "SEN": {
+   "name": "Senegal",
+   "ruralWetPit": 44.1,
+   "ruralDryPit": 11.0
+  },
+  "SLE": {
+   "name": "Sierra Leone",
+   "ruralWetPit": 58.6,
+   "ruralDryPit": 7.7
+  },
+  "SLB": {
+   "name": "Solomon Islands",
+   "ruralWetPit": 7.9,
+   "ruralDryPit": 3.5
+  },
+  "SOM": {
+   "name": "Somalia",
+   "ruralWetPit": 17.4,
+   "ruralDryPit": 2.0
+  },
+  "SSD": {
+   "name": "South Sudan",
+   "ruralWetPit": 59.3,
+   "ruralDryPit": 6.7
+  },
+  "SDN": {
+   "name": "Sudan",
+   "ruralWetPit": 85.8,
+   "ruralDryPit": 9.7
+  },
+  "TLS": {
+   "name": "Timor-Leste",
+   "ruralWetPit": 60.9,
+   "ruralDryPit": 3.8
+  },
+  "TGO": {
+   "name": "Togo",
+   "ruralWetPit": 42.3,
+   "ruralDryPit": 41.3
+  },
+  "TUV": {
+   "name": "Tuvalu",
+   "ruralWetPit": 13.8,
+   "ruralDryPit": 6.1
+  },
+  "UGA": {
+   "name": "Uganda",
+   "ruralWetPit": 42.9,
+   "ruralDryPit": 15.2
+  },
+  "TZA": {
+   "name": "Tanzania",
+   "ruralWetPit": 54.0,
+   "ruralDryPit": 19.1
+  },
+  "YEM": {
+   "name": "Yemen, Rep.",
+   "ruralWetPit": 38.6,
+   "ruralDryPit": 6.7
+  },
+  "ZMB": {
+   "name": "Zambia",
+   "ruralWetPit": 72.8,
+   "ruralDryPit": 15.0
+  }
+ }
+}

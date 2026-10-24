@@ -20,6 +20,9 @@ function deriveCountryInputs(data) {
   if (!finiteRecord(data.gniPerCapita) && !finiteRecord(data.gdpPerCapita)) {
     missing.push('GNI/GDP per capita');
   }
+  // ADR-0062: DHS rural household size and geoBoundaries ADM2 count are essential.
+  if (!finiteRecord(data.householdSize)) missing.push('rural household size');
+  if (!finiteRecord(data.adminUnits)) missing.push('administrative units');
   if (missing.length) return { inputs: null, missing };
 
   const ruralPopulation = Number(data.ruralPopulation.value);
@@ -36,6 +39,8 @@ function deriveCountryInputs(data) {
       popReqToilets: Math.floor(ruralPopulation * ((100 - basicSanitation) / 100)),
       popGrowthRate: Number(populationGrowth.toFixed(2)) / 100,
       avgAnnualIncome: Math.round(income),
+      avgHHSize: Number(data.householdSize.value),
+      districts: Number(data.adminUnits.value),
     },
     missing: [],
   };

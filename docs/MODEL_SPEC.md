@@ -587,7 +587,10 @@ blue `country-observation` state and carries a human- and machine-readable sourc
 state survives programmatic input events during loading and is removed when the user edits the
 value. Programme terms and policy assumptions must never carry that state. The four assumptions
 covered by ADR-0050 use a separate amber `programme-assumption` state and retain their entered
-values while dated context is rendered beside them. Context-only country indicators remain in the dated country strip and do not masquerade as model inputs. See
+values while dated context is rendered beside them. Context-only country indicators remain in the dated country strip and do not masquerade as model inputs. Since
+[ADR-0062](adr/0062-derive-household-size-and-admin-units-from-country-data.md) the blue set is
+`popReqToilets`, `popGrowthRate`, `avgAnnualIncome`, `dalyPerPerson`, `avgHHSize` (DHS) and `districts`
+(geoBoundaries ADM2), and every other numeric input carries the amber state. See
 [ADR-0046](adr/0046-mark-country-derived-inputs-consistently.md), [ADR-0049](adr/0049-derive-health-and-report-impact-honestly.md), and [ADR-0050](adr/0050-show-api-benchmarks-without-inventing-programme-terms.md).
 
 ### R-10.8 Monthly audit-table containment **[AS-BUILT]** (F-61)

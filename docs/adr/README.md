@@ -66,3 +66,4 @@ For the short version of what each one decided, [CHANGELOG.md](../../CHANGELOG.m
 | [0059](0059-oss-counts-only-loan-ledger-income.md) | OSS counts only loan-ledger income |
 | [0060](0060-launch-whole-enterprises.md) | Launch micro-enterprises in whole units |
 | [0061](0061-enterprise-working-capital-months-is-an-input.md) | Enterprise working-capital months is an input |
+| [0062](0062-derive-household-size-and-admin-units-from-country-data.md) | Derive household size and administrative units from country data |

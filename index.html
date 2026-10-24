@@ -124,7 +124,7 @@
                     </small>
                     <small id="programme-source-key" class="country-source-key">
                         <span class="programme-source-swatch" aria-hidden="true"></span>
-                        Amber fields are programme assumptions. Country API benchmarks may inform them but never set them.
+                        Amber fields are programme assumptions and scenario choices you supply. Country API benchmarks may inform them but never set them.
                     </small>
                 </div>
             </div>
@@ -169,7 +169,7 @@
                     </label>
                     <div class="input-wrapper has-prefix">
                         <span class="input-prefix">$</span>
-                        <input type="text" id="wiz-invest-grant-sidebar" value="1,000,000" class="formatted-number">
+                        <input type="text" id="wiz-invest-grant-sidebar" aria-describedby="programme-source-key" value="1,000,000" class="formatted-number programme-assumption">
 
                     </div>
                 </div>
@@ -179,21 +179,21 @@
                     </label>
                     <div class="input-wrapper has-prefix">
                         <span class="input-prefix">$</span>
-                        <input type="text" id="wiz-invest-loan-sidebar" value="4,000,000" class="formatted-number">
+                        <input type="text" id="wiz-invest-loan-sidebar" aria-describedby="programme-source-key" value="4,000,000" class="formatted-number programme-assumption">
                     </div>
                 </div>
                 <div class="input-group">
                     <label>Duration (Years)
                         <span class="info-icon" title="Simulation horizon. Independent of the fund repayment term: a horizon shorter than the term reports principal scheduled after it as not yet due, not as a default.">i</span>
                     </label>
-                    <input type="number" id="wiz-duration-sidebar" value="5">
+                    <input type="number" id="wiz-duration-sidebar" aria-describedby="programme-source-key" class="programme-assumption" value="5">
                 </div>
                 <div class="input-group">
                     <label>Fund Repayment (Years)
                         <span class="info-icon"
                             title="Term to repay the initial loan capital to investors, from month 1. Independent of the simulation horizon; it is not changed when the horizon changes. Set > 0 to enable debt service.">i</span>
                     </label>
-                    <input type="number" id="fundRepaymentTerm" value="5">
+                    <input type="number" id="fundRepaymentTerm" aria-describedby="programme-source-key" class="programme-assumption" value="5">
                 </div>
 
                 <div class="input-group">
@@ -201,7 +201,7 @@
                         <span class="info-icon"
                             title="Delays PRINCIPAL repayment only, to allow capital deployment. Interest still accrues from month 1.">i</span>
                     </label>
-                    <input type="number" id="investorGracePeriod" value="6">
+                    <input type="number" id="investorGracePeriod" aria-describedby="programme-source-key" class="programme-assumption" value="6">
                 </div>
 
                 <!--
@@ -216,7 +216,7 @@
                         <span class="info-icon"
                             title="Annual interest the fund pays its senior investors on the Initial Loan Capital. Accrues from month 1; unpaid interest capitalises into the outstanding liability.">i</span>
                     </label>
-                    <input type="number" step="0.01" id="fundCostOfCapital" value="2">
+                    <input type="number" step="0.01" id="fundCostOfCapital" aria-describedby="programme-source-key" class="programme-assumption" value="2">
                     <small id="coc-help" class="help-text"></small>
                 </div>
 
@@ -243,9 +243,9 @@
                 </div>
                 <div class="input-group">
                     <label>Avg Household Size (people)
-                        <span class="info-icon" title="Average number of people per household.">i</span>
+                        <span class="info-icon" title="Rural mean household members. Loaded from the latest DHS Program survey for the selected country (Malawi: 4.3, DHS 2024). See docs/adr/0062.">i</span>
                     </label>
-                    <input type="number" id="avgHHSize" value="4.4" step="0.1">
+                    <input type="number" id="avgHHSize" value="4.3" step="0.1">
                 </div>
                 <div class="input-group">
                     <label>Grant-Funded Pacing (% of Production)
@@ -254,7 +254,7 @@
                     </label>
                     <div class="input-wrapper has-suffix">
                         <div class="input-wrapper has-suffix">
-                            <input type="number" id="grantSupportPct" value="10" step="1">
+                            <input type="number" id="grantSupportPct" aria-describedby="programme-source-key" class="programme-assumption" value="10" step="1">
                             <span class="input-suffix">%</span>
                         </div>
                     </div>
@@ -272,12 +272,12 @@
                         <span class="info-icon"
                             title="Estimated construction cost of a single basic latrine in USD. This determines the loan principal required per household.">i</span>
                     </label>
-                    <input type="number" id="avgToiletCost" value="100">
+                    <input type="number" id="avgToiletCost" aria-describedby="programme-source-key" class="programme-assumption" value="100">
                 </div>
                 <div class="input-group">
                     <label>Administrative Units (e.g. Districts)
                         <span class="info-icon"
-                            title="Number of distinct geographical areas (Districts/Counties) where the project operates. Affects total scale and logistical complexity.">i</span>
+                            title="Second-level administrative units (districts, counties, cercles...). Loaded from geoBoundaries ADM2 for the selected country (Malawi: 28 districts). Replace with the units the programme actually operates in. See docs/adr/0062.">i</span>
                     </label>
                     <input type="number" id="districts" value="28">
                 </div>
@@ -287,14 +287,14 @@
                         <span class="info-icon"
                             title="Maximum sanitation businesses per administrative unit. This sets the network ceiling, not the starting cohort.">i</span>
                     </label>
-                    <input type="number" id="mePerDistrict" value="20">
+                    <input type="number" id="mePerDistrict" aria-describedby="programme-source-key" class="programme-assumption" value="20">
                 </div>
                 <div class="input-group">
                     <label>Jobs Supported / Active ME
                         <span class="info-icon"
                             title="Full-time-equivalent livelihoods supported by each active sanitation enterprise. The illustrative default assumes one owner/operator plus two workers; replace it with programme staffing evidence.">i</span>
                     </label>
-                    <input type="number" id="jobsPerMe" value="3" step="0.5">
+                    <input type="number" id="jobsPerMe" aria-describedby="programme-source-key" class="programme-assumption" value="3" step="0.5">
                 </div>
 
                 <div class="input-group">
@@ -302,14 +302,14 @@
                         <span class="info-icon"
                             title="Production Capacity: The maximum number of latrines one business can build in a month. Limits the speed of scale-up.">i</span>
                     </label>
-                    <input type="number" id="toiletsPerMeMonth" value="7">
+                    <input type="number" id="toiletsPerMeMonth" aria-describedby="programme-source-key" class="programme-assumption" value="7">
                 </div>
                 <div class="input-group">
                     <label>ME Setup Cost ($ USD)
                         <span class="info-icon"
                             title="Seed Capital: Cost to train, equip, and register one new Micro-enterprise. Provided as a loan or grant to the business.">i</span>
                     </label>
-                    <input type="number" id="meSetupCost" value="3000">
+                    <input type="number" id="meSetupCost" aria-describedby="programme-source-key" class="programme-assumption" value="3000">
                 </div>
                 <div class="input-group">
                     <label>ME Working Capital (Months)
@@ -345,21 +345,21 @@
                         <span class="info-icon"
                             title="Repayment period for household loans. Shorter terms = higher monthly payments but faster recycling of capital.">i</span>
                     </label>
-                    <input type="number" id="termHh" value="12">
+                    <input type="number" id="termHh" aria-describedby="programme-source-key" class="programme-assumption" value="12">
                 </div>
                 <div class="input-group">
                     <label>ME Loan Term (Months)
                         <span class="info-icon"
                             title="Repayment period for business startup loans. Typically longer (12-24 months) to allow business stabilization.">i</span>
                     </label>
-                    <input type="number" id="termMe" value="12">
+                    <input type="number" id="termMe" aria-describedby="programme-source-key" class="programme-assumption" value="12">
                 </div>
                 <div class="input-group">
                     <label>HH Annual Write-down Rate (%)
                         <span class="info-icon"
                             title="Annual portfolio write-down hazard on outstanding household balances. Programme assumption; country data never overwrites it.">i</span>
                     </label>
-                    <input type="number" id="hhDefaultRate" value="5" step="0.5">
+                    <input type="number" id="hhDefaultRate" aria-describedby="programme-source-key" class="programme-assumption" value="5" step="0.5">
                 </div>
 
                 <div class="input-group">
@@ -367,35 +367,35 @@
                         <span class="info-icon"
                             title="Annual portfolio write-down hazard on outstanding enterprise balances. Programme assumption; country data never overwrites it.">i</span>
                     </label>
-                    <input type="number" id="meDefaultRate" value="5" step="0.5">
+                    <input type="number" id="meDefaultRate" aria-describedby="programme-source-key" class="programme-assumption" value="5" step="0.5">
                 </div>
                 <div class="input-group">
                     <label>ME Annual Closure Rate (%)
                         <span class="info-icon"
                             title="Share of micro-enterprises that cease trading each year. Distinct from the write-down rate: a business can close having repaid its loan, and a loan can be written down by a business that keeps trading. Closure removes production capacity; write-down removes loan value.">i</span>
                     </label>
-                    <input type="number" id="meExitRate" value="10" step="1">
+                    <input type="number" id="meExitRate" aria-describedby="programme-source-key" class="programme-assumption" value="10" step="1">
                 </div>
                 <div class="input-group">
                     <label>ME Expansion Budget Share (%)
                         <span class="info-icon"
                             title="Share of lendable cash committed each month to recruiting new micro-enterprises. Was a hardcoded 10% with no control; see docs/adr/0019.">i</span>
                     </label>
-                    <input type="number" id="meExpansionBudgetShare" value="10" step="1">
+                    <input type="number" id="meExpansionBudgetShare" aria-describedby="programme-source-key" class="programme-assumption" value="10" step="1">
                 </div>
                 <div class="input-group">
                     <label>ME Max Monthly Growth Rate (%)
                         <span class="info-icon"
                             title="Ceiling on how fast the micro-enterprise network can grow in a single month, as a share of the current network. The dominant driver of the recruitment curve — 10%/month compounds to roughly 3.1x/year. Was a hardcoded 10% with no control; see docs/adr/0019.">i</span>
                     </label>
-                    <input type="number" id="meMaxMonthlyGrowthRate" value="10" step="1">
+                    <input type="number" id="meMaxMonthlyGrowthRate" aria-describedby="programme-source-key" class="programme-assumption" value="10" step="1">
                 </div>
                 <div class="input-group">
                     <label>Mgmt Fee Ratio (%)
                         <span class="info-icon"
                             title="Variable Operational Cost: % of all disbursements (loans+grants) retained to cover administration and monitoring.">i</span>
                     </label>
-                    <input type="number" id="mgmtFeeRatio" value="1" step="0.25">
+                    <input type="number" id="mgmtFeeRatio" aria-describedby="programme-source-key" class="programme-assumption" value="1" step="0.25">
                 </div>
 
 
@@ -432,14 +432,14 @@
                         <span class="info-icon"
                             title="Share of the country sanitation-attributable burden expected to be averted by the financed toilets. The 21% interim default is the 2022 meta-analysis point estimate for basic sanitation without sewer connection versus unimproved or limited sanitation (RR 0.79; 95% CI 0.61–1.03). Replace with programme evidence when available.">i</span>
                     </label>
-                    <input type="number" id="dalyImpactRealisation" value="21" step="1">
+                    <input type="number" id="dalyImpactRealisation" aria-describedby="programme-source-key" class="programme-assumption" value="21" step="1">
                 </div>
                 <div class="input-group">
                     <label>Toilet Service Life (Years)
                         <span class="info-icon"
                             title="How long a toilet stays in service. Carbon, health, and time benefits all stop after this period; replacement demand is not modelled.">i</span>
                     </label>
-                    <input type="number" id="toiletLifespanYears" value="5" step="1">
+                    <input type="number" id="toiletLifespanYears" aria-describedby="programme-source-key" class="programme-assumption" value="5" step="1">
                 </div>
                 <!-- Was a hardcoded 0.25 inside two conflicting formulas (F-07). -->
                 <div class="input-group">
@@ -447,14 +447,14 @@
                         <span class="info-icon"
                             title="Time each household member no longer spends travelling to or queueing for sanitation. Accrues monthly against toilets in service.">i</span>
                     </label>
-                    <input type="number" id="hoursPerPersonPerDay" value="0.25" step="0.05">
+                    <input type="number" id="hoursPerPersonPerDay" aria-describedby="programme-source-key" class="programme-assumption" value="0.25" step="0.05">
                 </div>
                 <div class="input-group">
                     <label>Value of Saved Time (% of wage)
                         <span class="info-icon"
                             title="Saved household time is valued below the market wage, because the hour is household time rather than forgone paid work. The hourly rate is derived from Avg Annual Income over a 2,080-hour year, then scaled by this factor. Replaces a hardcoded, uncited $0.50/hour.">i</span>
                     </label>
-                    <input type="number" id="timeValueFactor" value="50" step="5">
+                    <input type="number" id="timeValueFactor" aria-describedby="programme-source-key" class="programme-assumption" value="50" step="5">
                     <small id="hour-value-help" class="help-text"></small>
                 </div>
                 <div class="input-group">
@@ -462,21 +462,21 @@
                         <span class="info-icon"
                             title="Programme-evaluation input. Zero by default; enter a cited value together with a cited DALY effect before publishing SROI.">i</span>
                     </label>
-                    <input type="number" id="dalyValue" value="0">
+                    <input type="number" id="dalyValue" aria-describedby="programme-source-key" class="programme-assumption" value="0">
                 </div>
                 <div class="input-group">
                     <label>Net CO2e Avoided / Toilet (Tonnes/Yr)
                         <span class="info-icon"
                             title="Project-specific net emissions reduction versus the baseline sanitation system. It cannot be inferred from users or toilet count alone; IPCC accounting requires baseline and project treatment technologies. Zero means not estimated.">i</span>
                     </label>
-                    <input type="number" id="co2PerToilet" value="0" step="0.01">
+                    <input type="number" id="co2PerToilet" aria-describedby="programme-source-key" class="programme-assumption" value="0" step="0.01">
                 </div>
                 <div class="input-group">
                     <label>Value per Tonne CO2e ($)
                         <span class="info-icon"
                             title="Carbon Credit Price: Market value per tonne of verified CO2e reduction.">i</span>
                     </label>
-                    <input type="number" id="co2Value" value="15">
+                    <input type="number" id="co2Value" aria-describedby="programme-source-key" class="programme-assumption" value="15">
                 </div>
                 <div class="input-group">
                     <label>Fund Carbon Share (%)
@@ -484,7 +484,7 @@
                             title="Revenue Share: % of Carbon Credit value that flows back to the Fund vs. retained by households/operators.">i</span>
                     </label>
                     <div class="input-wrapper has-suffix">
-                        <input type="number" id="carbonCreditShare" value="50" step="5">
+                        <input type="number" id="carbonCreditShare" aria-describedby="programme-source-key" class="programme-assumption" value="50" step="5">
                         <span class="input-suffix">%</span>
                     </div>
                 </div>
@@ -504,21 +504,21 @@
                         <span class="info-icon"
                             title="Programme assumption: per-unit delivery-cost mark-up for uncertainty. It is not a cash reserve and is never set from governance data.">i</span>
                     </label>
-                    <input type="number" id="contingencyRate" value="5" step="0.5">
+                    <input type="number" id="contingencyRate" aria-describedby="programme-source-key" class="programme-assumption" value="5" step="0.5">
                 </div>
                 <div class="input-group">
                     <label>Initial ME Network (% of Target)
                         <span class="info-icon"
                             title="Pilot share of the target enterprise network launched at month zero, capped by available loan capital. The 15% default is an illustrative rollout assumption, not country data; replace it with the implementation plan. See docs/adr/0047.">i</span>
                     </label>
-                    <input type="number" id="initialMeNetworkShare" value="15" step="1">
+                    <input type="number" id="initialMeNetworkShare" aria-describedby="programme-source-key" class="programme-assumption" value="15" step="1">
                 </div>
                 <div class="input-group">
                     <label>M&E Cost (%)
                         <span class="info-icon"
                             title="Variable Cost: Charged as % of TOTAL Disbursements. Paid from Revenue first, then Ops Reserve.">i</span>
                     </label>
-                    <input type="number" id="meCostRate" value="2" step="0.25">
+                    <input type="number" id="meCostRate" aria-describedby="programme-source-key" class="programme-assumption" value="2" step="0.25">
                 </div>
 
                 <div class="sidebar-footer">
@@ -880,6 +880,8 @@
     -->
     <script src="src/data/worldbank.js"></script>
     <script src="src/data/who.js"></script>
+    <script src="src/data/dhs.js"></script>
+    <script src="src/data/geoboundaries.js"></script>
     <script src="src/data/countries.js"></script>
     <script src="src/data/stakeholders.js"></script>
     <script src="src/model/engine.js"></script>

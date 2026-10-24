@@ -114,9 +114,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-        const [data, healthBurden] = await Promise.all([
+        const [data, healthBurden, householdSize, adminUnits] = await Promise.all([
             ApiModule.fetchData(country),
             WhoApiModule.fetchSanitationDalys(country),
+            DhsApiModule.fetchRuralHouseholdSize(countryObj.dhs),
+            GeoBoundariesModule.fetchAdminUnitCount(country),
         ]);
         let healthEstimate = null;
         if (healthBurden) {
@@ -292,6 +294,36 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 clearParam('popReqToilets');
                 missing.push('rural population/basic sanitation');
+            }
+
+            // Household size and administrative units follow the country (ADR-0062).
+            // Both are essential: a missing value clears the field and pauses, so a
+            // previous country's number is never carried over.
+            if (householdSize && hasNumber(householdSize.value)) {
+                fillParam(
+                    'avgHHSize',
+                    householdSize.value,
+                    `DHS Program rural mean household members (${householdSize.year}` +
+                        `${householdSize.surveyId ? ', survey ' + householdSize.surveyId : ''})`,
+                    'dhs',
+                    'DHS Program'
+                );
+            } else {
+                clearParam('avgHHSize');
+                missing.push('rural household size (no DHS survey)');
+            }
+            if (adminUnits && hasNumber(adminUnits.value)) {
+                fillParam(
+                    'districts',
+                    adminUnits.value,
+                    `${adminUnits.value} second-level administrative units (${adminUnits.unitType}, ` +
+                        `${adminUnits.year}; ${adminUnits.source}). Replace with the programme's operating units if different.`,
+                    'geoboundaries',
+                    'geoBoundaries'
+                );
+            } else {
+                clearParam('districts');
+                missing.push('administrative units');
             }
 
             // Macro observations are context. Local CPI is not a USD cost-escalation

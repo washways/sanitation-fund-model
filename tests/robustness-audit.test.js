@@ -14,6 +14,8 @@ test('country audit derives the same model inputs as the browser contract', () =
     populationGrowth: { value: 2.5, year: '2025' },
     gniPerCapita: null,
     gdpPerCapita: { value: 700, year: '2025' },
+    householdSize: { value: 5.2, year: 2023 },
+    adminUnits: { value: 45, year: '2019' },
   });
 
   assert.deepStrictEqual(derived, {
@@ -21,6 +23,8 @@ test('country audit derives the same model inputs as the browser contract', () =
       popReqToilets: 600000,
       popGrowthRate: 0.025,
       avgAnnualIncome: 700,
+      avgHHSize: 5.2,
+      districts: 45,
     },
     missing: [],
   });
@@ -33,6 +37,8 @@ test('country audit runs the model and refuses an incomplete observation set', (
     populationGrowth: { value: 2.56, year: '2024' },
     gniPerCapita: { value: 600, year: '2024' },
     gdpPerCapita: { value: 650, year: '2024' },
+    householdSize: { value: 4.3, year: 2024 },
+    adminUnits: { value: 28, year: '2020' },
   });
   assert.strictEqual(complete.runnable, true);
   assert.strictEqual(complete.integrity.ok, true);
@@ -44,9 +50,11 @@ test('country audit runs the model and refuses an incomplete observation set', (
     populationGrowth: { value: 2.5, year: '2025' },
     gniPerCapita: { value: 700, year: '2025' },
     gdpPerCapita: { value: 650, year: '2025' },
+    householdSize: null,
+    adminUnits: { value: 28, year: '2020' },
   });
   assert.strictEqual(incomplete.runnable, false);
-  assert.deepStrictEqual(incomplete.missing, ['basic sanitation']);
+  assert.deepStrictEqual(incomplete.missing, ['basic sanitation', 'rural household size']);
   assert.strictEqual(incomplete.integrity, null);
 });
 
