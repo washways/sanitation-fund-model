@@ -29,9 +29,21 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.20.0 — 23 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.21.0 — 24 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.21.0 — The last robustness findings closed</h2>
+        <ul>
+            <li>New input: <strong>ME Working Capital (Months)</strong>. It sets the minimum months of production each enterprise loan finances. It was a hidden, unsourced 6. The default stays 6, so no result changes, and you can now test other values.</li>
+            <li>If country data fails to load, the dashboard, charts, table and export are cleared and a notice explains why. Before, old results stayed on screen under a form that no longer matched them.</li>
+            <li>A missing form control is now reported as an error instead of being replaced by a hidden number.</li>
+            <li>Capital fields keep their decimals: 1234.5 no longer becomes 1,234.</li>
+            <li>Outdated wording in the specification and code comments is corrected.</li>
+            <li>Resolves F-70 to F-73 and Q18 (ADR-0061). All 73 registered findings are now resolved. No recorded scenario result changed.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.20.0 — Verdicts read the right ledger, the right window and whole enterprises</h2>
         <ul>
             <li>Solvency is now judged on the loan ledger, which pays debt service and operations. Grant cash is ring-fenced and can no longer hide an overdrawn loan ledger. Depletion year, months insolvent, minimum cash and ops coverage all describe the loan ledger.</li>

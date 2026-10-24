@@ -1098,3 +1098,20 @@ body {
     line-height: 1.4;
     color: #64748b;
 }
+
+/* F-73: no valid calculation backs the dashboard, so hide it rather than show stale numbers. */
+#modelTab.no-results .charts-container,
+#modelTab.no-results .detailed-stats {
+    display: none;
+}
+
+.no-results-notice {
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid #d97706;
+    border-radius: 0.5rem;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}

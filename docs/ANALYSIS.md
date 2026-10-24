@@ -7,7 +7,7 @@
 | **Audit date** | 2026-08-20 |
 | **Commit audited** | `2d81863` ("Model integrity improvements…") on `main` |
 | **Method** | Static review of all 5,902 lines (`app.js`, `index.html`, `methodology.html`, `style.css`, `server.js`), then empirical verification by executing the model headlessly |
-| **Fix status** | 64 of 64 original findings resolved as of 2026-10-22. A robustness review the same day registered eight further findings (F-66 to F-73, §4B), all open. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
+| **Fix status** | 64 of 64 original findings resolved as of 2026-10-22. A robustness review the same day registered eight further findings (F-66 to F-73, §4B); all were resolved by release 0.21.0 on 2026-10-24. Rows below marked ✅ are closed; finding text is never deleted. Live count: [STATUS.md](../STATUS.md). |
 | **Execution status** | **The model was executed.** `tools/load-model.js` loads `ModelModule` into a Node VM with a minimal DOM stub; `tools/verify-findings.js` and `tools/probe.js` reproduce each finding against the shipped `index.html` defaults. Every finding below carries either a cited line, a reproduced measurement, or both. Reproduce with `node tools/verify-findings.js`. |
 
 ---
@@ -54,10 +54,10 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 
 | ID | Severity | Area | Summary | Evidence | Stage |
 |---|---|---|---|---|---|
-| [F-73](#f-73--a-failed-country-load-leaves-stale-results-on-screen) | Low | UX / Controller | When the country fetch fails, essential fields are cleared and “no calculation was run” is shown, but the dashboard still displays the static-default run made 100 ms after load | src | S6 |
-| [F-72](#f-72--the-input-boundary-still-has-silent-fallbacks-and-two-competing-formatters) | Low | UI / Robustness | `getRaw` returns a hard-coded default for a missing element, those defaults disagree with `index.html`, and two blur formatters (`parseInt` and `parseFloat`) are bound to the same inputs | src | S6 |
-| [F-71](#f-71--stale-counts-and-historical-text-in-normative-documents) | Low | Docs | Test and finding counts differ across AGENTS.md, README.md, STATUS.md and TESTING.md; MODEL_SPEC carries pre-fix history in present tense; a code comment still names the superseded 0.30 time-value default | src | S6 |
-| [F-70](#f-70--constants-with-no-row-in-parametersmd) | Low | Docs / Assumptions | The 6-month working-capital floor, 2,080-hour year, 30-day month, 3-month reserve, 30% collections floor, $1,000 viability tolerance and solver search ranges are hard-coded with no entry in the parameter dictionary | src | S6 |
+| ✅ [F-73](#f-73--a-failed-country-load-leaves-stale-results-on-screen) | Low | UX / Controller | When the country fetch fails, essential fields are cleared and “no calculation was run” is shown, but the dashboard still displays the static-default run made 100 ms after load | src | S6 |
+| ✅ [F-72](#f-72--the-input-boundary-still-has-silent-fallbacks-and-two-competing-formatters) | Low | UI / Robustness | `getRaw` returns a hard-coded default for a missing element, those defaults disagree with `index.html`, and two blur formatters (`parseInt` and `parseFloat`) are bound to the same inputs | src | S6 |
+| ✅ [F-71](#f-71--stale-counts-and-historical-text-in-normative-documents) | Low | Docs | Test and finding counts differ across AGENTS.md, README.md, STATUS.md and TESTING.md; MODEL_SPEC carries pre-fix history in present tense; a code comment still names the superseded 0.30 time-value default | src | S6 |
+| ✅ [F-70](#f-70--constants-with-no-row-in-parametersmd) | Low | Docs / Assumptions | The 6-month working-capital floor, 2,080-hour year, 30-day month, 3-month reserve, 30% collections floor, $1,000 viability tolerance and solver search ranges are hard-coded with no entry in the parameter dictionary | src | S6 |
 | ✅ [F-69](#f-69--oss-mixes-ledgers-and-reports-0-when-there-are-no-operating-expenses) | Medium | Model / Reporting | OSS counts ring-fenced carbon revenue as operating income (565x in the carbon scenario), is a cumulative ratio although the spec says “steady state”, and reports 0 and fails V4 when operating expenses are zero | run | S4 |
 | ✅ [F-68](#f-68--fractional-micro-enterprises-are-launched-near-the-network-cap) | Low | Model | `space = maxTotalMEs - currentMEs` is fractional after attrition, so the loop launches 0.035 of an enterprise and books a $400 loan for it; 45 such months in the capacity-constrained golden scenario | run | S4 |
 | ✅ [F-67](#f-67--the-repayment-term-is-force-bound-to-the-horizon-and-v2-measures-the-wrong-window) | Medium | UI / Model | A second, unguarded two-way listener keeps `fundRepaymentTerm` equal to `duration`, so the browser cannot express a term that differs from the horizon; and V2 reports debt not yet due as a default (5-year horizon, 10-year term: “52.6% default”) | run | S4 |
@@ -1329,6 +1329,14 @@ These are none of the three:
 one and its status. Whether the 6-month floor should become an input is a modelling decision
 (Q18); the rest are tolerances and search settings that only need to be visible.
 
+**Resolution:** the owner decided Q18: the floor becomes the input `meWorkingCapitalMonths`,
+default 6, recorded in PARAMETERS.md as an owner planning assumption with no external source.
+`meCapitalRequirement` uses `max(meWorkingCapitalMonths, termHh)`. At the 12-month Malawi
+household term the input does not bind, and no golden scenario moved, as
+[ADR-0061](adr/0061-enterprise-working-capital-months-is-an-input.md) predicted. Every other
+constant in the table above now has a row in PARAMETERS.md's *Fixed model constants* table.
+Five tests in `tests/working-capital.test.js`.
+
 ### F-71 — Stale counts and historical text in normative documents
 
 **Low — partly addressed.** Test and finding counts had drifted: AGENTS.md said 102 tests in 11
@@ -1342,6 +1350,13 @@ STATUS.md so only one file carries a number. Still open:
 - `src/model/kpis.js` carries a long comment defending a 0.30 time-value default that
   ADR-0034 superseded with 0.50; `src/ui/inputs.js` still uses 30 as the dead fallback.
 - `src/model/invariants.js`'s header says “INV-1..INV-18”; the file implements INV-1 to INV-21.
+
+**Resolution:** R-2.3 and §10 of MODEL_SPEC now describe the pre-fix states in the past tense
+and say when they ended. The planned `writeOffs` rename is recorded as dropped, because the names
+are internal and renaming them changes no number. The `kpis.js` comment now cites the 50% default
+and ADR-0034, and its silent 0.30 fallback is removed because validation already requires the
+input. The `inputs.js` fallback went with F-72, and the invariants header was corrected in
+0.20.0. The unused recursion-depth guard in `runCalculation` is deleted. No golden movement.
 
 ### F-72 — The input boundary still has silent fallbacks and two competing formatters
 
@@ -1357,6 +1372,15 @@ agree today only because every such field holds an integer.
 **Proposed fix:** make `getRaw` return `NaN` for a missing element so `validateInputs` reports
 it; delete the fallback defaults; keep one formatter.
 
+**Resolution:** done as proposed. `getRaw` returns `NaN` for a missing control and every
+per-field default is gone, so a dropped id is rejected by name. The `parseInt` formatter is
+deleted; `UI.setupFormatting` is the only blur formatter. In the browser the `parseInt` one ran
+first, so `1234.5` in a capital field became `1,234`. The country fill now groups digits with
+`en-US` explicitly, because `getRaw` strips commas only and a browser in a `.`-grouping locale
+would otherwise have written a value the reader could not parse. The startup harness had hidden
+the second formatter by matching only the exact selector string `.formatted-number`; it now
+resolves comma-separated selectors. Two tests in `tests/startup.test.js`; no golden movement.
+
 ### F-73 — A failed country load leaves stale results on screen
 
 **Low — open.** `UI.init` runs the static-default scenario 100 ms after load; the controller
@@ -1370,6 +1394,14 @@ button text, leaving it at “Loading…”.
 **Proposed fix:** on a failed or incomplete load, clear `UI.lastResults` and the rendered result
 (the same path `runCalculation` already takes on invalid input), or render an explicit
 “results reflect static defaults” banner; restore the button text before the early return.
+
+**Resolution:** the owner chose to clear the results. A new `UI.clearResults` withdraws the
+export snapshot, destroys the charts, empties the monthly table, hides the verdict and advice
+banners, and shows a notice saying why the dashboard is empty. It runs on an incomplete load,
+on a load that returns nothing, and on an invalid recalculation, which previously blocked only
+the export (F-46). A valid calculation restores the dashboard. The button now captures its idle
+label once, so an overlapping request can no longer restore it to “Loading…”. Four tests in
+`tests/startup.test.js`; no golden movement.
 
 ---
 

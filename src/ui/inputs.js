@@ -5,9 +5,13 @@
 // --- UI Module ---
 const UI = {
     getInputs() {
-        const getRaw = (id, defaultVal = 0) => {
+        // No fallback defaults (F-72, AGENTS.md §4). A control missing from the page
+        // reads as NaN so validateInputs rejects it by name. The old per-field
+        // defaults disagreed with index.html, so a dropped id ran on a number nobody
+        // chose.
+        const getRaw = id => {
             const el = document.getElementById(id);
-            if (!el) return defaultVal;
+            if (!el) return Number.NaN;
             // Strip commas and currency symbols
             const val = el.value.replace(/,/g, '').replace(/\$/g, '').trim();
             // Blank or malformed user input is not permission to restore a hidden
@@ -26,64 +30,64 @@ const UI = {
          * plausible in the countries this tool targets, silently got 1.5%. See F-17.
          *
          * @param id   element id
-         * @param def  default IN PERCENT (e.g. 5 means 5%)
          */
-        const getPercent = (id, def = 0) => getRaw(id, def) / 100;
+        const getPercent = id => getRaw(id) / 100;
 
         return {
             country: document.getElementById('countryInput').value || 'Unknown',
             investGrant: getRaw('wiz-invest-grant-sidebar'),
             investLoan: getRaw('wiz-invest-loan-sidebar'),
             popReqToilets: getRaw('popReqToilets'),
-            popGrowthRate: getPercent('popGrowthRate', 0),
-            avgHHSize: getRaw('avgHHSize', 5),
-            grantSupportPct: getPercent('grantSupportPct', 20), // Default 0.20
-            avgToiletCost: getRaw('avgToiletCost', 50),
+            popGrowthRate: getPercent('popGrowthRate'),
+            avgHHSize: getRaw('avgHHSize'),
+            grantSupportPct: getPercent('grantSupportPct'),
+            avgToiletCost: getRaw('avgToiletCost'),
             districts: getRaw('districts'),
             mePerDistrict: getRaw('mePerDistrict'),
             jobsPerMe: getRaw('jobsPerMe'),
             toiletsPerMeMonth: getRaw('toiletsPerMeMonth'),
             meSetupCost: getRaw('meSetupCost'),
-            loanInterestRate: getPercent('loanInterestRate_v2', 10),
-            meLoanInterestRate: getPercent('meLoanInterestRate_v2', 10),
-            hhDefaultRate: getPercent('hhDefaultRate', 5),
-            meDefaultRate: getPercent('meDefaultRate', 5),
+            meWorkingCapitalMonths: getRaw('meWorkingCapitalMonths'),
+            loanInterestRate: getPercent('loanInterestRate_v2'),
+            meLoanInterestRate: getPercent('meLoanInterestRate_v2'),
+            hhDefaultRate: getPercent('hhDefaultRate'),
+            meDefaultRate: getPercent('meDefaultRate'),
             // Business closure, distinct from loan write-down — see R-6.3.
-            meExitRate: getPercent('meExitRate', 10),
+            meExitRate: getPercent('meExitRate'),
             // In-loop ME expansion pacing (R-6.2). Both were hardcoded 0.1 until
-            // ADR-0019; defaults unchanged.
-            meExpansionBudgetShare: getPercent('meExpansionBudgetShare', 10),
-            meMaxMonthlyGrowthRate: getPercent('meMaxMonthlyGrowthRate', 10),
-            mgmtFeeRatio: getPercent('mgmtFeeRatio', 2),
-            inflationRate: getPercent('inflationRate', 0),
-            contingencyRate: getPercent('contingencyRate', 5),
-            initialMeNetworkShare: getPercent('initialMeNetworkShare', 15),
-            annualFixedOpsCost: getRaw('annualFixedOpsCost', 50000),
-            meCostRate: getPercent('meCostRate', 5),
-            fundCostOfCapital: getPercent('fundCostOfCapital', 2),
+            // ADR-0019.
+            meExpansionBudgetShare: getPercent('meExpansionBudgetShare'),
+            meMaxMonthlyGrowthRate: getPercent('meMaxMonthlyGrowthRate'),
+            mgmtFeeRatio: getPercent('mgmtFeeRatio'),
+            inflationRate: getPercent('inflationRate'),
+            contingencyRate: getPercent('contingencyRate'),
+            initialMeNetworkShare: getPercent('initialMeNetworkShare'),
+            annualFixedOpsCost: getRaw('annualFixedOpsCost'),
+            meCostRate: getPercent('meCostRate'),
+            fundCostOfCapital: getPercent('fundCostOfCapital'),
             fundRepaymentTerm: getRaw('fundRepaymentTerm'),
-            termHh: getRaw('termHh', 12),
-            termMe: getRaw('termMe', 24),
+            termHh: getRaw('termHh'),
+            termMe: getRaw('termMe'),
             // Impact
-            dalyPerPerson: getRaw('dalyPerPerson', 0.005),
-            dalyImpactRealisation: getPercent('dalyImpactRealisation', 21),
-            dalyValue: getRaw('dalyValue', 500),
-            avgAnnualIncome: getRaw('avgAnnualIncome', 1500),
-            co2PerToilet: getRaw('co2PerToilet', 0.2),
-            co2Value: getRaw('co2Value', 50),
-            carbonCreditShare: getPercent('carbonCreditShare', 100), // 100% -> 1.0
+            dalyPerPerson: getRaw('dalyPerPerson'),
+            dalyImpactRealisation: getPercent('dalyImpactRealisation'),
+            dalyValue: getRaw('dalyValue'),
+            avgAnnualIncome: getRaw('avgAnnualIncome'),
+            co2PerToilet: getRaw('co2PerToilet'),
+            co2Value: getRaw('co2Value'),
+            carbonCreditShare: getPercent('carbonCreditShare'),
             // Optimization Flags
             enableBreakEvenSolver: true,
             verify: true,
-            investorGracePeriod: getRaw('investorGracePeriod', 6), // New Input
-            duration: getRaw('wiz-duration-sidebar', 10),
+            investorGracePeriod: getRaw('investorGracePeriod'),
+            duration: getRaw('wiz-duration-sidebar'),
             // Hours saved per person per day (R-8.2). Was a hardcoded 0.25 buried in
             // two conflicting formulas; now a single named assumption.
-            hoursPerPersonPerDay: getRaw('hoursPerPersonPerDay', 0.25),
+            hoursPerPersonPerDay: getRaw('hoursPerPersonPerDay'),
             // Share of the market wage at which saved household time is valued (R-8.6).
-            timeValueFactor: getPercent('timeValueFactor', 30),
+            timeValueFactor: getPercent('timeValueFactor'),
             // Service life; carbon crediting stops after this (R-8.5).
-            toiletLifespanYears: getRaw('toiletLifespanYears', 5)
+            toiletLifespanYears: getRaw('toiletLifespanYears')
         };
     },
 

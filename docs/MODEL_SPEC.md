@@ -1,7 +1,7 @@
 # Model Specification
 
 **Status:** Normative. This document, not the code (`src/model/`), is the source of truth for the financial mathematics.
-**Version:** 1.2 (2026-10-22) — adds the open questions Q15–Q18 from the robustness review ([ANALYSIS.md §4B](ANALYSIS.md)) and corrects three rules whose wording no longer matched the code.
+**Version:** 1.3 (2026-10-24) — Q18 decided: enterprise working-capital months becomes an input (R-6.1, [ADR-0061](adr/0061-enterprise-working-capital-months-is-an-input.md)); pre-fix history in R-2.3, R-3.5 and §10 now reads in the past tense (F-71). Version 1.2 (2026-10-22) added Q15–Q18 and corrected three rules.
 
 ---
 
@@ -59,7 +59,7 @@ Implemented once in `ModelModule.getMonthlyRate`. Do not inline this formula any
 ### R-2.3 Units at the boundary **[AS-BUILT]** (was F-17, fixed 2026-08-20)
 There is **one** entry convention for rates, applied to every field, and conversion happens **exactly once**, at the boundary in `UI.getInputs()`.
 
-**No function may inspect a value's magnitude to guess its unit.** This is the rule that matters; it is violated today by two heuristics that contradict each other about the same DOM node (`>1 means percent` in `getInputs`, `<1 means decimal` in `updateSmartRates`), which makes rates above 100% unrepresentable and 100% itself ambiguous.
+**No function may inspect a value's magnitude to guess its unit.** This is the rule that matters. Until 2026-08-20 it was broken by two heuristics that contradicted each other about the same DOM node (`>1 means percent` in `getInputs`, `<1 means decimal` in `updateSmartRates`), which made rates above 100% unrepresentable and 100% itself ambiguous. Both are deleted.
 
 **Percentages.** `12` means 12%, for every rate field without exception. Decided 2026-08-20 — see [ADR-0012](adr/0012-percentage-entry-convention.md). Implemented as `getPercent()` in `UI.getInputs()`; both magnitude heuristics are deleted.
 
@@ -132,7 +132,7 @@ This is a *fractional continuous write-down*, not a discrete "x% of loans fail".
 **Label the UI field accordingly** — "Annual portfolio write-down rate", not "Default rate". `tests/writedown.test.js` (`T-DEF-1`) pins realised loss to disbursed principal at several terms so the crossover stays visible instead of silently drifting.
 
 ### R-3.5 Defaults are not cash **[AS-BUILT]**
-Write-offs reduce cohort balances and are reported in `dataMonthlyDefaults*`, but they are **never** a cash outflow. They must not appear in `netFlow`. The variable still lives in the `outflows` object under the name `defaultsHh` / `defaultsMe` for reporting convenience only; the rename to `writeOffs` planned for Stage 3 was never done and is tracked under F-71. Read the name as "write-down", not "cash out".
+Write-offs reduce cohort balances and are reported in `dataMonthlyDefaults*`, but they are **never** a cash outflow. They must not appear in `netFlow`. The variable still lives in the `outflows` object under the name `defaultsHh` / `defaultsMe` for reporting convenience only; the rename to `writeOffs` planned for Stage 3 was dropped (F-71) because the names are internal and renaming them would change no number. Read the name as "write-down", not "cash out".
 
 ---
 
@@ -251,7 +251,7 @@ remains the only liquidity/debt-service reserve. See [ADR-0047](adr/0047-start-w
 
 ```
 maxTotalMEs         = districts * mePerDistrict
-meCapitalRequirement = meSetupCost + (toiletsPerMeMonth * avgToiletCost * max(6, termHh))
+meCapitalRequirement = meSetupCost + (toiletsPerMeMonth * avgToiletCost * max(meWorkingCapitalMonths, termHh))
 affordableStartMEs   = floor(max(0, loanCash) / meCapitalRequirement)
 targetStartMEs       = initialMeNetworkShare == 0
                        ? 0
@@ -261,6 +261,10 @@ startLoanVolume      = startMEs * meCapitalRequirement   // was meSetupCost alon
 ```
 
 `meCapitalRequirement(inputs)` is now a single function (`ModelModule.meCapitalRequirement`), used here, in R-6.2's expansion budget, and in the loan R-6.2 books — the same number decides how many MEs the fund can afford and how much it lends them. Before this, the loan booked used setup cost alone — 7.3x less than the affordability check's own number at the shipped defaults — so the fund decided how many enterprises it could afford using the realistic figure, then only lent them a seventh of it.
+
+`meWorkingCapitalMonths` defaults to 6, the value that was hard-coded until Q18 was decided. It is
+an owner planning assumption with no external source; see
+[ADR-0061](adr/0061-enterprise-working-capital-months-is-an-input.md).
 
 `initialMeNetworkShare` defaults to 15% as an illustrative pilot-rollout assumption, not a country
 observation. The Malawi reference therefore starts 84 of its 560-enterprise target rather than the
@@ -531,12 +535,12 @@ No month may post an operating cost when the portfolio is empty and production i
 
 ## 10. Integrity versus viability **[AS-BUILT]** (was F-29, fixed 2026-08-20)
 
-The model conflates two claims that must be kept separate, and reports the weaker one in language that implies the stronger.
+Until 2026-08-20 the model conflated two claims that must be kept separate, and reported the weaker one in language that implied the stronger. The table records that pre-fix state; R-10.1 onward is the current rule.
 
-| | Question | Current state |
+| | Question | State before the fix |
 |---|---|---|
-| **Ledger integrity** | Is the arithmetic self-consistent? | Checked by `verifyLedger`; reports `✅ Model Integrity Verified` |
-| **Fund viability** | Does the fund actually work? | **Not reported at all** — solvency failures and investor defaults are `console.warn` only |
+| **Ledger integrity** | Is the arithmetic self-consistent? | Checked by `verifyLedger`; reported `✅ Model Integrity Verified` |
+| **Fund viability** | Does the fund actually work? | **Not reported at all**: solvency failures and investor defaults went to `console.warn` only |
 
 This describes the pre-fix state, historical since 2026-08-20 (F-29). On the shipped defaults at the time, the model printed `✅ Model Integrity Verified` for a run that went insolvent in year 4.1 and defaulted on **$749,981** of senior principal — the line that would have failed it was commented out and labelled "optional strictness". See [docs/ANALYSIS.md#f-29](ANALYSIS.md#f-29--the-integrity-check-passes-a-run-that-went-insolvent-and-defaulted) for the original citation; the file it pointed to (`app.js`) no longer exists post-S5 ([ADR-0033](adr/0033-s5-structural-split.md)).
 
@@ -723,8 +727,7 @@ These must hold for **every** run. They are the contract that makes the model au
 
 ## 13. Modelling decisions
 
-Q1–Q17 are decided. **Q18 is `[OPEN]`**, raised by the 2026-10-22 robustness review
-([ANALYSIS.md §4B](ANALYSIS.md)); they must not be resolved in code without the model owner's
+Q1–Q18 are decided. An open question must not be resolved in code without the model owner's
 decision and an ADR first. New questions are recorded here the same way.
 
 | # | Question | Decision |
@@ -746,7 +749,7 @@ decision and an ADR first. New questions are recorded here the same way.
 | Q15 | Should the solvency verdict (V1), `depletionMonth` and `opsRunway` test the loan ledger alone rather than the pooled balance? | Yes — loan ledger only; the pooled balance is an audit series. Decided 2026-10-22. [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md) |
 | Q16 | Should a repayment term longer than the horizon be rejected, or reported as "not yet due"? Should the UI stop binding term to horizon? | Report as not yet due; V2 fails only on past-due principal; the inputs are independent. Decided 2026-10-22. [ADR-0058](adr/0058-separate-repayment-term-from-horizon.md) |
 | Q17 | Should OSS exclude carbon, return `null` at zero operating cost, and use a trailing window? | Exclude carbon; `null` and skip V4 at zero cost; keep whole-horizon. Decided 2026-10-22. [ADR-0059](adr/0059-oss-counts-only-loan-ledger-income.md) |
-| Q18 | **[OPEN]** Is the 6-month working-capital floor in `meCapitalRequirement` (`max(6, termHh)`) a sourced assumption, and should it be an input? | Not decided. It has no citation and it multiplies every enterprise loan; see [PARAMETERS.md](PARAMETERS.md#fixed-model-constants) and F-70. |
+| Q18 | Is the 6-month working-capital floor in `meCapitalRequirement` (`max(6, termHh)`) a sourced assumption, and should it be an input? | It is unsourced, so it becomes the input `meWorkingCapitalMonths`, default 6, recorded as an owner planning assumption. [ADR-0061](adr/0061-enterprise-working-capital-months-is-an-input.md) |
 
 ---
 

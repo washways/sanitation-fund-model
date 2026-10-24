@@ -107,7 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const country = countryObj.code;
-        const originalText = btn.innerText;
+        // Capture the idle label once. Capturing it per click made an overlapping
+        // second request "restore" the label to "Loading..." (F-73).
+        if (!btn.dataset.idleLabel) btn.dataset.idleLabel = btn.innerText;
         btn.innerText = "Loading...";
 
 
@@ -137,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // A slower earlier request must never overwrite a country selected later.
         if (requestId !== countryLoadSequence) return;
-        btn.innerText = originalText;
+        btn.innerText = btn.dataset.idleLabel;
         // The pending-load prompt is satisfied; clear it.
         btn.classList.remove('needs-attention');
         const cHelp = document.getElementById('country-help');
@@ -216,7 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const el = document.getElementById(id);
                 if (el && val !== null && val !== undefined && !isNaN(val)) {
                     if (id === 'popReqToilets') {
-                        el.value = parseInt(val).toLocaleString();
+                        // en-US grouping: getRaw strips commas only (F-72).
+                        el.value = parseInt(val).toLocaleString('en-US');
                     } else {
                         el.value = val;
                     }
@@ -401,11 +404,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 wbDiv.innerHTML += `<div class="tag highlight" style="margin-top:4px;">` +
                     `<strong>Country data incomplete:</strong> ${missing.join(', ')}. ` +
                     `No calculation was run; enter cited values in the blank fields and recalculate.</div>`;
+                // The 100 ms static-default run must not stay on screen under a form
+                // that no longer matches it (F-73).
+                UI.clearResults(`Country data is incomplete (${missing.join(', ')}). ` +
+                    'Enter cited values in the blank fields, then recalculate.');
                 return;
             }
 
             // Finally, Run Calculation (Enable Auto-Solver)
             runCalculation(true);
+        } else {
+            UI.clearResults('Country data could not be loaded. Check the connection and click Load again.');
         }
 
     });
@@ -439,11 +448,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Main Execution Wrapper (Smart Solvency Solver)
 // FIX: Default isAutoAdjust to FALSE to prevent startup loops.
-function runCalculation(isAutoAdjust = false, depth = 0) {
-    if (depth > 5) {
-        console.warn("[Solver] Max recursion depth reached. Stopping.");
-        return;
-    }
+// The recursion-depth guard left over from the removed auto-adjuster is gone (F-71):
+// nothing calls this recursively any more.
+function runCalculation(isAutoAdjust = false) {
     try {
         let inputs = UI.getInputs();
         let results = ModelModule.calculate(inputs);
@@ -494,6 +501,7 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
         }
 
         // Update UI
+        if (UI.showResults) UI.showResults();
         if (UI.showAdvice) UI.showAdvice(results.advice);
         if (UI.updateKPIs) {
             UI.updateKPIs(results);
@@ -507,7 +515,7 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
     } catch (e) {
         // A failed recalculation is no result. Do not leave a previous scenario
         // exportable under the user's newly entered assumptions (F-46).
-        UI.lastResults = null;
+        UI.clearResults('The last recalculation failed; correct the inputs and recalculate.');
         console.error("Model Runtime Error:", e);
         if (e && e.code === 'INVALID_INPUTS' && Array.isArray(e.validationErrors)) {
             alert("Please correct these inputs before running the model:\n\n- " +
@@ -517,20 +525,8 @@ function runCalculation(isAutoAdjust = false, depth = 0) {
         }
     }
 }
-// Format Number Inputs on Blur
-document.querySelectorAll('.formatted-number, #popReqToilets').forEach(input => {
-    input.addEventListener('blur', (e) => {
-        const val = e.target.value.replace(/,/g, '');
-        if (!isNaN(val) && val !== '') {
-            e.target.value = parseInt(val).toLocaleString();
-        }
-    });
-    // Initial format if value exists
-    if (input.value) {
-        const val = input.value.replace(/,/g, '');
-        if (!isNaN(val)) input.value = parseInt(val).toLocaleString();
-    }
-});
+// Number formatting on blur lives in UI.setupFormatting only. A second, parseInt-based
+// formatter used to run first on the same fields and truncate decimals (F-72).
 
 
 window.runCalculation = runCalculation;
@@ -539,10 +535,4 @@ window.runCalculation = runCalculation;
 window.addEventListener('load', () => {
     const grantInput = document.getElementById('wiz-invest-grant-sidebar');
     if (grantInput) grantInput.classList.remove('auto-filled');
-
-    // Ensure commas are applied if data loaded
-    const popInput = document.getElementById('popReqToilets');
-    if (popInput && popInput.value && !popInput.value.includes(',')) {
-        popInput.value = parseInt(popInput.value).toLocaleString();
-    }
 });

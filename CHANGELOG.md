@@ -11,6 +11,25 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
+## [0.21.0] — 2026-10-23 — The last robustness findings closed
+
+### Added
+
+- **Enterprise working capital is now an input.** *ME Working Capital (Months)* sets the minimum months of production each enterprise loan finances on top of setup cost. It was a hard-coded 6 with no source. The default stays 6 and is recorded as an owner planning assumption, so no result changes. The model uses the larger of this and the household loan term; at the 12-month Malawi term it does not bind. No golden movement. ([ADR-0061](docs/adr/0061-enterprise-working-capital-months-is-an-input.md), Q18, F-70)
+
+### Fixed
+
+- **A failed country load no longer leaves old results on screen.** If the World Bank data is missing or unreachable, the dashboard, charts, monthly table, verdict banners and export are withdrawn, and a notice says why. Before, the screen kept the static-default run while the form said "no calculation was run". An invalid recalculation now clears the dashboard too, not just the export. Overlapping loads no longer leave the button reading "Loading...". No golden movement. ([F-73](docs/ANALYSIS.md#f-73--a-failed-country-load-leaves-stale-results-on-screen))
+- **A control missing from the page is rejected, not silently defaulted.** The input reader used to substitute its own hard-coded number, and five of those disagreed with the page (for example a 24-month enterprise term against the page's 12). It now reads the gap as invalid and validation names it. ([F-72](docs/ANALYSIS.md#f-72--the-input-boundary-still-has-silent-fallbacks-and-two-competing-formatters))
+- **Capital fields keep their decimals.** Two formatters ran on the same fields and the first one truncated: `1234.5` became `1,234`. One formatter remains. The country fill also groups digits as `9,244,139` regardless of browser locale, so the reader can always parse it. No golden movement. (F-72)
+- **Stale history in the spec and code is corrected.** Two spec sections described long-fixed defects in the present tense. A code comment still defended the superseded 30% time-value default, with a silent 0.30 fallback behind it. A dead recursion guard from the removed auto-adjuster is deleted. ([F-71](docs/ANALYSIS.md#f-71--stale-counts-and-historical-text-in-normative-documents))
+
+### Status
+
+- All 73 registered findings are resolved and Q1 to Q18 are decided. 161 tests pass. No golden value moved in this release.
+
+---
+
 ## [0.20.0] — 2026-10-23 — Verdicts read the right ledger, the right window and whole enterprises
 
 ### Changed

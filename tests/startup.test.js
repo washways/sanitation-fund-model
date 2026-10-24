@@ -120,8 +120,13 @@ function bootApp(fixture = FIXTURE) {
     addEventListener(type, fn) { if (type === 'DOMContentLoaded') domReady = fn; },
     querySelector: (s) => (s === '.top-actions' ? el('__topActions') : null),
     querySelectorAll: (selector) => {
-      if (selector === '.formatted-number') {
-        return [...ids].filter(id => initialClasses[id]?.includes('formatted-number')).map(el);
+      // Comma-separated class/id lists resolve as a browser would. Matching only the
+      // exact string '.formatted-number' hid a second blur formatter (F-72).
+      if (/^\s*[.#][A-Za-z0-9_-]+(\s*,\s*[.#][A-Za-z0-9_-]+)*\s*$/.test(selector)) {
+        const parts = selector.split(',').map(p => p.trim());
+        return [...ids].filter(id => parts.some(p => (p[0] === '#'
+          ? p.slice(1) === id
+          : initialClasses[id]?.includes(p.slice(1))))).map(el);
       }
       if (selector === 'input, select') {
         return [...ids].filter(id => ['INPUT', 'SELECT'].includes(tags[id])).map(el);
@@ -418,6 +423,51 @@ test('missing essential country observations clear stale fields and stop auto-ca
     'the user should be told that the country scenario is incomplete');
 });
 
+describe('a failed or incomplete country load leaves no stale results (F-73)', () => {
+  const failedFixture = () => {
+    const fixture = structuredClone(FIXTURE);
+    // Every World Bank request fails, as it would offline or when the API is blocked.
+    for (const key of Object.keys(fixture.indicators)) delete fixture.indicators[key];
+    return fixture;
+  };
+
+  test('the static-default run is withdrawn when the country load fails', async () => {
+    const app = bootApp(failedFixture());
+    await app.runStartup();
+    assert.strictEqual(app.UI.lastResults, null,
+      'no result may remain exportable after the load said no calculation was run');
+    assert.ok(app.el('modelTab').classList.contains('no-results'),
+      'the dashboard must be marked as holding no results');
+    assert.match(app.el('noResultsNotice').innerText, /No results/i,
+      'the user must be told why the dashboard is empty');
+  });
+
+  test('a successful calculation restores the dashboard', async () => {
+    const app = bootApp();
+    await app.runStartup();
+    assert.ok(app.UI.lastResults, 'control: the Malawi load produces results');
+    assert.ok(!app.el('modelTab').classList.contains('no-results'));
+  });
+
+  test('an invalid recalculation also clears the dashboard, not only the export', async () => {
+    const app = bootApp();
+    await app.runStartup();
+    app.el('popReqToilets').value = '';
+    app.runCalculation();
+    assert.strictEqual(app.UI.lastResults, null);
+    assert.ok(app.el('modelTab').classList.contains('no-results'));
+  });
+
+  test('overlapping loads restore the button label, not "Loading..."', async () => {
+    const app = bootApp();
+    await app.runStartup();
+    const btn = app.el('fetchDataBtn');
+    btn.innerText = 'Load Country Data';
+    await Promise.all([btn.click(), btn.click()]);
+    assert.strictEqual(btn.innerText, 'Load Country Data');
+  });
+});
+
 test('missing WHO health evidence resets the optional DALY estimate to zero', async () => {
   const fixture = structuredClone(FIXTURE);
   delete fixture.who;
@@ -440,6 +490,31 @@ test('a WHO record without its conservative lower bound is not treated as zero e
   assert.strictEqual(app.el('dalyPerPerson').value, '0');
   assert.ok(!app.el('dalyPerPerson').classList.contains('country-observation'));
   assert.match(app.el('dalyPerPerson').title, /not estimated/i);
+});
+
+describe('the input boundary has no silent fallbacks and one formatter (F-72)', () => {
+  test('a control missing from the page reads as NaN and is rejected, not defaulted', async () => {
+    const app = bootApp();
+    await app.runStartup();
+    for (const id of ['termMe', 'grantSupportPct', 'dalyValue', 'co2PerToilet', 'timeValueFactor']) {
+      app.ids.delete(id);
+    }
+    const inputs = app.UI.getInputs();
+    for (const key of ['termMe', 'grantSupportPct', 'dalyValue', 'co2PerToilet', 'timeValueFactor']) {
+      assert.ok(Number.isNaN(inputs[key]), `${key} must be NaN when its control is missing, got ${inputs[key]}`);
+    }
+    const errors = app.ModelModule.validateInputs(inputs);
+    assert.ok(errors.length >= 5, `validation must reject every missing input, got: ${errors.join(' | ')}`);
+  });
+
+  test('a formatted field keeps its decimals on blur: one parseFloat formatter, not parseInt', async () => {
+    const app = bootApp();
+    await app.runStartup();
+    const grant = app.el('wiz-invest-grant-sidebar');
+    grant.value = '1234.5';
+    grant.dispatchEvent({ type: 'blur', target: grant });
+    assert.strictEqual(grant.value, '1,234.5');
+  });
 });
 
 describe('repayment term and horizon are independent inputs (F-67, ADR-0058)', () => {

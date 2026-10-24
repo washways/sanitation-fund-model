@@ -311,6 +311,14 @@
                     </label>
                     <input type="number" id="meSetupCost" value="3000">
                 </div>
+                <div class="input-group">
+                    <label>ME Working Capital (Months)
+                        <span class="info-icon"
+                            title="Minimum months of production (toilets per ME per month x toilet cost) each enterprise loan finances on top of setup cost. The model uses the larger of this and the HH loan term. The default of 6 is an owner planning assumption with no external source; replace it with programme evidence. See docs/adr/0061.">i</span>
+                    </label>
+                    <input type="number" id="meWorkingCapitalMonths" value="6" step="1" min="0"
+                        class="programme-assumption">
+                </div>
 
 
                 <h3>Financials</h3>
@@ -546,6 +554,8 @@
             </header>
 
             <div id="modelTab" class="tab-content active">
+                <!-- F-73: shown instead of the dashboard when no valid calculation backs it. -->
+                <div id="noResultsNotice" class="no-results-notice" role="status" hidden></div>
                 <div class="charts-container">
                     <div class="chart-card">
                         <h3>Fund Balance & Cashflow</h3>

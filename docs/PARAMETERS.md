@@ -43,6 +43,7 @@ Every numeric input must be finite before the simulation starts. Blank or malfor
 | `jobsPerMe` | Jobs Supported / Active ME | 3 | jobs/enterprise / same | programme assumption | Interim Malawi reference: one owner/operator plus two FTE workers per active enterprise. Produces a point-in-time jobs-supported estimate, not jobs created or job-years. Replace with programme staffing evidence. |
 | `toiletsPerMeMonth` | Toilets / ME / Month | 7 | count/month / count/month | programme assumption | Flat productivity; no learning, seasonality, or supply-chain lag. |
 | `meSetupCost` | ME Setup Cost | 3,000 | USD / USD | Malawi reference: [UNICEF Malawi sanitation revolving funds](https://www.unicef.org/malawi/media/3886/file/Sanitation%2520Revolving%2520Funds%2520for%2520Rural%2520and%2520Peri-Urban%2520Communities%2520in%2520Malawi.pdf) | Approximate enterprise-loan size, added to working capital by `meCapitalRequirement()`. |
+| `meWorkingCapitalMonths` | ME Working Capital (Months) | 6 | months / months | **owner planning assumption, no external source** ([ADR-0061](adr/0061-enterprise-working-capital-months-is-an-input.md), Q18) | Minimum months of production each enterprise loan finances on top of setup cost. The model uses `max(meWorkingCapitalMonths, termHh)`, so at the 12-month Malawi household term this input does not bind. Sizes every enterprise loan, the startup cohort and the affordable-network cap. Replace with programme evidence. |
 
 ## Lending terms
 
@@ -115,7 +116,6 @@ whose provenance is still missing (F-70).
 
 | Constant | Value | Where | Status | Meaning |
 |---|---:|---|---|---|
-| Working-capital floor | `max(6, termHh)` months | `meCapitalRequirement()`, R-6.1 | **Undocumented** — Q18 | Months of production an enterprise must be able to finance before it is paid. Multiplies `toiletsPerMeMonth × avgToiletCost`. Drives startup cost, every enterprise loan, and the affordable-network cap. |
 | Liquidity reserve | 3 months of full fixed ops + next 3 months of scheduled senior principal | engine, R-5.4 | Convention — [ADR-0027](adr/0027-debt-service-lookahead-reserve.md) | Cash the loan ledger must hold before it may lend. |
 | Collections floor | 30% of fixed ops | engine, R-5.3 | Convention — [ADR-0024](adr/0024-collections-floor-stays-abrupt.md) | Skeleton-team cost while the loan ledger is overdrawn. Stops entirely at wind-up. |
 | Working year | 2,080 hours | `computeKPIs`, R-8.6 | Convention (40 h × 52 weeks) | Converts annual income to an hourly value of time. |
