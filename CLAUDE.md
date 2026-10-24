@@ -42,7 +42,10 @@ If the baseline is red, stop. Never re-record `tests/golden.json` unless an acce
 | S6 monthly-table containment — 2026-10-22 | Gave the 22-column monthly audit table an independent auto-height card, bounded two-axis viewport, and sticky headings; the follow-up removed its residual `chart-card` dependency. | Never place the monthly table back inside the generic fixed-height chart contract or rely on cascade order to undo chart sizing. Preserve the month-level audit trail and contain it locally rather than clipping or shortening it. |
 | S6 model transparency — 2026-10-22 | Added an on-site five-step model map, decision-use calibration checklist, and numeric-input documentation coverage. Removed claims the engine does not support. | Describe dated observations as evidence, not real-time forecasts. The model has no price-elastic demand, is not double-entry accounting, and cannot guarantee repayment. Keep all numeric UI inputs documented in `PARAMETERS.md`. |
 | S6 scorecard integrity — 2026-10-22 | Bound Grant Equity Multiple, Capital Preservation, OSS, and FSS directly to canonical KPI fields and removed the unused competing summary renderer. | Grant equity is an `x` multiple; capital preservation is net assets / all initial capital; OSS excludes write-downs and finance cost; FSS includes them. Investor repayment never includes grant cash. |
-| S6 need-versus-demand honesty — 2026-10-22 | Relabelled API sanitation need, the target backlog, and reach reporting so none imply observed borrower uptake or complete SDG 6 closure. | `popReqToilets` is rural population without basic sanitation: a maximum target under sufficient uptake. The model does not forecast willingness, affordability, eligibility, product choice, or adoption. Never invent an uptake rate from geographic coverage. |
+| S6 need-versus-demand honesty — 2026-10-22 | Relabelled API sanitation need, the target backlog, and reach reporting so none imply observed borrower uptake or complete SDG 6 closure. | `popReqToilets` is rural population without basic sanitation: a maximum target under sufficient uptake. The model does not forecast willingness, affordability, eligibility, product choice, or adoption. Never invent an uptake rate from geographic coverage. |
+| Verdict basis — 0.20.0, 2026-10-23 | Solvency reads the loan ledger (`dataMonthlyLoanCash`); V2 fails only on past-due senior principal; repayment term and horizon are independent; OSS = loan interest ÷ operating cost (null at zero cost); enterprises launch whole. ADR-0057–0060. | Grant cash never counts as solvency or ops runway. Never re-link term and horizon. Never add carbon to OSS. |
+| Robustness closure — 0.21.0, 2026-10-24 | `meWorkingCapitalMonths` input (default 6, unsourced owner assumption, ADR-0061); `UI.clearResults` withdraws every rendered result when no valid run backs the form; `getRaw` returns NaN for a missing control; one number formatter. All 73 findings resolved. | Never restore per-field fallback defaults in `getRaw`. A failed or incomplete load must leave no results on screen. |
+| Country derivations — 0.22.0, 2026-10-24 | `avgHHSize` from DHS (`HC_MEMB_H_MNM`, rural, latest survey) and `districts` from geoBoundaries ADM2, both blue and essential (clear and pause when missing). Every other numeric input is amber. ADR-0062. | A test fails if an input is neither blue nor amber. Nine countries lack a DHS survey and must pause, never borrow a value. |
 
 The detailed reasons and measured changes live in [CHANGELOG.md](CHANGELOG.md) and [docs/adr/](docs/adr/). Never edit an accepted ADR; supersede it.
 
@@ -90,6 +93,43 @@ evidence resets the optional rate to zero/not estimated; never retain the previo
 - Keep the adverse 20-year Malawi result visible as a stress finding. Do not tune assumptions merely to force long-run viability.
 - Keep the engine explicitly USD-only for now. Any later local-currency display needs dated user-supplied conversion logic and an ADR; never apply a live spot rate to the whole multi-year path.
 - After sensitivity analysis, prioritize transparent JSON scenario save/load/compare before board-paper PDF or offline/mobile expansion.
+
+## Owner decisions — 2026-10-24 (not yet implemented; do these next)
+
+The owner asked that country data replace Malawi values wherever a transparent source exists.
+Decided, with the evidence gathered:
+
+1. **`avgToiletCost` from Hutton & Varughese (2016), rural DRY-pit latrine.** The per-person,
+   2015-US$ capital costs for all 44 selector countries are already extracted and cited in
+   [docs/data/hutton-varughese-2016-rural-latrine-costs.json](docs/data/hutton-varughese-2016-rural-latrine-costs.json).
+   Formula: `ruralDryPit × avgHHSize × (US CPI latest ÷ US CPI 2015)` using World Bank
+   `FP.CPI.TOTL` for USA (2015 = 108.70, 2024 = 143.86, factor 1.3235), rounded to whole dollars.
+   Blue, with source, technology, price year and formula on hover. Malawi becomes about $73
+   (was $100), so most goldens move: write the ADR with a measured probe first. Eritrea and
+   Ethiopia rows look column-shifted in the source; say "suspect" on hover. If household size is
+   missing the cost cannot be derived: clear and pause.
+2. **`meSetupCost` scaled by price level.** `3000 × PL(country) ÷ PL(Malawi)`, where
+   `PL = PA.NUS.PPP ÷ PA.NUS.FCRF` taken from the latest year where BOTH exist for that country
+   (`PA.NUS.PPPC.RF` is archived). Matched-year data exist for 43 of 44; Yemen has none. Liberia
+   returns 0.002 (currency-unit mismatch), so reject implausible ratios with a documented
+   tolerance in PARAMETERS.md's fixed-constants table. Missing or rejected: clear and pause.
+   Malawi stays exactly $3,000 because the ratio cancels.
+3. **Remaining Malawi references stay amber with a notice.** `termHh`, `termMe`,
+   `hoursPerPersonPerDay`, `timeValueFactor`, `jobsPerMe`, `mePerDistrict`, `toiletsPerMeMonth`
+   get "Malawi reference" in their tooltips. After a non-Malawi load, one line lists those still at
+   their Malawi value so the user knows to replace them. No country source exists for these.
+
+Implementation notes: `src/data/worldbank.js` `fetchIndicator` returns only the latest record, so
+add a year-series fetch for the PPP/FX match. The startup stub in `tests/startup.test.js` keys
+World Bank fixtures by indicator only; extend it to key by country as well (USA CPI, MWI PPP/FX).
+Mirror every derivation in `tools/country-runtime-audit.js` and `tools/audit-country-data.js`, and
+re-run `npm run audit:countries`.
+
+## Next steps after that
+
+- Open the page in a real browser once: every check so far is headless (`verify-findings` says so).
+- `meWorkingCapitalMonths` (6) is still an unsourced owner assumption; replace with programme evidence.
+- S4 leftovers: solver caching and JSON scenario save/load/compare (owner priority before PDF/mobile).
 
 ## Known review traps
 

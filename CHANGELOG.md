@@ -11,7 +11,7 @@ All notable changes to this project — anything that alters what the model prod
 
 ---
 
-## [Unreleased]
+## [0.22.0] — 2026-10-24 — Household size and administrative units follow the country
 
 ### Changed
 
@@ -24,6 +24,10 @@ All notable changes to this project — anything that alters what the model prod
 - Gross Social Value Multiple falls 2.0–2.5% in every scenario (baseline 2.73 → 2.67), because fewer people live in each toilet's household. Carbon scenarios move only 0.02%.
 - `demand constrained`: toilets 1,139 → 1,166 (+2.4%), with matching loan, grant and cost-per-latrine moves. No other toilet, cash or repayment figure moved. No verdict changed.
 - Malawi startup run: people reached 366,740 → 358,405; physical DALYs about 2,139 → 2,090; toilets, cash and verdict unchanged.
+
+### Decided, not yet built
+
+- Toilet cost from Hutton & Varughese (2016) rural dry-pit costs, enterprise setup cost scaled by price level, and a notice listing remaining Malawi references after a non-Malawi load. The extracted cost table is in `docs/data/`; the plan is in CLAUDE.md.
 
 ---
 

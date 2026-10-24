@@ -29,9 +29,20 @@
 <main class="page">
     <nav class="nav"><a href="index.html">&larr; Model</a><a href="methodology.html">Methodology</a></nav>
     <h1>Changes and known limitations</h1>
-    <p class="meta">Current release: <strong>Version 0.21.0 — 24 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
+    <p class="meta">Current release: <strong>Version 0.22.0 — 24 October 2026</strong>. This page gives a simple, user-facing release history without requiring access to GitHub.</p>
 
     <section class="release good">
+        <h2>0.22.0 — Household size and administrative units follow the country</h2>
+        <ul>
+            <li>Household size now loads from the DHS Program for the selected country (rural, latest survey). It used to stay at Malawi's 4.4 for every country, although it ranges from 3.1 in Lesotho to 10.4 in The Gambia.</li>
+            <li>The number of administrative units now loads from geoBoundaries, with the local unit name and year on hover. Malawi stays at 28 districts.</li>
+            <li>Nine countries have no DHS household-size survey. For them the field is cleared and you are asked for a cited value.</li>
+            <li>Every input is now blue (country data) or amber (your assumption or choice).</li>
+            <li>Malawi household size is now 4.3 (DHS 2024), so people reached and DALYs fall about 2%. Toilets, cash and the verdict are unchanged.</li>
+        </ul>
+    </section>
+
+    <section class="release">
         <h2>0.21.0 — The last robustness findings closed</h2>
         <ul>
             <li>New input: <strong>ME Working Capital (Months)</strong>. It sets the minimum months of production each enterprise loan finances. It was a hidden, unsourced 6. The default stays 6, so no result changes, and you can now test other values.</li>

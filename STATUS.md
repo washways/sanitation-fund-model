@@ -6,9 +6,9 @@
 
 | | |
 |---|---|
-| **Release** | 0.21.0 — enterprise working-capital months is an input; failed loads clear stale results; no silent input fallbacks |
+| **Release** | 0.22.0 — household size (DHS) and administrative units (geoBoundaries) follow the country; every input blue or amber |
 | **Stages complete** | S0, S1, S2, S3, S5; S3 rollout realism complete; S4 solvers, constraint reporting and sensitivity complete; S6 country-input provenance, responsive results, model transparency, scorecard integrity, and need-versus-demand terminology complete; caching/scenario comparison and remaining S6 work remain |
-| **Tests** | ✅ 161 pass, 0 todo, 0 fail (`npm test`, ~10s) |
+| **Tests** | ✅ 166 pass, 0 todo, 0 fail (`npm test`, ~10s) |
 | **Lint** | ✅ ESLint, 0 errors and 0 warnings |
 | **Goldens** | ✅ 21 scenarios current (`npm run golden:diff` → “No behaviour change”) |
 | **Country audit** | ✅ 35/44 selector countries have every essential observation and complete a full integrity-clean run; the other 9 have no DHS household-size survey and pause for a cited value; conservative sanitation DALYs derive for 42/44 (`npm run audit:countries`, `npm run audit:impact`) |
@@ -23,6 +23,7 @@
 | Real-browser chart/advisor click-through | Headless tests cover startup, calculation, export, and wiring, but not visual chart interaction. | Add a browser smoke pass during S6 accessibility/mobile work. |
 | Borrower adoption and eligible market | The observed unserved rural population is a maximum target; the model assumes enough uptake to use delivery capacity and does not forecast willingness, affordability, eligibility, or product choice. | Use programme market research to bound uptake before treating toilets as a forecast; do not infer a national rate from the API. |
 | Formal SROI method | The displayed Gross Social Value Multiple is honestly labelled (F-65) but still has no deadweight, attribution, displacement or discounting. | Add a full appraisal method only with an explicit standard and sourced programme assumptions. |
+| Toilet cost and enterprise setup cost | Still Malawi values ($100, $3,000) for every country. The owner has decided the derivations; they are not built yet. | Implement the plan in CLAUDE.md, *Owner decisions — 2026-10-24*. |
 | Enterprise working-capital months | Now an input (Q18, ADR-0061), but its default of 6 is an owner planning assumption with no external source. It binds only when the household term is under 6 months. | Replace the default with programme evidence before an investment decision. |
 
 ## Malawi reference run
@@ -162,6 +163,8 @@ node tools/verify-findings.js
 Run the app with `python -m http.server 8080` or `npm run serve`. `file://` works, but browsers may block World Bank calls from local files.
 
 ## Latest activity
+
+On 2026-10-24 release 0.22.0 made household size and administrative units country-derived (ADR-0062) and marked every other input amber. The owner also decided how toilet cost, enterprise setup cost and the remaining Malawi references should be derived; those decisions, the evidence and the implementation notes are in [CLAUDE.md](CLAUDE.md) under *Owner decisions — 2026-10-24*, and the extracted cost table is in [docs/data/](docs/data/).
 
 On 2026-10-24 release 0.21.0 closed the last four robustness findings. The owner decided Q18: the unsourced 6-month working-capital floor is now the input `meWorkingCapitalMonths`, default 6 (ADR-0061). A failed or incomplete country load, or an invalid recalculation, now withdraws every rendered result through `UI.clearResults` (F-73). `getRaw` returns `NaN` for a missing control and the duplicate `parseInt` formatter is gone (F-72); the startup harness now resolves comma-separated selectors, which had hidden that formatter. Stale history in MODEL_SPEC and `kpis.js` is corrected (F-71). No golden value moved.
 
