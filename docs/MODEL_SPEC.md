@@ -251,7 +251,7 @@ remains the only liquidity/debt-service reserve. See [ADR-0047](adr/0047-start-w
 
 ```
 maxTotalMEs         = districts * mePerDistrict
-meCapitalRequirement = meSetupCost + (toiletsPerMeMonth * avgToiletCost * max(6, termHh))
+meCapitalRequirement = meSetupCost + (toiletsPerMeMonth * avgToiletCost * max(meWorkingCapitalMonths, termHh))
 affordableStartMEs   = floor(max(0, loanCash) / meCapitalRequirement)
 targetStartMEs       = initialMeNetworkShare == 0
                        ? 0
@@ -261,6 +261,10 @@ startLoanVolume      = startMEs * meCapitalRequirement   // was meSetupCost alon
 ```
 
 `meCapitalRequirement(inputs)` is now a single function (`ModelModule.meCapitalRequirement`), used here, in R-6.2's expansion budget, and in the loan R-6.2 books — the same number decides how many MEs the fund can afford and how much it lends them. Before this, the loan booked used setup cost alone — 7.3x less than the affordability check's own number at the shipped defaults — so the fund decided how many enterprises it could afford using the realistic figure, then only lent them a seventh of it.
+
+`meWorkingCapitalMonths` defaults to 6, the value that was hard-coded until Q18 was decided. It is
+an owner planning assumption with no external source; see
+[ADR-0061](adr/0061-enterprise-working-capital-months-is-an-input.md).
 
 `initialMeNetworkShare` defaults to 15% as an illustrative pilot-rollout assumption, not a country
 observation. The Malawi reference therefore starts 84 of its 560-enterprise target rather than the
@@ -723,8 +727,7 @@ These must hold for **every** run. They are the contract that makes the model au
 
 ## 13. Modelling decisions
 
-Q1–Q17 are decided. **Q18 is `[OPEN]`**, raised by the 2026-10-22 robustness review
-([ANALYSIS.md §4B](ANALYSIS.md)); they must not be resolved in code without the model owner's
+Q1–Q18 are decided. An open question must not be resolved in code without the model owner's
 decision and an ADR first. New questions are recorded here the same way.
 
 | # | Question | Decision |
@@ -746,7 +749,7 @@ decision and an ADR first. New questions are recorded here the same way.
 | Q15 | Should the solvency verdict (V1), `depletionMonth` and `opsRunway` test the loan ledger alone rather than the pooled balance? | Yes — loan ledger only; the pooled balance is an audit series. Decided 2026-10-22. [ADR-0057](adr/0057-judge-solvency-on-the-loan-ledger.md) |
 | Q16 | Should a repayment term longer than the horizon be rejected, or reported as "not yet due"? Should the UI stop binding term to horizon? | Report as not yet due; V2 fails only on past-due principal; the inputs are independent. Decided 2026-10-22. [ADR-0058](adr/0058-separate-repayment-term-from-horizon.md) |
 | Q17 | Should OSS exclude carbon, return `null` at zero operating cost, and use a trailing window? | Exclude carbon; `null` and skip V4 at zero cost; keep whole-horizon. Decided 2026-10-22. [ADR-0059](adr/0059-oss-counts-only-loan-ledger-income.md) |
-| Q18 | **[OPEN]** Is the 6-month working-capital floor in `meCapitalRequirement` (`max(6, termHh)`) a sourced assumption, and should it be an input? | Not decided. It has no citation and it multiplies every enterprise loan; see [PARAMETERS.md](PARAMETERS.md#fixed-model-constants) and F-70. |
+| Q18 | Is the 6-month working-capital floor in `meCapitalRequirement` (`max(6, termHh)`) a sourced assumption, and should it be an input? | It is unsourced, so it becomes the input `meWorkingCapitalMonths`, default 6, recorded as an owner planning assumption. [ADR-0061](adr/0061-enterprise-working-capital-months-is-an-input.md) |
 
 ---
 

@@ -65,3 +65,4 @@ For the short version of what each one decided, [CHANGELOG.md](../../CHANGELOG.m
 | [0058](0058-separate-repayment-term-from-horizon.md) | Separate the repayment term from the horizon |
 | [0059](0059-oss-counts-only-loan-ledger-income.md) | OSS counts only loan-ledger income |
 | [0060](0060-launch-whole-enterprises.md) | Launch micro-enterprises in whole units |
+| [0061](0061-enterprise-working-capital-months-is-an-input.md) | Enterprise working-capital months is an input |

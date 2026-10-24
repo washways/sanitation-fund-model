@@ -47,6 +47,7 @@ const UI = {
             jobsPerMe: getRaw('jobsPerMe'),
             toiletsPerMeMonth: getRaw('toiletsPerMeMonth'),
             meSetupCost: getRaw('meSetupCost'),
+            meWorkingCapitalMonths: getRaw('meWorkingCapitalMonths'),
             loanInterestRate: getPercent('loanInterestRate_v2'),
             meLoanInterestRate: getPercent('meLoanInterestRate_v2'),
             hhDefaultRate: getPercent('hhDefaultRate'),

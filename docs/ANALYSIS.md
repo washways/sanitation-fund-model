@@ -57,7 +57,7 @@ Every finding has a stable ID. **Do not renumber.** When a finding is fixed, mar
 | ✅ [F-73](#f-73--a-failed-country-load-leaves-stale-results-on-screen) | Low | UX / Controller | When the country fetch fails, essential fields are cleared and “no calculation was run” is shown, but the dashboard still displays the static-default run made 100 ms after load | src | S6 |
 | ✅ [F-72](#f-72--the-input-boundary-still-has-silent-fallbacks-and-two-competing-formatters) | Low | UI / Robustness | `getRaw` returns a hard-coded default for a missing element, those defaults disagree with `index.html`, and two blur formatters (`parseInt` and `parseFloat`) are bound to the same inputs | src | S6 |
 | [F-71](#f-71--stale-counts-and-historical-text-in-normative-documents) | Low | Docs | Test and finding counts differ across AGENTS.md, README.md, STATUS.md and TESTING.md; MODEL_SPEC carries pre-fix history in present tense; a code comment still names the superseded 0.30 time-value default | src | S6 |
-| [F-70](#f-70--constants-with-no-row-in-parametersmd) | Low | Docs / Assumptions | The 6-month working-capital floor, 2,080-hour year, 30-day month, 3-month reserve, 30% collections floor, $1,000 viability tolerance and solver search ranges are hard-coded with no entry in the parameter dictionary | src | S6 |
+| ✅ [F-70](#f-70--constants-with-no-row-in-parametersmd) | Low | Docs / Assumptions | The 6-month working-capital floor, 2,080-hour year, 30-day month, 3-month reserve, 30% collections floor, $1,000 viability tolerance and solver search ranges are hard-coded with no entry in the parameter dictionary | src | S6 |
 | ✅ [F-69](#f-69--oss-mixes-ledgers-and-reports-0-when-there-are-no-operating-expenses) | Medium | Model / Reporting | OSS counts ring-fenced carbon revenue as operating income (565x in the carbon scenario), is a cumulative ratio although the spec says “steady state”, and reports 0 and fails V4 when operating expenses are zero | run | S4 |
 | ✅ [F-68](#f-68--fractional-micro-enterprises-are-launched-near-the-network-cap) | Low | Model | `space = maxTotalMEs - currentMEs` is fractional after attrition, so the loop launches 0.035 of an enterprise and books a $400 loan for it; 45 such months in the capacity-constrained golden scenario | run | S4 |
 | ✅ [F-67](#f-67--the-repayment-term-is-force-bound-to-the-horizon-and-v2-measures-the-wrong-window) | Medium | UI / Model | A second, unguarded two-way listener keeps `fundRepaymentTerm` equal to `duration`, so the browser cannot express a term that differs from the horizon; and V2 reports debt not yet due as a default (5-year horizon, 10-year term: “52.6% default”) | run | S4 |
@@ -1328,6 +1328,14 @@ These are none of the three:
 **Fix:** [PARAMETERS.md](PARAMETERS.md) now has a *Fixed model constants* table recording each
 one and its status. Whether the 6-month floor should become an input is a modelling decision
 (Q18); the rest are tolerances and search settings that only need to be visible.
+
+**Resolution:** the owner decided Q18: the floor becomes the input `meWorkingCapitalMonths`,
+default 6, recorded in PARAMETERS.md as an owner planning assumption with no external source.
+`meCapitalRequirement` uses `max(meWorkingCapitalMonths, termHh)`. At the 12-month Malawi
+household term the input does not bind, and no golden scenario moved, as
+[ADR-0061](adr/0061-enterprise-working-capital-months-is-an-input.md) predicted. Every other
+constant in the table above now has a row in PARAMETERS.md's *Fixed model constants* table.
+Five tests in `tests/working-capital.test.js`.
 
 ### F-71 — Stale counts and historical text in normative documents
 

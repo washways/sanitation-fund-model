@@ -36,6 +36,7 @@ module.exports = {
   jobsPerMe: 3,
   toiletsPerMeMonth: 7,
   meSetupCost: 3000,
+  meWorkingCapitalMonths: 6, // owner planning assumption, unsourced (Q18, ADR-0061)
 
   // Lending
   grantSupportPct: 0.10,

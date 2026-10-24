@@ -32,7 +32,9 @@ const ModelModule = {
     // the fund decided how many enterprises it could afford using this number, then
     // only lent them a seventh of it.
     meCapitalRequirement(inputs) {
-        const reserveMonths = Math.max(6, inputs.termHh || 0);
+        // Months of production an enterprise must finance before it is paid. The
+        // floor is an input (Q18, ADR-0061); it was a hard-coded, unsourced 6.
+        const reserveMonths = Math.max(inputs.meWorkingCapitalMonths || 0, inputs.termHh || 0);
         const workingCapital = (inputs.toiletsPerMeMonth || 0) * (inputs.avgToiletCost || 0) * reserveMonths;
         return (inputs.meSetupCost || 0) + workingCapital;
     },
@@ -149,6 +151,7 @@ const ModelModule = {
             jobsPerMe: 'Jobs Supported per Active ME',
             toiletsPerMeMonth: 'Toilets per ME per Month',
             meSetupCost: 'ME Setup Cost',
+            meWorkingCapitalMonths: 'ME Working-Capital Months',
             grantSupportPct: 'Grant-Funded Pacing',
             loanInterestRate: 'HH Loan Interest Rate',
             meLoanInterestRate: 'ME Loan Interest Rate',
@@ -192,7 +195,7 @@ const ModelModule = {
 
         requireWhenFinite([
             'investGrant', 'investLoan', 'fundRepaymentTerm', 'popReqToilets', 'districts',
-            'mePerDistrict', 'jobsPerMe', 'toiletsPerMeMonth', 'meSetupCost',
+            'mePerDistrict', 'jobsPerMe', 'toiletsPerMeMonth', 'meSetupCost', 'meWorkingCapitalMonths',
             'annualFixedOpsCost', 'mgmtFeeRatio', 'meCostRate',
             'contingencyRate', 'dalyPerPerson', 'dalyValue', 'avgAnnualIncome',
             'co2PerToilet', 'co2Value', 'meMaxMonthlyGrowthRate',

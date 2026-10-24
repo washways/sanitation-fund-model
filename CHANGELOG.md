@@ -13,6 +13,10 @@ All notable changes to this project — anything that alters what the model prod
 
 ## [0.21.0] — 2026-10-23 — The last robustness findings closed
 
+### Added
+
+- **Enterprise working capital is now an input.** *ME Working Capital (Months)* sets the minimum months of production each enterprise loan finances on top of setup cost. It was a hard-coded 6 with no source. The default stays 6 and is recorded as an owner planning assumption, so no result changes. The model uses the larger of this and the household loan term; at the 12-month Malawi term it does not bind. No golden movement. ([ADR-0061](docs/adr/0061-enterprise-working-capital-months-is-an-input.md), Q18, F-70)
+
 ### Fixed
 
 - **A failed country load no longer leaves old results on screen.** If the World Bank data is missing or unreachable, the dashboard, charts, monthly table, verdict banners and export are withdrawn, and a notice says why. Before, the screen kept the static-default run while the form said "no calculation was run". An invalid recalculation now clears the dashboard too, not just the export. Overlapping loads no longer leave the button reading "Loading...". No golden movement. ([F-73](docs/ANALYSIS.md#f-73--a-failed-country-load-leaves-stale-results-on-screen))
